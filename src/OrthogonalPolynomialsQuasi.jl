@@ -1,5 +1,5 @@
 module OrthogonalPolynomialsQuasi
-using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, LinearAlgebra
+using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, IntervalSets, DomainSets, InfiniteLinearAlgebra, LinearAlgebra
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
@@ -15,6 +15,8 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
 
+
+import ContinuumArrays: Basis, @simplify, Identity
 
 export Jacobi, Legendre, Chebyshev, Ultraspherical,
             JacobiWeight, ChebyshevWeight, UltrasphericalWeight,

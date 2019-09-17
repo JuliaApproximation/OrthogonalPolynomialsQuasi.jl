@@ -1,5 +1,6 @@
 using OrthogonalPolynomialsQuasi, ContinuumArrays, FillArrays, LazyArrays, BandedMatrices
-import ContinuumArrays: jacobimatrix, SimplifyStyle, ∞
+import ContinuumArrays: SimplifyStyle
+import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
 import LazyArrays: ApplyStyle, colsupport
 
 

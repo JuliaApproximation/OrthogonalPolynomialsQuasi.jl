@@ -7,8 +7,25 @@ version = "0.1.0"
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 ContinuumArrays = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
 InfiniteLinearAlgebra = "cde9dba0-b1de-11e9-2c62-0bab9446c55c"
+DomainSets = "5b8099bc-c8ec-5219-889f-1d9e522a28bf"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
-InfiniteLinearAlgebra = "cde9dba0-b1de-11e9-2c62-0bab9446c55c"
+IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[compat]
+DomainSets = "0.1"
+BandedMatrices = "0.11"
+FillArrays = "0.7"
+IntervalSets = "0.3.1"
+LazyArrays = "0.11"
+julia = "1.0"
+QuasiArrays = "0.0.2"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+
+[targets]
+test = ["Test","ForwardDiff"]
