@@ -1,7 +1,8 @@
-using OrthogonalPolynomialsQuasi, ContinuumArrays, FillArrays, LazyArrays, BandedMatrices
+using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, LazyArrays, BandedMatrices
 import ContinuumArrays: SimplifyStyle
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
 import LazyArrays: ApplyStyle, colsupport
+import QuasiArrays: MulQuasiMatrix
 
 
 @testset "Ultraspherical" begin
@@ -17,15 +18,17 @@ import LazyArrays: ApplyStyle, colsupport
     @test ApplyStyle(\,typeof(U),typeof(applied(*,D,T))) == SimplifyStyle()
     @test materialize(@~ U\(D*T)) isa BandedMatrix
     D₀ = U\(D*T)
-    @test_broken D₀ isa BandedMatrix
+    @test D₀ isa BandedMatrix
     @test D₀[1:10,1:10] isa BandedMatrix{Float64}
     @test D₀[1:10,1:10] == diagm(1 => 1:9)
     @test colsupport(D₀,1) == 1:0
 
     D₁ = C\(D*U)
     @test D₁ isa BandedMatrix
-    @test apply(*,D₁,D₀.args...)[1:10,1:10] == diagm(2 => 4:2:18)
+    @test apply(*,D₁,D₀)[1:10,1:10] == diagm(2 => 4:2:18)
     @test (D₁*D₀)[1:10,1:10] == diagm(2 => 4:2:18)
+    @test D₁*D₀ isa MulMatrix
+    @test bandwidths(D₁*D₀) == (-2,2)
 
     S₀ = (U\T)[1:10,1:10]
     @test S₀ isa BandedMatrix{Float64}
@@ -43,10 +46,8 @@ end
 
     P = Legendre()
     D = Derivative(axes(P,1))
-    @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Ones}
+    @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Fill}
 end
-
-
 
 @testset "Jacobi" begin
     b,a = 0.1,0.2
@@ -83,8 +84,7 @@ end
     A = Jacobi(2,2) \ (D*S)
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
 
-    @test A isa MulMatrix
-    @test isbanded(A)
+    @test A isa BandedMatrix
     @test bandwidths(A) == (-1,1)
     @test size(A) == (∞,∞)
     @test A[1:10,1:10] == diagm(1 => 1:0.5:5)
@@ -118,7 +118,8 @@ end
     @test M̃ isa BandedMatrix
     @test bandwidths(M̃) == (2,0)
 
-    @test A*B isa MulArray
+    @test A*B isa BroadcastArray
+    @test_broken bandwidths(A*B) == bandwidths(B)
 
     A,B,C = (P\(W*S))',(P'P),P\(W*S)
     M = ApplyArray(*,A,B,C)
@@ -146,7 +147,7 @@ end
     @test W*S isa QuasiArrays.ApplyQuasiMatrix
     
     M = P\(D*W*S)
-    @test M isa ApplyArray
+    @test M isa BandedMatrix
     @test M[1:10,1:10] == diagm(-1 => -2.0:-2:-18.0)
 
     N = 10
