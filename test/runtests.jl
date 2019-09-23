@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, LazyArrays, BandedMatrices
+using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, LazyArrays, BandedMatrices, LinearAlgebra, ForwardDiff, Test
 import ContinuumArrays: SimplifyStyle
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
 import LazyArrays: ApplyStyle, colsupport
@@ -119,7 +119,7 @@ end
     @test bandwidths(M̃) == (2,0)
 
     @test A*B isa BroadcastArray
-    @test_broken bandwidths(A*B) == bandwidths(B)
+    @test bandwidths(A*B) == bandwidths(B)
 
     A,B,C = (P\(W*S))',(P'P),P\(W*S)
     M = ApplyArray(*,A,B,C)
@@ -171,7 +171,6 @@ end
     @test A isa MulQuasiMatrix
 
     @test apply(*,L',L) isa QuasiArrays.ApplyQuasiArray
-
     Δ = L'L
     @test Δ isa MulMatrix
     @test bandwidths(Δ) == (0,0)
