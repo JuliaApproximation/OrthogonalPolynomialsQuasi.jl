@@ -239,3 +239,13 @@ end
     f = x -> Chebyshev{eltype(x)}()[x,1:5]
     @test ForwardDiff.derivative(f,0.1) ≈ [0;(1:4).*U[0.1,1:4]]
 end
+
+@testset "∞-dimensional Dirichlet" begin
+    S = Jacobi(true,true)
+    W = Diagonal(JacobiWeight(true,true)) 
+    D = Derivative(axes(S,1))
+    X = Diagonal(Inclusion(axes(S,1)))
+
+    (Legendre() \ S)*(S\(W*S)
+    Ultraspherical(3/2)\(D^2*W*S)
+end
