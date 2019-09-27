@@ -176,6 +176,22 @@ end
     @test bandwidths(Δ) == (0,0)
 end
 
+@testset "∞-FEM" begin
+    S = Jacobi(true,true)
+    W = Diagonal(JacobiWeight(true,true))
+    D = Derivative(axes(W,1))
+    L = D*W*S
+    Δ = L'L
+    WS = W*S
+    P = Legendre()
+    
+    f = P * Vcat(randn(10), Zeros(∞))
+
+    B = BroadcastArray(+, Δ, (P\(W*S))'*(P'P)*(P\(W*S)))
+    (P\(W*S))' * P' * f
+    applied(*, (P'P), f.args[2]) |> typeof
+end
+
 @testset "Chebyshev evaluation" begin
     P = Chebyshev()
     @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
