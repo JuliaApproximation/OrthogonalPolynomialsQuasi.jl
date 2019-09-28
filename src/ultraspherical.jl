@@ -49,38 +49,23 @@ end
 ##########
 
 # Ultraspherical(1)\(D*Chebyshev())
-@simplify function \(J::Ultraspherical, *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Chebyshev))
-    T = promote_type(eltype(J),eltype(D),eltype(S))
-    (J.λ == 1) || throw(ArgumentError())
-    _BandedMatrix((zero(eltype(M)):∞)', ∞, -1,1)
-end
-
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Chebyshev)
-    A = apply(\,Ultraspherical{eltype(S)}(1),applied(*,D,S))
-    ApplyQuasiMatrix(*, Ultraspherical{eltype(S)}(1), A)
+    T = promote_type(eltype(D),eltype(S))
+    A = _BandedMatrix((zero(T):∞)', ∞, -1,1)
+    ApplyQuasiMatrix(*, Ultraspherical{T}(1), A)
 end
 
 # Ultraspherical(1/2)\(D*Legendre())
-@simplify function \(J::Ultraspherical, *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Legendre))
-    T = promote_type(eltype(J),eltype(D),eltype(S))
-    (J.λ == 3/2) || throw(ArgumentError())
-    _BandedMatrix(Ones{T}(1,∞), ∞, -1,1)
-end
-
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Legendre)
-    A = apply(\,Ultraspherical{eltype(S)}(3/2),applied(*,D,S))
-    ApplyQuasiMatrix(*, Ultraspherical{eltype(S)}(3/2), A)
+    T = promote_type(eltype(D),eltype(S))
+    A = _BandedMatrix(Ones{T}(1,∞), ∞, -1,1)
+    ApplyQuasiMatrix(*, Ultraspherical{T}(3/2), A)
 end
 
 
 # Ultraspherical(λ+1)\(D*Ultraspherical(λ))
-@simplify function \(J::Ultraspherical, *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Ultraspherical))
-    (J.λ == S.λ+1) || throw(ArgumentError())
-    _BandedMatrix(Fill(2S.λ,1,∞), ∞, -1,1)
-end
-
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Ultraspherical)
-    A = apply(\,Ultraspherical{eltype(S)}(S.λ+1),applied(*,D,S))
+    A = _BandedMatrix(Fill(2S.λ,1,∞), ∞, -1,1)
     ApplyQuasiMatrix(*, Ultraspherical{eltype(S)}(S.λ+1), A)
 end
 

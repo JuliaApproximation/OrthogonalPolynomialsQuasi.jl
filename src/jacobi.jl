@@ -78,42 +78,30 @@ end
 ##########
 
 # Jacobi(b+1,a+1)\(D*Jacobi(a,b))
-@simplify function \(J::Jacobi, *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Jacobi))
-    (J.b == S.b+1 && J.a == S.a+1) || throw(ArgumentError())
-    _BandedMatrix((((-1:∞) .+ (S.a + S.b))/2)', ∞, -1,1)
-end
-
-
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Jacobi)
-    A = apply(\,Jacobi(S.b+1,S.a+1),applied(*,D,S))
+    A = _BandedMatrix((((-1:∞) .+ (S.a + S.b))/2)', ∞, -1,1)
     ApplyQuasiMatrix(*, Jacobi(S.b+1,S.a+1), A)
 end
 
 # Legendre()\ (D*W*Jacobi(true,true))
-@simplify function \(L::Legendre, 
-                    *(D::Derivative{<:Any,<:ChebyshevInterval}, W::QuasiDiagonal{Bool,JacobiWeight{Bool}}, S::Jacobi{Bool}))
-    w = parent(W)
+@simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, WS::WeightedBasis{Bool,JacobiWeight{Bool},Jacobi{Bool}})
+    w,S = WS.args                    
     (w.a && S.a && w.b && S.b) || throw(ArgumentError())
-    _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
-end
-
-# reduce to Legendre
-@simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, W::QuasiDiagonal{Bool,JacobiWeight{Bool}}, S::Jacobi{Bool})
-    w = parent(W)
-    (w.a && S.a && w.b && S.b) || throw(ArgumentError())
-    A = apply(\, Legendre{eltype(M)}(), applied(*,D,W,S))
+    A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
     ApplyQuasiMatrix(*, Legendre(), A)
 end
 
 # Jacobi(b-1,a-1)\ (D*w*Jacobi(b,a))
-@simplify function \(L::Jacobi, *(D::Derivative{<:Any,<:ChebyshevInterval}, W::QuasiDiagonal{<:Any,<:JacobiWeight}, S::Jacobi))
-    w = parent(W)
-    (w.a == S.a == L.a+1 && w.b == S.b == L.b+1) || throw(ArgumentError())
-    _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
+@simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, WS::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi})
+    w,S = WS.args
+    a,b = S.a, S.b
+    (w.a == a && w.b == b) || throw(ArgumentError())
+    A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
+    ApplyQuasiMatrix(*, Jacobi(a-1,b-1), A)
 end
 
-@simplify function \(J::Jacobi{Bool}, *(W::QuasiDiagonal{Bool,JacobiWeight{Bool}}, S::Jacobi{Bool}))
-    w = parent(W)
+@simplify function \(J::Jacobi{Bool}, WS::WeightedBasis{Bool,JacobiWeight{Bool},Jacobi{Bool}})
+    w,S = WS.args
     @assert  S.b && S.a
     if w.b && !w.a
         @assert !J.b && J.a
@@ -126,8 +114,8 @@ end
     end
 end
 
-@simplify function \(L::Legendre, *(W::QuasiDiagonal{Bool,JacobiWeight{Bool}}, S::Jacobi{Bool}))
-    w = parent(W)
+@simplify function \(L::Legendre, WS::WeightedBasis{Bool,JacobiWeight{Bool},Jacobi{Bool}})
+    w,S = WS.args
     if w.b && w.a
         @assert S.b && S.a
         _BandedMatrix(Vcat(((2:2:∞)./(3:2:∞))', Zeros(1,∞), (-(2:2:∞)./(3:2:∞))'), ∞, 2,0)
@@ -142,7 +130,7 @@ end
     end
 end
 
-@simplify function *(St::QuasiAdjoint{Bool,Jacobi{Bool}}, W::QuasiDiagonal{Int,JacobiWeight{Int}}, S::Jacobi{Bool})
+@simplify function *(St::QuasiAdjoint{Bool,Jacobi{Bool}}, WS::WeightedBasis{Int,JacobiWeight{Int},Jacobi{Bool}})
     w = parent(W)
     (w.b == 2 && S.b && w.a == 2 && S.a && parent(St) == S) || throw(ArgumentError())
     W_sqrt = Diagonal(JacobiWeight(true,true))

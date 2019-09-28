@@ -1,7 +1,7 @@
 using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, LazyArrays, BandedMatrices, LinearAlgebra, ForwardDiff, Test
 import ContinuumArrays: SimplifyStyle
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
-import LazyArrays: ApplyStyle, colsupport
+import LazyArrays: ApplyStyle, colsupport, MemoryLayout
 import QuasiArrays: MulQuasiMatrix
 
 
@@ -15,8 +15,8 @@ import QuasiArrays: MulQuasiMatrix
     @test U\U === pinv(U)*U === Eye(∞)
     @test C\C === pinv(C)*C === Eye(∞)
 
-    @test ApplyStyle(\,typeof(U),typeof(applied(*,D,T))) == SimplifyStyle()
-    @test materialize(@~ U\(D*T)) isa BandedMatrix
+    @test ApplyStyle(*,typeof(D),typeof(T)) == SimplifyStyle()
+    @test D*T isa MulQuasiMatrix
     D₀ = U\(D*T)
     @test D₀ isa BandedMatrix
     @test D₀[1:10,1:10] isa BandedMatrix{Float64}
@@ -69,8 +69,7 @@ end
 
 @testset "Jacobi integer" begin
     S = Jacobi(true,true)
-    W = Diagonal(JacobiWeight(true,true))
-    D = Derivative(axes(W,1))
+    D = Derivative(axes(S,1))
     P = Legendre()
 
     @test pinv(pinv(S)) === S
@@ -79,36 +78,34 @@ end
     Bi = pinv(Jacobi(2,2))
     @test Bi isa QuasiArrays.PInvQuasiMatrix
 
-    A = apply(\, Jacobi(2,2), applied(*, D, S))
-    @test A isa BandedMatrix
     A = Jacobi(2,2) \ (D*S)
     @test typeof(A) == typeof(pinv(Jacobi(2,2))*(D*S))
-
     @test A isa BandedMatrix
     @test bandwidths(A) == (-1,1)
     @test size(A) == (∞,∞)
     @test A[1:10,1:10] == diagm(1 => 1:0.5:5)
 
-    @test_broken @inferred(D*S)
-    M = D*S
+    M = @inferred(D*S)
     @test M isa MulQuasiMatrix
     @test M.args[1] == Jacobi(2,2)
     @test M.args[2][1:10,1:10] == A[1:10,1:10]
+end
 
-    L = Diagonal(JacobiWeight(true,false))
-    @test apply(\, Jacobi(false,true), applied(*,L,S)) isa BandedMatrix
-    @test_broken @inferred(Jacobi(false,true)\(L*S))
-    A = Jacobi(false,true)\(L*S)
+@testset "Weighted Jacobi integer" begin
+    S = Jacobi(true,true)
+    w̃ = JacobiWeight(true,false)
+    A = @inferred(Jacobi(false,true)\(w̃ .* S))
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
 
-    L = Diagonal(JacobiWeight(false,true))
-    @test_broken @inferred(Jacobi(true,false)\(L*S))
-    A = Jacobi(true,false)\(L*S)
+    w̄ = JacobiWeight(false,true)
+    A = @inferred(Jacobi(true,false)\(w̄.*S))
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
 
-    A,B = (P'P),P\(W*S)
+    w = JacobiWeight(true,true)
+    P = Legendre()
+    A,B = (P'P),P\(w.*S)
 
     M = Mul(A,B)
     @test M[1,1] == 4/3
@@ -121,7 +118,7 @@ end
     @test A*B isa BroadcastArray
     @test bandwidths(A*B) == bandwidths(B)
 
-    A,B,C = (P\(W*S))',(P'P),P\(W*S)
+    A,B,C = (P\(w.*S))',(P'P),P\(w.*S)
     M = ApplyArray(*,A,B,C)
     @test bandwidths(M) == (2,2)
     @test M[1,1] ≈  1+1/15
@@ -140,29 +137,28 @@ end
 
 @testset "P-FEM" begin
     S = Jacobi(true,true)
-    W = Diagonal(JacobiWeight(true,true))
-    D = Derivative(axes(W,1))
+    w = JacobiWeight(true,true)
+    D = Derivative(axes(S,1))
     P = Legendre()
 
-    @test W*S isa QuasiArrays.ApplyQuasiMatrix
+    @test w.*S isa QuasiArrays.BroadcastQuasiMatrix
     
-    M = P\(D*W*S)
+    M = P\(D*(w.*S))
     @test M isa BandedMatrix
     @test M[1:10,1:10] == diagm(-1 => -2.0:-2:-18.0)
 
     N = 10
-    A = D*W*S[:,1:N]
+    A = D* (w.*S)[:,1:N]
     @test A.args[1] == P    
-    @test P\((D*W)*S[:,1:N]) isa AbstractMatrix
-    @test P\(D*W*S[:,1:N]) isa AbstractMatrix
+    @test P\(D*(w.*S)[:,1:N]) isa MulMatrix
 
-    L = D*W*S
+    L = D*(w.*S)
     Δ = L'L
     @test Δ isa MulMatrix
     @test Δ[1:3,1:3] isa BandedMatrix
     @test bandwidths(Δ) == (0,0)
 
-    L = D*W*S[:,1:N]
+    L = D*(w.*S)[:,1:N]
 
     A  = apply(*, (L').args..., L.args...)
     @test A isa MulQuasiMatrix
@@ -178,18 +174,24 @@ end
 
 @testset "∞-FEM" begin
     S = Jacobi(true,true)
-    W = Diagonal(JacobiWeight(true,true))
-    D = Derivative(axes(W,1))
-    L = D*W*S
+    w = JacobiWeight(true,true)
+    D = Derivative(axes(w,1))
+    WS = w.*S
+    L = D* WS
     Δ = L'L
-    WS = W*S
     P = Legendre()
     
     f = P * Vcat(randn(10), Zeros(∞))
+    (P\WS)'*(P'P)*(P\WS)
+    B = BroadcastArray(+, Δ, (P\WS)'*(P'P)*(P\WS))
+    @test colsupport(B,1) == 1:3
+    
+    F = qr(B);
+    F.R
+    MemoryLayout(typeof(B))
 
-    B = BroadcastArray(+, Δ, (P\(W*S))'*(P'P)*(P\(W*S)))
-    (P\(W*S))' * P' * f
-    applied(*, (P'P), f.args[2]) |> typeof
+
+    B\ Vcat(randn(10), Zeros(∞))
 end
 
 @testset "Chebyshev evaluation" begin
