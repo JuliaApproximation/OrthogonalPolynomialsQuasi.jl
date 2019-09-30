@@ -4,7 +4,7 @@ using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, Inte
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
                 first, last
-import Base.Broadcast: materialize, BroadcastStyle
+import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
@@ -24,17 +24,13 @@ export Jacobi, Legendre, Chebyshev, Ultraspherical,
 
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
 
+@simplify *(B::Identity, C::OrthogonalPolynomial) = C*jacobimatrix(C)
 
-
-@simplify function \(A::OrthogonalPolynomial, *(B::Identity, C::OrthogonalPolynomial))
-    A === C || error("Override  $(typeof(A)) \\ (x * $(typeof(C)))")
-    jacobimatrix(A)
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::OrthogonalPolynomial) 
+    x == axes(C,1) || throw(DimensionMismatch())
+    C*jacobimatrix(C)
 end
-
-
-@simplify *(X::Identity, P::OrthogonalPolynomial) = ApplyQuasiMatrix(*, P, apply(\, P, applied(*, X, P)))
   
-
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, a::AbstractVector, c::AbstractVector, x) where T
     isempty(v) && return v
     v[1] = one(x) # assume OPs are normalized to one for now

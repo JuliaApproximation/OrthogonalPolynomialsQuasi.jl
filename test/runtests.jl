@@ -37,6 +37,11 @@ import QuasiArrays: MulQuasiMatrix
     S₁ = (C\U)[1:10,1:10]
     @test S₁ isa BandedMatrix{Float64}
     @test S₁ == diagm(0 => 1 ./ (1:10), 2=> -(1 ./ (3:10)))
+
+    x = axes(T,1)
+    J = T\(x.*T)
+    @test J isa BandedMatrix
+    @test J[1:10,1:10] == jacobimatrix(T)[1:10,1:10]
 end
 
 @testset "Legendre" begin
@@ -187,11 +192,8 @@ end
     @test colsupport(B,1) == 1:3
     
     F = qr(B);
-    F.R
-    MemoryLayout(typeof(B))
-
-
-    B\ Vcat(randn(10), Zeros(∞))
+    b = Vcat(randn(10), Zeros(∞))
+    @test B*(F \ b) ≈ b
 end
 
 @testset "Chebyshev evaluation" begin
