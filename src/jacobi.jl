@@ -31,6 +31,8 @@ end
 
 Jacobi(b::T, a::V) where {T,V} = Jacobi{promote_type(T,V)}(b,a)
 
+Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
+
 axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
 ==(P::Jacobi, Q::Jacobi) = P.a == Q.a && P.b == Q.b
 
@@ -40,6 +42,13 @@ axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
 
 @simplify *(A::QuasiAdjoint{<:Any,<:Legendre}, B::Legendre) =
     Diagonal(2 ./ (2(0:∞) .+ 1))
+
+@simplify function *(A::QuasiAdjoint{<:Any,<:Jacobi}, B::Jacobi)
+    @assert parent(A) == B
+    @assert iszero(B.b) && iszero(B.a)
+    P = Legendre{eltype(B)}()
+    P'P
+end
 
 ########
 # Jacobi Matrix
@@ -51,7 +60,7 @@ function jacobimatrix(J::Jacobi)
     b,a = J.b,J.a
     n = 0:∞
     B = @. 2*(n+1)*(n+a+b+1) / ((2n+a+b+1)*(2n+a+b+2))
-    A = Vcat((a-b) / (a+b+2), (a^2-b^2) ./ ((2n.+a.+b.+2).*(2n.+a.+b.+4)))
+    A = Vcat((b-a) / (a+b+2), (b^2-a^2) ./ ((2n.+a.+b.+2).*(2n.+a.+b.+4)))
     C = @. 2*(n+a)*(n+b) / ((2n+a+b)*(2n+a+b+1))
 
     _BandedMatrix(Vcat(C',A',B'), ∞, 1,1)
@@ -66,12 +75,37 @@ end
 # Conversion
 ##########
 
-@simplify function *(A::Jacobi, B::Jacobi) 
+@simplify \(A::Jacobi, B::Legendre) = A\Jacobi(B)
+@simplify \(A::Legendre, B::Jacobi) = Jacobi(A)\B
+
+@simplify function \(A::Jacobi, B::Jacobi) 
+    T = promote_type(eltype(A), eltype(B))
     a,b = B.a,B.b
-    if A.a == a && A.b == b+1
+    if A.a == a && A.b == b
+        Eye{T}(∞)
+    elseif A.a == a && A.b == b+1
         _BandedMatrix(Vcat((((0:∞) .+ a)./((1:2:∞) .+ (a+b)))', (((1:∞) .+ (a+b))./((1:2:∞) .+ (a+b)))'), ∞, 0,1)
+    else
+        error("not implemented")
     end
 end
+
+@simplify function \(A::Jacobi, wB::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) 
+    a,b = A.a,A.b
+    w,B = wB.args
+    if B.a == a && B.b == b+1 && isone(w.b) && iszero(w.a)
+        _BandedMatrix(Vcat((((2:2:∞) .+ 2b)./((2:2:∞) .+ (a+b)))', ((2:2:∞)./((2:2:∞) .+ (a+b)))'), ∞, 1,0)
+    elseif B.a == a+1 && B.b == b && iszero(w.b) && isone(w.a)
+        _BandedMatrix(Vcat((-((2:2:∞) .+ 2b)./((2:2:∞) .+ (a+b)))', ((2:2:∞)./((2:2:∞) .+ (a+b)))'), ∞, 1,0)
+    elseif B.a == a+1 && B.b == b+1 && isone(w.b) && isone(w.a)
+        J = Jacobi(b+1,a)
+        (Jacobi(b,a) \ (JacobiWeight(w.b, zero(w.a)) .* J)) * (J \ (JacobiWeight(zero(w.b), w.a) .* B))
+    else
+        error("not implemented")
+    end
+end
+
+\(A::Legendre, wB::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) = Jacobi(A) \ wB
 
 ##########
 # Derivatives
@@ -79,7 +113,7 @@ end
 
 # Jacobi(b+1,a+1)\(D*Jacobi(a,b))
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Jacobi)
-    A = _BandedMatrix((((-1:∞) .+ (S.a + S.b))/2)', ∞, -1,1)
+    A = _BandedMatrix((((1:∞) .+ (S.a + S.b))/2)', ∞, -1,1)
     ApplyQuasiMatrix(*, Jacobi(S.b+1,S.a+1), A)
 end
 

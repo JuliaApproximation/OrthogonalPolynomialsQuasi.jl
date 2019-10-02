@@ -6,70 +6,121 @@ import QuasiArrays: MulQuasiMatrix
 
 
 @testset "Ultraspherical" begin
-    T = Chebyshev()
-    U = Ultraspherical(1)
-    C = Ultraspherical(2)
-    D = Derivative(axes(T,1))
+    @testset "operators" begin
+        T = Chebyshev()
+        U = Ultraspherical(1)
+        C = Ultraspherical(2)
+        D = Derivative(axes(T,1))
 
-    @test T\T === pinv(T)*T === Eye(∞)
-    @test U\U === pinv(U)*U === Eye(∞)
-    @test C\C === pinv(C)*C === Eye(∞)
+        @test T\T === pinv(T)*T === Eye(∞)
+        @test U\U === pinv(U)*U === Eye(∞)
+        @test C\C === pinv(C)*C === Eye(∞)
 
-    @test ApplyStyle(*,typeof(D),typeof(T)) == SimplifyStyle()
-    @test D*T isa MulQuasiMatrix
-    D₀ = U\(D*T)
-    @test D₀ isa BandedMatrix
-    @test D₀[1:10,1:10] isa BandedMatrix{Float64}
-    @test D₀[1:10,1:10] == diagm(1 => 1:9)
-    @test colsupport(D₀,1) == 1:0
+        @test ApplyStyle(*,typeof(D),typeof(T)) == SimplifyStyle()
+        @test D*T isa MulQuasiMatrix
+        D₀ = U\(D*T)
+        @test D₀ isa BandedMatrix
+        @test D₀[1:10,1:10] isa BandedMatrix{Float64}
+        @test D₀[1:10,1:10] == diagm(1 => 1:9)
+        @test colsupport(D₀,1) == 1:0
 
-    D₁ = C\(D*U)
-    @test D₁ isa BandedMatrix
-    @test apply(*,D₁,D₀)[1:10,1:10] == diagm(2 => 4:2:18)
-    @test (D₁*D₀)[1:10,1:10] == diagm(2 => 4:2:18)
-    @test D₁*D₀ isa MulMatrix
-    @test bandwidths(D₁*D₀) == (-2,2)
+        D₁ = C\(D*U)
+        @test D₁ isa BandedMatrix
+        @test apply(*,D₁,D₀)[1:10,1:10] == diagm(2 => 4:2:18)
+        @test (D₁*D₀)[1:10,1:10] == diagm(2 => 4:2:18)
+        @test D₁*D₀ isa MulMatrix
+        @test bandwidths(D₁*D₀) == (-2,2)
 
-    S₀ = (U\T)[1:10,1:10]
-    @test S₀ isa BandedMatrix{Float64}
-    @test S₀ == diagm(0 => [1.0; fill(0.5,9)], 2=> fill(-0.5,8))
+        S₀ = (U\T)[1:10,1:10]
+        @test S₀ isa BandedMatrix{Float64}
+        @test S₀ == diagm(0 => [1.0; fill(0.5,9)], 2=> fill(-0.5,8))
 
-    S₁ = (C\U)[1:10,1:10]
-    @test S₁ isa BandedMatrix{Float64}
-    @test S₁ == diagm(0 => 1 ./ (1:10), 2=> -(1 ./ (3:10)))
+        S₁ = (C\U)[1:10,1:10]
+        @test S₁ isa BandedMatrix{Float64}
+        @test S₁ == diagm(0 => 1 ./ (1:10), 2=> -(1 ./ (3:10)))
 
-    x = axes(T,1)
-    J = T\(x.*T)
-    @test J isa BandedMatrix
-    @test J[1:10,1:10] == jacobimatrix(T)[1:10,1:10]
+        x = axes(T,1)
+        J = T\(x.*T)
+        @test J isa BandedMatrix
+        @test J[1:10,1:10] == jacobimatrix(T)[1:10,1:10]
+    end
+    @testset "test on functions" begin
+        T = Chebyshev()
+        U = Ultraspherical(1)
+        D = Derivative(axes(T,1))
+        f = T*Vcat(randn(10), Zeros(∞))
+        @test (U*(U\f)).args[1] isa Ultraspherical
+        @test (U*(U\f))[0.1] ≈ f[0.1]
+        @test (D*f)[0.1] ≈ ForwardDiff.derivative(x -> (Chebyshev{eltype(x)}()*f.args[2])[x],0.1)
+    end
 end
 
 @testset "Legendre" begin
-    @test jacobimatrix(Jacobi(0.,0.))[1,1] == 0.0
-    @test jacobimatrix(Jacobi(0.,0.))[1:10,1:10] == jacobimatrix(Legendre())[1:10,1:10] == jacobimatrix(Ultraspherical(1/2))[1:10,1:10]
-    @test Jacobi(0.,0.)[0.1,1:10] ≈ Legendre()[0.1,1:10] ≈ Ultraspherical(1/2)[0.1,1:10]
+    @testset "operators" begin
+        @test jacobimatrix(Jacobi(0.,0.))[1,1] == 0.0
+        @test jacobimatrix(Jacobi(0.,0.))[1:10,1:10] == jacobimatrix(Legendre())[1:10,1:10] == jacobimatrix(Ultraspherical(1/2))[1:10,1:10]
+        @test Jacobi(0.,0.)[0.1,1:10] ≈ Legendre()[0.1,1:10] ≈ Ultraspherical(1/2)[0.1,1:10]
 
-    P = Legendre()
-    D = Derivative(axes(P,1))
-    @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Fill}
+        P = Legendre()
+        P̃ = Jacobi(0.0,0.0)
+        P̄ = Ultraspherical(1/2)
+        @test P̃\P === P\P̃ === P̄\P === P\P̄ === Eye(∞)
+        @test_broken P̄\P̃ === P̃\P̄ === Eye(∞)
+        
+        D = Derivative(axes(P,1))
+        @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Fill}
+    end
+    @testset "test on functions" begin
+        P = Legendre()
+        D = Derivative(axes(P,1))
+        f = P*Vcat(randn(10), Zeros(∞))
+        P̃ = Jacobi(0.0,0.0)
+        P̄ = Ultraspherical(1/2)
+        @test (P̃*(P̃\f))[0.1] == (P̄*(P̄\f))[0.1] == f[0.1]
+        C = Ultraspherical(3/2)
+        @test (C*(C\f))[0.1] ≈ f[0.1]
+
+        @test (D*f)[0.1] ≈ ForwardDiff.derivative(x -> (Legendre{eltype(x)}()*f.args[2])[x],0.1)
+    end
 end
 
 @testset "Jacobi" begin
-    b,a = 0.1,0.2
-    S = Jacobi(b,a)
-    x = 0.1
-    @test S[x,1] === 1.0
-    X = jacobimatrix(S)
-    @test X[1,1] ≈ (a^2-b^2)/((a+b)*(a+b+2))
-    @test X[2,1] ≈ 2/(a+b+2)
-    @test S[x,2] ≈ 0.065
-    @test S[x,10] ≈ 0.22071099583604945
+    @testset "basis" begin
+        b,a = 0.1,0.2
+        P = Jacobi(b,a)
+        @test P[0.1,2] ≈ 0.16499999999999998
+        P = Jacobi(a,b)
+        @test P[-0.1,2] ≈ -0.16499999999999998
+    end
+    @testset "operators" begin
+        b,a = 0.2,0.1
+        S = Jacobi(b,a)
+        x = 0.1
+        @test S[x,1] === 1.0
+        X = jacobimatrix(S)
+        @test X[1,1] ≈ (b^2-a^2)/((a+b)*(a+b+2))
+        @test X[2,1] ≈ 2/(a+b+2)
+        @test S[x,2] ≈ 0.065
+        @test S[x,10] ≈ 0.22071099583604945
 
-    w = JacobiWeight(b,a)
-    @test w[x] ≈ (1+x)^b * (1-x)^a
-    wS = w.*S
-    @test wS[0.1,1] ≈ w[0.1]
-    @test wS[0.1,1:2] ≈ w[0.1] .* S[0.1,1:2]
+        w = JacobiWeight(b,a)
+        @test w[x] ≈ (1+x)^b * (1-x)^a
+        wS = w.*S
+        @test wS[0.1,1] ≈ w[0.1]
+        @test wS[0.1,1:2] ≈ w[0.1] .* S[0.1,1:2]
+    end
+    @testset "functions" begin
+        b,a = 0.1,0.2
+        P = Jacobi(b,a)
+        D = Derivative(axes(P,1))
+
+        f = P*Vcat(randn(10), Zeros(∞))
+        @test (Jacobi(b+1,a) * (Jacobi(b+1,a)\f))[0.1] ≈ f[0.1]
+        h = 0.0000001
+        @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=10h
+
+        (D*(JacobiWeight(b,a) .* f))
+    end
 end
 
 @testset "Jacobi integer" begin
