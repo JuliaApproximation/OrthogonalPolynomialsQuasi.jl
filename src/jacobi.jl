@@ -131,7 +131,7 @@ end
     a,b = S.a, S.b
     (w.a == a && w.b == b) || throw(ArgumentError())
     A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
-    ApplyQuasiMatrix(*, Jacobi(a-1,b-1), A)
+    ApplyQuasiMatrix(*, JacobiWeight(a-1,b-1) .* Jacobi(a-1,b-1), A)
 end
 
 @simplify function \(J::Jacobi{Bool}, WS::WeightedBasis{Bool,JacobiWeight{Bool},Jacobi{Bool}})
