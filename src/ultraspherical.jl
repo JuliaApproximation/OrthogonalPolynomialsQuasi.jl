@@ -38,7 +38,10 @@ Jacobi(C::Chebyshev{T}) where T = Jacobi(-one(T)/2,-one(T)/2)
 # Jacobi Matrix
 ########
 
-jacobimatrix(C::Chebyshev{T}) where T = _BandedMatrix(Vcat(Fill(one(T)/2,1,∞), Zeros(1,∞), Hcat(one(T), Fill(one(T)/2,1,∞))), ∞, 1, 1)
+jacobimatrix(C::Chebyshev{T}) where T = 
+    _BandedMatrix(Vcat(Fill(one(T)/2,1,∞), 
+                        Zeros(1,∞), 
+                        Hcat(one(T), Fill(one(T)/2,1,∞))), ∞, 1, 1)
 
 function jacobimatrix(P::Ultraspherical{T}) where T
     λ = P.λ
