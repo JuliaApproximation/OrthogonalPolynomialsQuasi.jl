@@ -94,9 +94,9 @@ end
 @simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::Chebyshev)
     if U.λ == 1
         T = promote_type(eltype(U), eltype(C))
-        _BandedMatrix(Vcat(Hcat(Ones{T}(1,3),Ones{T}(1,∞)/2),
+        _BandedMatrix(Vcat(-Ones{T}(1,∞)/2,
                             Zeros{T}(1,∞), 
-                            Ones{T}(1,∞)/2), ∞, 0,2)
+                            Hcat(Ones{T}(1,1),Ones{T}(1,∞)/2)), ∞, 0,2)
     elseif U.λ > 0
         (U\Ultraspherical(1)) * (Ultraspherical(1)\C)
     else

@@ -96,7 +96,7 @@ end
     if B.a == a && B.b == b+1 && isone(w.b) && iszero(w.a)
         _BandedMatrix(Vcat((((2:2:∞) .+ 2b)./((2:2:∞) .+ (a+b)))', ((2:2:∞)./((2:2:∞) .+ (a+b)))'), ∞, 1,0)
     elseif B.a == a+1 && B.b == b && iszero(w.b) && isone(w.a)
-        _BandedMatrix(Vcat((-((2:2:∞) .+ 2b)./((2:2:∞) .+ (a+b)))', ((2:2:∞)./((2:2:∞) .+ (a+b)))'), ∞, 1,0)
+        _BandedMatrix(Vcat((((2:2:∞) .+ 2a)./((2:2:∞) .+ (a+b)))', -((2:2:∞)./((2:2:∞) .+ (a+b)))'), ∞, 1,0)
     elseif B.a == a+1 && B.b == b+1 && isone(w.b) && isone(w.a)
         J = Jacobi(b+1,a)
         (Jacobi(b,a) \ (JacobiWeight(w.b, zero(w.a)) .* J)) * (J \ (JacobiWeight(zero(w.b), w.a) .* B))

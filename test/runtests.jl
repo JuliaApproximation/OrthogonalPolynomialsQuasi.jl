@@ -117,7 +117,7 @@ end
         f = P*Vcat(randn(10), Zeros(∞))
         @test (Jacobi(b+1,a) * (Jacobi(b+1,a)\f))[0.1] ≈ f[0.1]
         h = 0.0000001
-        @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=10h
+        @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=100h
 
         (D*(JacobiWeight(b,a) .* f))
     end
@@ -139,7 +139,7 @@ end
     @test A isa BandedMatrix
     @test bandwidths(A) == (-1,1)
     @test size(A) == (∞,∞)
-    @test A[1:10,1:10] == diagm(1 => 1:0.5:5)
+    @test A[1:10,1:10] == diagm(1 => 2:0.5:6)
 
     M = @inferred(D*S)
     @test M isa MulQuasiMatrix
@@ -153,14 +153,22 @@ end
     A = @inferred(Jacobi(false,true)\(w̃ .* S))
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
+    @test A[1:10,1:10] ≈ (Jacobi(0.0,1.0) \ (JacobiWeight(1.0,0.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
 
     w̄ = JacobiWeight(false,true)
     A = @inferred(Jacobi(true,false)\(w̄.*S))
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
+    @test A[1:10,1:10] ≈ (Jacobi(1.0,0.0) \ (JacobiWeight(0.0,1.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
+    
+    P = Legendre()
+    w̄ = JacobiWeight(false,true)
+    @test_broken P \ (w̃ .* Jacobi(false,true))
+    w̄ = JacobiWeight(true,false)
+    @test (P \ (w̃ .* Jacobi(true,false)))[1:10,1:10] == diagm(0 => ones(10), -1 => ones(9))
+
 
     w = JacobiWeight(true,true)
-    P = Legendre()
     A,B = (P'P),P\(w.*S)
 
     M = Mul(A,B)
@@ -178,7 +186,6 @@ end
     M = ApplyArray(*,A,B,C)
     @test bandwidths(M) == (2,2)
     @test M[1,1] ≈  1+1/15
-    @test typeof(M) == typeof(A*B*C)
     M = A*B*C
     @test bandwidths(M) == (2,2)
     @test M[1,1] ≈  1+1/15
@@ -242,6 +249,12 @@ end
     B = BroadcastArray(+, Δ, (P\WS)'*(P'P)*(P\WS))
     @test colsupport(B,1) == 1:3
     
+    @test axes(B.args[2].args[1]) == (Base.OneTo(∞),Base.OneTo(∞))
+    @test axes(B.args[2]) == (Base.OneTo(∞),Base.OneTo(∞))
+    @test axes(B) == (Base.OneTo(∞),Base.OneTo(∞))
+
+    @test BandedMatrix(view(B,1:10,13:20)) == zeros(10,8)
+
     F = qr(B);
     b = Vcat(randn(10), Zeros(∞))
     @test B*(F \ b) ≈ b
@@ -313,10 +326,10 @@ end
 
 @testset "∞-dimensional Dirichlet" begin
     S = Jacobi(true,true)
-    W = Diagonal(JacobiWeight(true,true)) 
+    w = JacobiWeight(true,true)
     D = Derivative(axes(S,1))
     X = Diagonal(Inclusion(axes(S,1)))
 
-    (Legendre() \ S)*(S\(W*S)
-    Ultraspherical(3/2)\(D^2*W*S)
+    @test_broken (Legendre() \ S)*(S\(w.*S))
+    @test (Ultraspherical(3/2)\(D^2*(w.*S)))[1:10,1:10] == diagm(0 => -(2:2:20))
 end
