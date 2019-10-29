@@ -16,7 +16,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
 
 
-import ContinuumArrays: Basis, @simplify, Identity
+import ContinuumArrays: Basis, Weight, @simplify, Identity
 
 export Jacobi, Legendre, Chebyshev, Ultraspherical,
             JacobiWeight, ChebyshevWeight, UltrasphericalWeight,
@@ -113,7 +113,7 @@ getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
 include("jacobi.jl")
 include("ultraspherical.jl")
-
+include("stieltjes.jl")
 
 
 end # module

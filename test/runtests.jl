@@ -1,7 +1,7 @@
-using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, LazyArrays, BandedMatrices, LinearAlgebra, ForwardDiff, Test
-import ContinuumArrays: SimplifyStyle
+using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, LazyArrays, BandedMatrices, LinearAlgebra, ForwardDiff, IntervalSets, Test
+import ContinuumArrays: SimplifyStyle, BasisLayout
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
-import LazyArrays: ApplyStyle, colsupport, MemoryLayout
+import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import QuasiArrays: MulQuasiMatrix
 
 
@@ -120,6 +120,13 @@ end
         @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=100h
 
         (D*(JacobiWeight(b,a) .* f))
+    end
+
+    @testset "trivial weight" begin
+        S = JacobiWeight(0.0,0.0) .* Jacobi(0.0,0.0)
+        @test S == S
+        @test Legendre() == S
+        @test Legendre()\S isa Eye
     end
 end
 
@@ -333,3 +340,33 @@ end
     @test_broken (Legendre() \ S)*(S\(w.*S))
     @test (Ultraspherical(3/2)\(D^2*(w.*S)))[1:10,1:10] == diagm(0 => -(2:2:20))
 end
+
+@testset "rescaled" begin 
+    x = Inclusion(0..1)
+    S = Jacobi(1.0,1.0)[2x.-1,:]
+    D = Derivative(x)
+    f = S*[[1,2,3]; zeros(∞)]
+    g = Jacobi(1.0,1.0)*[[1,2,3]; zeros(∞)]
+    @test f[0.1] ≈ g[2*0.1-1]
+    h = 0.0000001
+    @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=100h
+    @test Jacobi(2.0,2.0)[2x.-1,:] \ (D*S).args[1] isa BandedMatrix
+    @test (Jacobi(2.0,2.0)[2x.-1,:] \ (D*S))[1:10,1:10] == diagm(1 => 4:12)
+
+    P = Legendre()[2x.-1,:]
+    w = JacobiWeight(1.0,1.0)
+    wS = (w .* Jacobi(1.0,1.0))[2x.-1,:]
+    @test MemoryLayout(typeof(wS)) isa BasisLayout
+    f = wS*[[1,2,3]; zeros(∞)]
+    g = (w .* Jacobi(1.0,1.0))*[[1,2,3]; zeros(∞)]
+    @test f[0.1] ≈ g[2*0.1-1]
+    h = 0.0000001
+    @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=100h
+    @test P == P
+
+    @test P.parent == (D*wS).args[1].parent
+    DwS = apply(*,D,wS)
+    A,B = P,arguments(DwS)[1];
+    @test (A.parent\B.parent) == Eye(∞)
+    @test (P \ (DwS))[1:10,1:10] == diagm(-1 => -4:-4:-36)
+end 

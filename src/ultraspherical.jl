@@ -1,4 +1,5 @@
 struct ChebyshevWeight{T} <: AbstractJacobiWeight{T} end
+ChebyshevWeight() = ChebyshevWeight{Float64}()
 
 function getindex(w::ChebyshevWeight, x::Number)
     x ∈ axes(w,1) || throw(BoundsError())

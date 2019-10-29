@@ -1,4 +1,4 @@
-abstract type AbstractJacobiWeight{T} <: AbstractQuasiVector{T} end
+abstract type AbstractJacobiWeight{T} <: Weight{T} end
 
 struct JacobiWeight{T} <: AbstractJacobiWeight{T}
     b::T
@@ -7,6 +7,8 @@ struct JacobiWeight{T} <: AbstractJacobiWeight{T}
 end
 
 JacobiWeight(b::T, a::V) where {T,V} = JacobiWeight{promote_type(T,V)}(b,a)
+
+==(A::JacobiWeight, B::JacobiWeight) = A.b == B.b && A.a == B.a
 
 axes(::AbstractJacobiWeight) = (Inclusion(ChebyshevInterval()),)
 function getindex(w::JacobiWeight, x::Number)
@@ -35,6 +37,18 @@ Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
 
 axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
 ==(P::Jacobi, Q::Jacobi) = P.a == Q.a && P.b == Q.b
+==(P::Legendre, Q::Jacobi) = Jacobi(P) == Q
+==(P::Jacobi, Q::Legendre) = P == Jacobi(Q)
+==(A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) = 
+    A.args == B.args
+==(A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, B::Jacobi{T}) where T = 
+    A == JacobiWeight(zero(T),zero(T)).*B
+==(A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, B::Legendre) = 
+    A == Jacobi(B)
+==(A::Jacobi{T}, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) where T = 
+    JacobiWeight(zero(T),zero(T)).*A == B
+==(A::Legendre, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) =     
+    Jacobi(A) == B
 
 ########
 # Mass Matrix
@@ -86,7 +100,7 @@ end
     elseif A.a == a && A.b == b+1
         _BandedMatrix(Vcat((((0:∞) .+ a)./((1:2:∞) .+ (a+b)))', (((1:∞) .+ (a+b))./((1:2:∞) .+ (a+b)))'), ∞, 0,1)
     else
-        error("not implemented")
+        error("not implemented for $A and $B")
     end
 end
 
@@ -100,8 +114,10 @@ end
     elseif B.a == a+1 && B.b == b+1 && isone(w.b) && isone(w.a)
         J = Jacobi(b+1,a)
         (Jacobi(b,a) \ (JacobiWeight(w.b, zero(w.a)) .* J)) * (J \ (JacobiWeight(zero(w.b), w.a) .* B))
+    elseif iszero(w.a) && iszero(w.b)
+        A \ B
     else
-        error("not implemented")
+        error("not implemented for $A and $wB")
     end
 end
 
