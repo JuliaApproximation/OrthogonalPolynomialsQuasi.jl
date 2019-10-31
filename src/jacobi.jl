@@ -57,12 +57,15 @@ axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
 @simplify *(A::QuasiAdjoint{<:Any,<:Legendre}, B::Legendre) =
     Diagonal(2 ./ (2(0:∞) .+ 1))
 
-@simplify function *(A::QuasiAdjoint{<:Any,<:Jacobi}, B::Jacobi)
-    @assert parent(A) == B
-    @assert iszero(B.b) && iszero(B.a)
+function legendre_massmatrix(Ac, B)
+    A = parent(Ac)
     P = Legendre{eltype(B)}()
-    P'P
+    (P\A)'*(P'P)*(P\B)
 end
+
+@simplify *(Ac::QuasiAdjoint{<:Any,<:Jacobi}, B::Jacobi) = legendre_massmatrix(Ac,B)
+@simplify *(Ac::QuasiAdjoint{<:Any,<:WeightedBasis{<:Any,<:JacobiWeight}}, B::WeightedBasis{<:Any,<:JacobiWeight}) = legendre_massmatrix(Ac,B)
+@simplify *(Ac::QuasiAdjoint{<:Any,<:Jacobi}, B::WeightedBasis{<:Any,<:JacobiWeight})  = legendre_massmatrix(Ac,B)
 
 ########
 # Jacobi Matrix
@@ -104,18 +107,32 @@ end
     end
 end
 
-@simplify function \(A::Jacobi, wB::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) 
+@simplify function \(A::Jacobi, w_B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) 
     a,b = A.a,A.b
-    w,B = wB.args
-    if B.a == a && B.b == b+1 && isone(w.b) && iszero(w.a)
-        _BandedMatrix(Vcat((((2:2:∞) .+ 2b)./((2:2:∞) .+ (a+b)))', ((2:2:∞)./((2:2:∞) .+ (a+b)))'), ∞, 1,0)
-    elseif B.a == a+1 && B.b == b && iszero(w.b) && isone(w.a)
-        _BandedMatrix(Vcat((((2:2:∞) .+ 2a)./((2:2:∞) .+ (a+b)))', -((2:2:∞)./((2:2:∞) .+ (a+b)))'), ∞, 1,0)
-    elseif B.a == a+1 && B.b == b+1 && isone(w.b) && isone(w.a)
-        J = Jacobi(b+1,a)
-        (Jacobi(b,a) \ (JacobiWeight(w.b, zero(w.a)) .* J)) * (J \ (JacobiWeight(zero(w.b), w.a) .* B))
-    elseif iszero(w.a) && iszero(w.b)
+    (JacobiWeight(zero(a),zero(b)) .* A) \ w_B
+end
+
+@simplify function \(w_A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, B::Jacobi) 
+    a,b = B.a,B.b
+    w_A \ (JacobiWeight(zero(a),zero(b)) .* B)
+end
+
+@simplify function \(w_A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, w_B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) 
+    wA,A = w_A.args
+    wB,B = w_B.args
+
+    if wA == wB
         A \ B
+    elseif B.a == A.a && B.b == A.b+1 && wB.b == wA.b+1 && wB.a == wA.a
+        _BandedMatrix(Vcat((((2:2:∞) .+ 2A.b)./((2:2:∞) .+ (A.a+A.b)))', ((2:2:∞)./((2:2:∞) .+ (A.a+A.b)))'), ∞, 1,0)
+    elseif B.a == A.a+1 && B.b == A.b && wB.b == wA.b && wB.a == wA.a+1
+        _BandedMatrix(Vcat((((2:2:∞) .+ 2A.a)./((2:2:∞) .+ (A.a+A.b)))', -((2:2:∞)./((2:2:∞) .+ (A.a+A.b)))'), ∞, 1,0)
+    elseif wB.a ≥ wA.a+1
+        J = JacobiWeight(wB.b,wB.a-1) .* Jacobi(B.b,B.a-1) 
+        (w_A\J) * (J\w_B)
+    elseif wB.b ≥ wA.b+1
+        J = JacobiWeight(wB.b-1,wB.a) .* Jacobi(B.b-1,B.a) 
+        (w_A\J) * (J\w_B)
     else
         error("not implemented for $A and $wB")
     end
@@ -133,36 +150,19 @@ end
     ApplyQuasiMatrix(*, Jacobi(S.b+1,S.a+1), A)
 end
 
-# Legendre()\ (D*W*Jacobi(true,true))
-@simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, WS::WeightedBasis{Bool,JacobiWeight{Bool},Jacobi{Bool}})
-    w,S = WS.args                    
-    (w.a && S.a && w.b && S.b) || throw(ArgumentError())
-    A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
-    ApplyQuasiMatrix(*, Legendre(), A)
-end
-
 # Jacobi(b-1,a-1)\ (D*w*Jacobi(b,a))
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, WS::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi})
     w,S = WS.args
     a,b = S.a, S.b
     (w.a == a && w.b == b) || throw(ArgumentError())
-    A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
-    ApplyQuasiMatrix(*, JacobiWeight(a-1,b-1) .* Jacobi(a-1,b-1), A)
-end
-
-@simplify function \(J::Jacobi{Bool}, WS::WeightedBasis{Bool,JacobiWeight{Bool},Jacobi{Bool}})
-    w,S = WS.args
-    @assert  S.b && S.a
-    if w.b && !w.a
-        @assert !J.b && J.a
-        _BandedMatrix(Vcat(((2:2:∞)./(3:2:∞))',((2:2:∞)./(3:2:∞))'), ∞, 1,0)
-    elseif !w.b && w.a
-        @assert J.b && !J.a
-        _BandedMatrix(Vcat(((2:2:∞)./(3:2:∞))',(-(2:2:∞)./(3:2:∞))'), ∞, 1,0)
+    if w.a == 0 && w.b == 0
+        D*S
     else
-        error("Not implemented")
+        A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
+        ApplyQuasiMatrix(*, JacobiWeight(a-1,b-1) .* Jacobi(a-1,b-1), A)
     end
 end
+
 
 @simplify function \(L::Legendre, WS::WeightedBasis{Bool,JacobiWeight{Bool},Jacobi{Bool}})
     w,S = WS.args

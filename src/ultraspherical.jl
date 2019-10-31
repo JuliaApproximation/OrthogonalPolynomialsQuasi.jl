@@ -25,9 +25,13 @@ Chebyshev() = Chebyshev{Float64}()
 struct Ultraspherical{T,Λ<:Real} <: AbstractJacobi{T} 
     λ::Λ
 end
-Ultraspherical{T}(λ::Λ) where {T,Λ} = Ultraspherical{T,Λ}(λ)
-Ultraspherical(λ::Λ) where Λ = Ultraspherical{Float64,Λ}(λ)
+Ultraspherical{T}(λ::Λ) where {T,Λ<:Real} = Ultraspherical{T,Λ}(λ)
+Ultraspherical(λ::Λ) where Λ<:Real = Ultraspherical{Float64,Λ}(λ)
 Ultraspherical(P::Legendre{T}) where T = Ultraspherical(one(T)/2)
+function Ultraspherical(P::Jacobi{T}) where T
+    P.a == P.b || throw(ArgumentError("$P is not ultraspherical"))
+    Ultraspherical(P.a+one(T)/2)
+end
 
 Jacobi(C::Ultraspherical{T}) where T = Jacobi(C.λ-one(T)/2,C.λ-one(T)/2)
 Jacobi(C::Chebyshev{T}) where T = Jacobi(-one(T)/2,-one(T)/2)
@@ -87,10 +91,12 @@ end
 
 @simplify function \(A::Ultraspherical, B::Jacobi) 
     Ã = Jacobi(A)
-    (view(A,1,:)./view(Ã,1,:)) .* (Ã\B)
+    Diagonal(Ã[1,:]./A[1,:]) * (Ã\B)
 end
-@simplify \(A::Jacobi, B::Ultraspherical) = Ultraspherical(A)\B
-
+@simplify function \(A::Jacobi, B::Ultraspherical) 
+    B̃ = Jacobi(B)
+    (A\B̃)*Diagonal(B[1,:]./B̃[1,:])
+end
 
 @simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::Chebyshev)
     if U.λ == 1

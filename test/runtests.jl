@@ -370,3 +370,26 @@ end
     @test (A.parent\B.parent) == Eye(∞)
     @test (P \ (DwS))[1:10,1:10] == diagm(-1 => -4:-4:-36)
 end 
+
+@testset "Jacobi-Chebyshev-Ultraspherical transforms" begin
+    @test Jacobi(0.0,0.0) \ Legendre() == Eye(∞) 
+    @test ((Ultraspherical(3/2) \ Jacobi(1,1))*(Jacobi(1,1) \ Ultraspherical(3/2)))[1:10,1:10] ≈ Eye(10)
+    f = Jacobi(0.0,0.0)*[[1,2,3]; zeros(∞)]
+    @test (Legendre() \ f) == f.args[2]
+    f = Jacobi(1.0,1.0)*[[1,2,3]; zeros(∞)]
+    g = Ultraspherical(3/2)*(Ultraspherical(3/2)\f)
+    @test f[0.1] ≈ g[0.1]
+end
+
+@testset "Beam" begin
+    P = JacobiWeight(0.0,0.0) .* Jacobi(0.0,0.0)
+    x = axes(P,1)
+    D = Derivative(x)
+    @test (D*P).args[1] == Jacobi{Float64}(1,1)
+    @test (Jacobi(1,1)\(D*P))[1:10,1:10] ≈ (Jacobi(1,1) \ (D*Legendre()))[1:10,1:10]
+
+    S = JacobiWeight(2.0,2.0) .* Jacobi(2.0,2.0)
+    @test (Legendre() \ S)[1,1] ≈ 0.533333333333333333
+    Δ² = (D^2*S)'*(D^2*S)
+    M = S'S
+end

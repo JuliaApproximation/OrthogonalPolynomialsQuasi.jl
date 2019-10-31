@@ -1,9 +1,9 @@
 module OrthogonalPolynomialsQuasi
-using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, IntervalSets, DomainSets, InfiniteLinearAlgebra, LinearAlgebra
+using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, IntervalSets, DomainSets, InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last
+                first, last, Slice
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv
@@ -13,14 +13,21 @@ import FillArrays: AbstractFill, getindex_value
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
-                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle
+                    LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle,
+                    _getindex
 
+import InfiniteArrays: OneToInf
+import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector
 
-import ContinuumArrays: Basis, Weight, @simplify, Identity
-
-export Jacobi, Legendre, Chebyshev, Ultraspherical,
+export Jacobi, Legendre, Chebyshev, Ultraspherical, Fourier,
             JacobiWeight, ChebyshevWeight, UltrasphericalWeight,
             fullmaterialize
+
+_getindex(::IndexStyle, A::AbstractQuasiArray, i::Real, j::Slice{<:OneToInf}) =
+    materialize(view(A, i, j))
+_getindex(::IndexStyle, A::AbstractQuasiArray, i::Slice{<:OneToInf}, j::Real) =
+    materialize(view(A, i, j))
+
 
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
 
@@ -113,6 +120,7 @@ getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
 include("jacobi.jl")
 include("ultraspherical.jl")
+include("fourier.jl")
 include("stieltjes.jl")
 
 

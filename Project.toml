@@ -5,7 +5,9 @@ version = "0.1.0"
 
 [deps]
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
+BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0"
 ContinuumArrays = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
+InfiniteArrays = "4858937d-0d70-526a-a4dd-2d5cb5dd786c"
 InfiniteLinearAlgebra = "cde9dba0-b1de-11e9-2c62-0bab9446c55c"
 DomainSets = "5b8099bc-c8ec-5219-889f-1d9e522a28bf"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
@@ -24,6 +26,7 @@ julia = "1.0"
 QuasiArrays = "0.0.2"
 ContinuumArrays = "0.0.2"
 InfiniteLinearAlgebra = "0.0.2"
+InfiniteArrays = "0.4"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
