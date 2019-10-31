@@ -1,6 +1,24 @@
 using OrthogonalPolynomialsQuasi, ContinuumArrays, DifferentialEquations, Plots
 
 ###
+# Heat
+###
+
+S = JacobiWeight(1.0,1.0) .* Jacobi(1.0,1.0)
+D = Derivative(axes(S,1))
+Δ = -((D*S)'*(D*S))
+M = S'S
+
+function evolution(u, (M,A), t) 
+    M\(A*u)
+end
+n = 50
+u0 = [[1,2,3]; zeros(n-3)]
+prob = ODEProblem(evolution,u0,(0.0,3.0),(cholesky(Symmetric(M[1:n,1:n])),Δ[1:n,1:n]))
+@time u = solve(prob,TRBDF2()); u(1.0)
+
+
+###
 # Beam
 ###
 
