@@ -18,7 +18,8 @@ end
     P = parent(wT)
     z, x = parent(S).args[1].args
     z̃ = inbounds_getindex(parentindices(wT)[1], z)
-    (inv.(z - x') * P)[:,parentindices(wT)[2]]
+    x̃ = axes(P,1)
+    (inv.(z̃ .- x̃') * P)[:,parentindices(wT)[2]]
 end
 
 @simplify function *(H::Hilbert, wT::SubQuasiArray{<:Any,2,<:WeightedBasis,<:Tuple{<:AffineQuasiVector,<:Any}}) 

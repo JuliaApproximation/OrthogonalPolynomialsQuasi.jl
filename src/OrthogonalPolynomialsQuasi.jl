@@ -17,11 +17,11 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     _getindex
 
 import InfiniteArrays: OneToInf
-import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector
+import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex
 
 export Jacobi, Legendre, Chebyshev, Ultraspherical, Fourier,
             JacobiWeight, ChebyshevWeight, UltrasphericalWeight,
-            fullmaterialize
+            fullmaterialize, ∞
 
 _getindex(::IndexStyle, A::AbstractQuasiArray, i::Real, j::Slice{<:OneToInf}) =
     materialize(view(A, i, j))
@@ -36,6 +36,28 @@ abstract type OrthogonalPolynomial{T} <: Basis{T} end
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::OrthogonalPolynomial) 
     x == axes(C,1) || throw(DimensionMismatch())
     C*jacobimatrix(C)
+end
+
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AffineQuasiVector, C::OrthogonalPolynomial) 
+    x = axes(C,1) 
+    axes(y,1) == x || throw(DimensionMismatch())
+    broadcast(+, y.A * (x.*C), y.b.*C)
+end
+
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::WeightedBasis{<:Any,<:Any,<:OrthogonalPolynomial}) 
+    x == axes(C,1) || throw(DimensionMismatch())
+    w,P = C.args
+    P2, J = (x .* P).args
+    @assert P == P2
+    (w .* P) * J
+end
+
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,Tuple{<:AffineQuasiVector,<:Any}}) 
+    x == axes(C,1) || throw(DimensionMismatch())
+    P = parent(C)
+    kr,jr = parentindices(C)
+    y = axes(P,1)
+    kr.A \ (y .* P .- kr.b .* P)
 end
   
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, a::AbstractVector, c::AbstractVector, x) where T

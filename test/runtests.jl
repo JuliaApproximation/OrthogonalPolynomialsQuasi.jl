@@ -393,3 +393,15 @@ end
     Δ² = (D^2*S)'*(D^2*S)
     M = S'S
 end
+
+@testset "poly broadcast" begin
+    P = Legendre()
+    x = axes(P,1)
+
+    J = P \ (x .* P)
+    @test (P \ (   (1 .+ x) .* P))[1:10,1:10] ≈ (I + J)[1:10,1:10]
+
+    x = Inclusion(0..1)
+    Q = P[2x.-1,:]
+    x .* Q
+end
