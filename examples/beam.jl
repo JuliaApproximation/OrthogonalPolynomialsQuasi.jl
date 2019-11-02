@@ -17,6 +17,24 @@ u0 = [[1,2,3]; zeros(n-3)]
 prob = ODEProblem(evolution,u0,(0.0,3.0),(cholesky(Symmetric(M[1:n,1:n])),Δ[1:n,1:n]))
 @time u = solve(prob,TRBDF2()); u(1.0)
 
+###
+# Heat natural
+###
+L = LinearSpline(range(-1,1;length=2))
+P = apply(hcat,L,S)
+ApplyArray(hcat,Legendre() \ (D*L), Legendre() \ (D*S))
+
+(D*L)'*(D*L)
+
+(D*S)'*(D*S)
+
+((D*S)'*(D*L)).args[3]
+(D*L)'*(D*S)
+H = (D*L).args[1]
+P = Legendre()
+(P\H)' * P'P * (P \ (D*S))
+
+
 
 ###
 # Beam

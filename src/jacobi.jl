@@ -145,13 +145,13 @@ end
 ##########
 
 # Jacobi(b+1,a+1)\(D*Jacobi(a,b))
-@simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Jacobi)
+@simplify function *(D::Derivative{<:Any,<:AbstractInterval}, S::Jacobi)
     A = _BandedMatrix((((1:∞) .+ (S.a + S.b))/2)', ∞, -1,1)
     ApplyQuasiMatrix(*, Jacobi(S.b+1,S.a+1), A)
 end
 
 # Jacobi(b-1,a-1)\ (D*w*Jacobi(b,a))
-@simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, WS::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi})
+@simplify function *(D::Derivative{<:Any,<:AbstractInterval}, WS::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi})
     w,S = WS.args
     a,b = S.a, S.b
     (w.a == a && w.b == b) || throw(ArgumentError())
@@ -187,4 +187,14 @@ end
     L = Legendre()
     A = PInv(L)*W_sqrt*S
     A'*(L'L)*A
+end
+
+
+###
+# Splines
+###
+
+@simplify function \(A::Legendre, B::HeavisideSpline)
+    @assert B.points == -1:2:1
+    Vcat(1, Zeros(∞,1))
 end

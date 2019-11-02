@@ -405,3 +405,15 @@ end
     Q = P[2x.-1,:]
     x .* Q
 end
+
+@testset "hcat" begin
+    L = LinearSpline(range(-1,1;length=2))
+    S = JacobiWeight(1.0,1.0) .* Jacobi(1.0,1.0)
+    P = apply(hcat,L,S)
+    @test P isa ApplyQuasiArray
+    @test axes(P) == axes(S)
+    @test P[0.1,1:10] == [L[0.1,:]; S[0.1,1:8]]
+    D = Derivative(axes(P,1))
+    # applied(*,D,P) |> typeof
+    # MemoryLayout(typeof(D))
+end
