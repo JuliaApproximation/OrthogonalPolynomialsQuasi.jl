@@ -19,7 +19,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex
 
-export Jacobi, Legendre, Chebyshev, Ultraspherical, Fourier,
+export Hermite, Jacobi, Legendre, Chebyshev, Ultraspherical, Fourier,
             JacobiWeight, ChebyshevWeight, UltrasphericalWeight,
             fullmaterialize, ∞
 
@@ -30,6 +30,19 @@ _getindex(::IndexStyle, A::AbstractQuasiArray, i::Slice{<:OneToInf}, j::Real) =
 
 
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
+
+"""
+    jacobimatrix(S)
+
+returns the Jacobi matrix `X` associated to a quasi-matrix of orthogonal polynomials
+satisfying
+```julia
+x = axes(S,1)    
+x*S == S*X
+```
+Note that `X` is the transpose of the usual definition of the Jacobi matrix.
+"""
+jacobimatrix(S) = error("Override for $(typeof(S))")
 
 @simplify *(B::Identity, C::OrthogonalPolynomial) = C*jacobimatrix(C)
 
@@ -112,6 +125,7 @@ function forwardrecurrence!(v::AbstractVector{T}, b_v::AbstractFill, ::Zeros{<:A
 end
 
 _vec(a) = vec(a)
+_vec(a::InfiniteArrays.ReshapedArray) = _vec(parent(a))
 _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
 bands(J) = _vec.(J.data.args)
 
@@ -140,6 +154,7 @@ getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer
 getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
 
+include("hermite.jl")
 include("jacobi.jl")
 include("ultraspherical.jl")
 include("fourier.jl")
