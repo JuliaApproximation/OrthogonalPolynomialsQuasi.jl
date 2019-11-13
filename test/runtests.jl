@@ -53,6 +53,11 @@ import QuasiArrays: MulQuasiMatrix
         @test (U*(U\f))[0.1] ≈ f[0.1]
         @test (D*f)[0.1] ≈ ForwardDiff.derivative(x -> (Chebyshev{eltype(x)}()*f.args[2])[x],0.1)
     end
+    @testset "U->T lowering"  begin
+        wT = ChebyshevWeight() .* Chebyshev()
+        wU = UltrasphericalWeight(1) .*  Ultraspherical(1)
+        @test (wT \ wU)[1:10,1:10] == diagm(0 => fill(0.5,10), -2 => fill(-0.5,8))
+    end
 end
 
 @testset "Legendre" begin
