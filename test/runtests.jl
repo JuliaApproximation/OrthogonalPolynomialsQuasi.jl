@@ -157,13 +157,13 @@ end
 @testset "Weighted Jacobi integer" begin
     S = Jacobi(true,true)
     w̃ = JacobiWeight(true,false)
-    A = @inferred(Jacobi(false,true)\(w̃ .* S))
+    A = Jacobi(false,true)\(w̃ .* S)
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
     @test A[1:10,1:10] ≈ (Jacobi(0.0,1.0) \ (JacobiWeight(1.0,0.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
 
     w̄ = JacobiWeight(false,true)
-    A = @inferred(Jacobi(true,false)\(w̄.*S))
+    A = Jacobi(true,false)\(w̄.*S)
     @test A isa BandedMatrix
     @test size(A) == (∞,∞)
     @test A[1:10,1:10] ≈ (Jacobi(1.0,0.0) \ (JacobiWeight(0.0,1.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
@@ -338,7 +338,7 @@ end
     X = Diagonal(Inclusion(axes(S,1)))
 
     @test_broken (Legendre() \ S)*(S\(w.*S))
-    @test (Ultraspherical(3/2)\(D^2*(w.*S)))[1:10,1:10] == diagm(0 => -(2:2:20))
+    @test (Ultraspherical(3/2)\(D^2*(w.*S)))[1:10,1:10] ≈ diagm(0 => -(2:2:20))
 end
 
 @testset "rescaled" begin 
