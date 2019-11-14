@@ -1,9 +1,20 @@
-using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, LazyArrays, BandedMatrices, LinearAlgebra, ForwardDiff, IntervalSets, Test
+using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, FastTransforms,
+        LazyArrays, BandedMatrices, LinearAlgebra, ForwardDiff, IntervalSets, Test
 import ContinuumArrays: SimplifyStyle, BasisLayout
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import QuasiArrays: MulQuasiMatrix
+import Base: OneTo
 
+@testset "ChebyshevGrid" begin
+    for kind in (1,2)
+        @test all(ChebyshevGrid{kind}(10) .=== chebyshevpoints(Float64,10; kind=kind))
+        for T in (Float16, Float32, Float64)
+            @test all(ChebyshevGrid{kind,T}(10) .=== chebyshevpoints(T,10; kind=kind))
+        end
+        @test ChebyshevGrid{kind,BigFloat}(10) == chebyshevpoints(BigFloat,10; kind=kind)
+    end
+end
 
 @testset "Ultraspherical" begin
     @testset "operators" begin
@@ -58,7 +69,28 @@ import QuasiArrays: MulQuasiMatrix
         wU = UltrasphericalWeight(1) .*  Ultraspherical(1)
         @test (wT \ wU)[1:10,1:10] == diagm(0 => fill(0.5,10), -2 => fill(-0.5,8))
     end
+    @testset "Transforms" begin
+        T = Chebyshev()
+        Tn = T[:,OneTo(100)]
+        @test grid(Tn) == chebyshevpoints(100; kind=1)
+        g, F = transform(Tn)
+        u = T*[F \ exp.(g); zeros(∞)]
+        @test u[0.1] ≈ exp(0.1)
+
+        # auto-transform
+        x = axes(T,1)
+        u = Tn * (Tn \ exp.(x))
+        @test u[0.1] ≈ exp(0.1)
+
+        Tn = T[:,2:100]        
+        @test grid(Tn) == chebyshevpoints(100; kind=1)
+        (Tn \ (exp.(x) .- 1.26606587775201))
+        Tn \ u
+    end
 end
+
+for n = 2 .^ (4:∞)
+    T[:,OneTo
 
 @testset "Legendre" begin
     @testset "operators" begin

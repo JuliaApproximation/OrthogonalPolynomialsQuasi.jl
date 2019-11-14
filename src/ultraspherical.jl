@@ -1,10 +1,44 @@
+##
+# Chebyshev
+##
+
 struct ChebyshevWeight{T} <: AbstractJacobiWeight{T} end
 ChebyshevWeight() = ChebyshevWeight{Float64}()
 
+struct Chebyshev{T} <: AbstractJacobi{T} end
+Chebyshev() = Chebyshev{Float64}()
+==(a::Chebyshev, b::Chebyshev) = true
+
+
 function getindex(w::ChebyshevWeight, x::Number)
     x ∈ axes(w,1) || throw(BoundsError())
-    1/sqrt(1-x^2)
+    inv(sqrt(1-x^2))
 end
+
+struct ChebyshevGrid{kind,T} <: AbstractVector{T}
+    n::Int
+end
+
+ChebyshevGrid{kind}(n::Integer) where kind = ChebyshevGrid{kind,Float64}(n)
+
+size(g::ChebyshevGrid) = (g.n,)
+getindex(g::ChebyshevGrid{1,T}, k::Integer) where T = 
+    sinpi(convert(T,g.n-2k+1)/(2g.n))
+
+function getindex(g::ChebyshevGrid{2,T}, k::Integer) where T
+    g.n == 1 && return zero(T)
+    sinpi(convert(T,g.n-2k+1)/(2g.n-2))
+end
+
+function grid(Tn::SubQuasiArray{<:Any,2,<:Chebyshev,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) 
+    kr,jr = parentindices(Tn)
+    ChebyshevGrid{1,eltype(kr)}(maximum(jr))
+end
+
+
+##
+# Ultraspherical
+##
 
 struct UltrasphericalWeight{T,Λ} <: AbstractJacobiWeight{T} 
     λ::Λ
@@ -18,9 +52,6 @@ function getindex(w::UltrasphericalWeight, x::Number)
 end
 
 
-struct Chebyshev{T} <: AbstractJacobi{T} end
-Chebyshev() = Chebyshev{Float64}()
-==(a::Chebyshev, b::Chebyshev) = true
 
 struct Ultraspherical{T,Λ<:Real} <: AbstractJacobi{T} 
     λ::Λ
@@ -33,10 +64,16 @@ function Ultraspherical(P::Jacobi{T}) where T
     Ultraspherical(P.a+one(T)/2)
 end
 
+==(a::Ultraspherical, b::Ultraspherical) = a.λ == b.λ
+
+###
+# interrelationships
+###
+
 Jacobi(C::Ultraspherical{T}) where T = Jacobi(C.λ-one(T)/2,C.λ-one(T)/2)
 Jacobi(C::Chebyshev{T}) where T = Jacobi(-one(T)/2,-one(T)/2)
 
-==(a::Ultraspherical, b::Ultraspherical) = a.λ == b.λ
+
 
 
 ########
