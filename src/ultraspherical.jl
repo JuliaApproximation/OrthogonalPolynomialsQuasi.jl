@@ -53,11 +53,11 @@ end
 
 
 
-struct Ultraspherical{T,Λ<:Real} <: AbstractJacobi{T} 
+struct Ultraspherical{T,Λ} <: AbstractJacobi{T} 
     λ::Λ
 end
-Ultraspherical{T}(λ::Λ) where {T,Λ<:Real} = Ultraspherical{T,Λ}(λ)
-Ultraspherical(λ::Λ) where Λ<:Real = Ultraspherical{Float64,Λ}(λ)
+Ultraspherical{T}(λ::Λ) where {T,Λ} = Ultraspherical{T,Λ}(λ)
+Ultraspherical(λ::Λ) where Λ = Ultraspherical{Float64,Λ}(λ)
 Ultraspherical(P::Legendre{T}) where T = Ultraspherical(one(T)/2)
 function Ultraspherical(P::Jacobi{T}) where T
     P.a == P.b || throw(ArgumentError("$P is not ultraspherical"))
