@@ -17,7 +17,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     _getindex
 
 import InfiniteArrays: OneToInf
-import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex, grid, transform
+import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex, grid, transform, _transform_ldiv
 
 export Hermite, Jacobi, Legendre, Chebyshev, Ultraspherical, Fourier,
             JacobiWeight, ChebyshevWeight, ChebyshevGrid, UltrasphericalWeight,
@@ -29,7 +29,39 @@ _getindex(::IndexStyle, A::AbstractQuasiArray, i::Slice{<:OneToInf}, j::Real) =
     materialize(view(A, i, j))
 
 
+checkpoints(::ChebyshevInterval) = [-0.823972,0.01,0.3273484]
+checkpoints(x::Inclusion) = checkpoints(x.domain)
+checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
+
+function _transform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}, ::Tuple{<:Any,<:OneToInf}) where {U,V}
+    T = promote_type(U,V)
+
+    r = checkpoints(A)
+    fr = f[r]
+    maxabsfr = norm(fr,Inf)
+
+    tol = eps(T)
+
+    for n = 2 .^ (4:∞)
+        An = A[:,OneTo(n)]
+        cfs = An \ f
+        maxabsc = maximum(abs, cfs)
+        if maxabsc == 0 && maxabsfr == 0
+            return zeros(T,∞)
+        end
+
+        un = An * cfs
+        # we allow for transformed coefficients being a different size
+        ##TODO: how to do scaling for unnormalized bases like Jacobi?
+        if maximum(abs,@views(cfs[n-8:end])) < 10tol*maxabsc &&
+                all(norm.(un[r] - fr, 1) .< tol * n * maxabsfr*1000)
+            return [cfs; zeros(T,∞)]
+        end
+    end
+end    
+
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
+
 
 """
     jacobimatrix(S)

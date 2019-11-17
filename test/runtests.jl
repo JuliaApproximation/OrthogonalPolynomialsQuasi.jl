@@ -1,5 +1,5 @@
-using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, FastTransforms,
-        LazyArrays, BandedMatrices, LinearAlgebra, ForwardDiff, IntervalSets, Test
+using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, 
+        LazyArrays, BandedMatrices, LinearAlgebra, FastTransforms, ForwardDiff, IntervalSets, Test
 import ContinuumArrays: SimplifyStyle, BasisLayout
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
@@ -84,13 +84,15 @@ end
 
         Tn = T[:,2:100]        
         @test grid(Tn) == chebyshevpoints(100; kind=1)
-        (Tn \ (exp.(x) .- 1.26606587775201))
-        Tn \ u
+        @test (Tn \ (exp.(x) .- 1.26606587775201)) ≈ (Tn \ u) ≈ (T\u)[2:100]
+
+        u = T * (T \ exp.(x))        
+        @test u[0.1] ≈ exp(0.1)
+
+        @test_broken T[:,2:end] \ (exp.(x) .- 1.26606587775201)
     end
 end
 
-for n = 2 .^ (4:∞)
-    T[:,OneTo
 
 @testset "Legendre" begin
     @testset "operators" begin
