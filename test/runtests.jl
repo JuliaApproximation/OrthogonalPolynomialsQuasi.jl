@@ -69,6 +69,15 @@ end
         wU = UltrasphericalWeight(1) .*  Ultraspherical(1)
         @test (wT \ wU)[1:10,1:10] == diagm(0 => fill(0.5,10), -2 => fill(-0.5,8))
     end
+    @testset "sub-of-sub" begin
+        T = Chebyshev()
+        V = T[:,2:end]
+        @test view(V,0.1:0.1:1,:) isa SubArray
+        @test V[0.1:0.1:1,:] isa SubArray
+        @test V[0.1:0.1:1,:][:,1:5] == T[0.1:0.1:1,2:6]
+        @test parentindices(V[:,OneTo(5)])[1] isa Inclusion
+    end
+
     @testset "Transforms" begin
         T = Chebyshev()
         Tn = T[:,OneTo(100)]
@@ -89,7 +98,8 @@ end
         u = T * (T \ exp.(x))        
         @test u[0.1] ≈ exp(0.1)
 
-        @test_broken T[:,2:end] \ (exp.(x) .- 1.26606587775201)
+        v = T[:,2:end] \ (exp.(x) .- 1.26606587775201)
+        @test v[1:10] ≈ (T\u)[2:11]
     end
 end
 
