@@ -3,7 +3,7 @@ using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, Inte
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last, Slice, size, length, axes
+                first, last, Slice, size, length, axes, IdentityUnitRange
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv
@@ -30,10 +30,16 @@ _getindex(::IndexStyle, A::AbstractQuasiArray, i::Slice{<:OneToInf}, j::Real) =
 
 
 checkpoints(::ChebyshevInterval) = [-0.823972,0.01,0.3273484]
+checkpoints(::UnitInterval) = [0.823972,0.01,0.3273484]
+checkpoints(d::AbstractInterval) = width(d) .* checkpoints(UnitInterval()) .+ leftendpoint(d)
 checkpoints(x::Inclusion) = checkpoints(x.domain)
 checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
 
-function _transform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}, ::Tuple{<:Any,<:OneToInf}) where {U,V}
+_transform_ldiv(A, f, ::Tuple{<:Any,OneToInf})  = adaptive_transform_ldiv(A, f)
+_transform_ldiv(A, f, ::Tuple{<:Any,IdentityUnitRange{<:OneToInf}})  = adaptive_transform_ldiv(A, f)
+_transform_ldiv(A, f, ::Tuple{<:Any,Slice{<:OneToInf}})  = adaptive_transform_ldiv(A, f)
+
+function     adaptive_transform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
     T = promote_type(U,V)
 
     r = checkpoints(A)

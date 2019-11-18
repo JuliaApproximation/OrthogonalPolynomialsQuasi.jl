@@ -16,6 +16,38 @@ import Base: OneTo
     end
 end
 
+@testset "Transforms" begin
+    @testset "Chebyshev" begin
+        T = Chebyshev()
+        Tn = T[:,OneTo(100)]
+        @test grid(Tn) == chebyshevpoints(100; kind=1)
+        g, F = transform(Tn)
+        u = T*[F \ exp.(g); zeros(∞)]
+        @test u[0.1] ≈ exp(0.1)
+
+        # auto-transform
+        x = axes(T,1)
+        u = Tn * (Tn \ exp.(x))
+        @test u[0.1] ≈ exp(0.1)
+
+        Tn = T[:,2:100]        
+        @test grid(Tn) == chebyshevpoints(100; kind=1)
+        @test (Tn \ (exp.(x) .- 1.26606587775201)) ≈ (Tn \ u) ≈ (T\u)[2:100]
+
+        u = T * (T \ exp.(x))        
+        @test u[0.1] ≈ exp(0.1)
+
+        v = T[:,2:end] \ (exp.(x) .- 1.26606587775201)
+        @test v[1:10] ≈ (T\u)[2:11]
+    end
+    @testset "Mapped Chebyshev" begin
+        x = Inclusion(0..1)
+        T = Chebyshev()[2x .- 1,:]
+        @test (T*(T\x))[0.1] ≈ 0.1
+        @test (T* (T \ exp.(x)))[0.1] ≈ exp(0.1)
+    end
+end
+
 @testset "Ultraspherical" begin
     @testset "operators" begin
         T = Chebyshev()
@@ -76,30 +108,6 @@ end
         @test V[0.1:0.1:1,:] isa SubArray
         @test V[0.1:0.1:1,:][:,1:5] == T[0.1:0.1:1,2:6]
         @test parentindices(V[:,OneTo(5)])[1] isa Inclusion
-    end
-
-    @testset "Transforms" begin
-        T = Chebyshev()
-        Tn = T[:,OneTo(100)]
-        @test grid(Tn) == chebyshevpoints(100; kind=1)
-        g, F = transform(Tn)
-        u = T*[F \ exp.(g); zeros(∞)]
-        @test u[0.1] ≈ exp(0.1)
-
-        # auto-transform
-        x = axes(T,1)
-        u = Tn * (Tn \ exp.(x))
-        @test u[0.1] ≈ exp(0.1)
-
-        Tn = T[:,2:100]        
-        @test grid(Tn) == chebyshevpoints(100; kind=1)
-        @test (Tn \ (exp.(x) .- 1.26606587775201)) ≈ (Tn \ u) ≈ (T\u)[2:100]
-
-        u = T * (T \ exp.(x))        
-        @test u[0.1] ≈ exp(0.1)
-
-        v = T[:,2:end] \ (exp.(x) .- 1.26606587775201)
-        @test v[1:10] ≈ (T\u)[2:11]
     end
 end
 
