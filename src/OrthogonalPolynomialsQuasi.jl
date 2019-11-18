@@ -14,19 +14,19 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle,
-                    _getindex
+                    _getindex, lazy_getindex
 
 import InfiniteArrays: OneToInf
-import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex, grid, transform, _transform_ldiv
+import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex, grid, transform, transform_ldiv
 
 export Hermite, Jacobi, Legendre, Chebyshev, Ultraspherical, Fourier,
             JacobiWeight, ChebyshevWeight, ChebyshevGrid, UltrasphericalWeight,
             fullmaterialize, ∞
 
 _getindex(::IndexStyle, A::AbstractQuasiArray, i::Real, j::Slice{<:OneToInf}) =
-    materialize(view(A, i, j))
+    lazy_getindex(A, i, j)
 _getindex(::IndexStyle, A::AbstractQuasiArray, i::Slice{<:OneToInf}, j::Real) =
-    materialize(view(A, i, j))
+    lazy_getindex(A, i, j)
 
 
 checkpoints(::ChebyshevInterval) = [-0.823972,0.01,0.3273484]
@@ -35,11 +35,11 @@ checkpoints(d::AbstractInterval) = width(d) .* checkpoints(UnitInterval()) .+ le
 checkpoints(x::Inclusion) = checkpoints(x.domain)
 checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
 
-_transform_ldiv(A, f, ::Tuple{<:Any,OneToInf})  = adaptive_transform_ldiv(A, f)
-_transform_ldiv(A, f, ::Tuple{<:Any,IdentityUnitRange{<:OneToInf}})  = adaptive_transform_ldiv(A, f)
-_transform_ldiv(A, f, ::Tuple{<:Any,Slice{<:OneToInf}})  = adaptive_transform_ldiv(A, f)
+transform_ldiv(A, f, ::Tuple{<:Any,OneToInf})  = adaptivetransform_ldiv(A, f)
+transform_ldiv(A, f, ::Tuple{<:Any,IdentityUnitRange{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
+transform_ldiv(A, f, ::Tuple{<:Any,Slice{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
 
-function     adaptive_transform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
+function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
     T = promote_type(U,V)
 
     r = checkpoints(A)

@@ -30,11 +30,6 @@ function getindex(g::ChebyshevGrid{2,T}, k::Integer) where T
     sinpi(convert(T,g.n-2k+1)/(2g.n-2))
 end
 
-function grid(Tn::SubQuasiArray{<:Any,2,<:Chebyshev,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) 
-    kr,jr = parentindices(Tn)
-    ChebyshevGrid{1,eltype(kr)}(maximum(jr))
-end
-
 
 ##
 # Ultraspherical
@@ -66,6 +61,9 @@ function Ultraspherical(P::Jacobi{T}) where T
 end
 
 ==(a::Ultraspherical, b::Ultraspherical) = a.λ == b.λ
+==(::Ultraspherical, ::Chebyshev) = false
+==(::Chebyshev, ::Ultraspherical) = false
+
 
 ###
 # interrelationships

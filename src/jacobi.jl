@@ -50,6 +50,15 @@ axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
 ==(A::Legendre, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) =     
     Jacobi(A) == B
 
+###
+# transforms
+###
+
+function grid(Tn::SubQuasiArray{<:Any,2,<:AbstractJacobi,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) 
+    kr,jr = parentindices(Tn)
+    ChebyshevGrid{1,eltype(kr)}(maximum(jr))
+end    
+
 ########
 # Mass Matrix
 #########

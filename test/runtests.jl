@@ -1,6 +1,6 @@
 using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, 
         LazyArrays, BandedMatrices, LinearAlgebra, FastTransforms, ForwardDiff, IntervalSets, Test
-import ContinuumArrays: SimplifyStyle, BasisLayout
+import ContinuumArrays: SimplifyStyle, BasisLayout, MappedBasisLayout
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import QuasiArrays: MulQuasiMatrix
@@ -45,6 +45,12 @@ end
         T = Chebyshev()[2x .- 1,:]
         @test (T*(T\x))[0.1] ≈ 0.1
         @test (T* (T \ exp.(x)))[0.1] ≈ exp(0.1)
+    end
+
+    @testset "Ultraspherical" begin
+        U = Ultraspherical(1)
+        x = axes(U,1)
+        (U * (U \ exp.(x)))[0.1]
     end
 end
 
@@ -133,7 +139,7 @@ end
         f = P*Vcat(randn(10), Zeros(∞))
         P̃ = Jacobi(0.0,0.0)
         P̄ = Ultraspherical(1/2)
-        @test (P̃*(P̃\f))[0.1] == (P̄*(P̄\f))[0.1] == f[0.1]
+        @test (P̃*(P̃\f))[0.1] ≈ (P̄*(P̄\f))[0.1] ≈ f[0.1]
         C = Ultraspherical(3/2)
         @test (C*(C\f))[0.1] ≈ f[0.1]
 
@@ -413,7 +419,7 @@ end
     P = Legendre()[2x.-1,:]
     w = JacobiWeight(1.0,1.0)
     wS = (w .* Jacobi(1.0,1.0))[2x.-1,:]
-    @test MemoryLayout(typeof(wS)) isa BasisLayout
+    @test MemoryLayout(typeof(wS)) isa MappedBasisLayout
     f = wS*[[1,2,3]; zeros(∞)]
     g = (w .* Jacobi(1.0,1.0))*[[1,2,3]; zeros(∞)]
     @test f[0.1] ≈ g[2*0.1-1]
@@ -432,7 +438,8 @@ end
     @test Jacobi(0.0,0.0) \ Legendre() == Eye(∞) 
     @test ((Ultraspherical(3/2) \ Jacobi(1,1))*(Jacobi(1,1) \ Ultraspherical(3/2)))[1:10,1:10] ≈ Eye(10)
     f = Jacobi(0.0,0.0)*[[1,2,3]; zeros(∞)]
-    @test (Legendre() \ f) == f.args[2]
+    @test_broken (Legendre() \ f) == f.args[2]
+    @test (Legendre() \ f) ≈ f.args[2]
     f = Jacobi(1.0,1.0)*[[1,2,3]; zeros(∞)]
     g = Ultraspherical(3/2)*(Ultraspherical(3/2)\f)
     @test f[0.1] ≈ g[0.1]
