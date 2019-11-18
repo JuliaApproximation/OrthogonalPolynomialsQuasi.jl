@@ -3,7 +3,7 @@ using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, Inte
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last, Slice, size, length, axes, IdentityUnitRange
+                first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv

@@ -216,3 +216,17 @@ end
     (B.a == B.b == -T/2) || throw(ArgumentError())
     Diagonal(Jacobi(-T/2,-T/2)[1,:])
 end
+
+####
+# sum
+####
+
+function _sum(A::WeightedBasis{T,<:UltrasphericalWeight,<:Ultraspherical}, dims) where T
+    w, U = A.args
+    @assert dims == 1
+    @assert w.λ == U.λ == 1
+    Hcat(convert(T, π)/2, Zeros{T}(1,∞))
+end
+
+_sum(A::WeightedBasis{T,<:ChebyshevWeight,<:Chebyshev}, dims) where T =
+    Hcat(convert(T, π), Zeros{T}(1,∞))

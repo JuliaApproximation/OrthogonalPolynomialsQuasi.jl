@@ -485,3 +485,16 @@ end
     # applied(*,D,P) |> typeof
     # MemoryLayout(typeof(D))
 end
+
+@testset "sum" begin
+    wT = ChebyshevWeight() .* Chebyshev()
+    @test sum(wT; dims=1)[1,1:10] == [π; zeros(9)]
+    @test sum(wT * [[1,2,3]; zeros(∞)]) == 1.0π
+    wU = UltrasphericalWeight(1) .* Ultraspherical(1)
+    @test sum(wU; dims=1)[1,1:10] == [π/2; zeros(9)]
+    @test sum(wU * [[1,2,3]; zeros(∞)]) == π/2
+
+    x = Inclusion(0..1)
+    @test sum(wT[2x .- 1, :]; dims=1)[1,1:10] == [π/2; zeros(9)]
+    @test sum(wT[2x .- 1, :] * [[1,2,3]; zeros(∞)]) == π/2
+end
