@@ -438,8 +438,10 @@ end
     @test Jacobi(0.0,0.0) \ Legendre() == Eye(∞) 
     @test ((Ultraspherical(3/2) \ Jacobi(1,1))*(Jacobi(1,1) \ Ultraspherical(3/2)))[1:10,1:10] ≈ Eye(10)
     f = Jacobi(0.0,0.0)*[[1,2,3]; zeros(∞)]
+    g = (Legendre() \ f) - f.args[2]
+    @test_skip norm(g) ≤ 1E-15
     @test_broken (Legendre() \ f) == f.args[2]
-    @test (Legendre() \ f) ≈ f.args[2]
+    @test (Legendre() \ f)[1:10] ≈ f.args[2][1:10]
     f = Jacobi(1.0,1.0)*[[1,2,3]; zeros(∞)]
     g = Ultraspherical(3/2)*(Ultraspherical(3/2)\f)
     @test f[0.1] ≈ g[0.1]
@@ -476,6 +478,8 @@ end
     P = apply(hcat,L,S)
     @test P isa ApplyQuasiArray
     @test axes(P) == axes(S)
+    V = view(P,0.1,1:10)
+    @test all(arguments(V) .≈ [L[0.1,:], S[0.1,1:8]])
     @test P[0.1,1:10] == [L[0.1,:]; S[0.1,1:8]]
     D = Derivative(axes(P,1))
     # applied(*,D,P) |> typeof
