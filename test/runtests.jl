@@ -19,7 +19,7 @@ end
 @testset "Transforms" begin
     @testset "Chebyshev" begin
         T = Chebyshev()
-        Tn = T[:,OneTo(100)]
+        Tn = @inferred(T[:,OneTo(100)])
         @test grid(Tn) == chebyshevpoints(100; kind=1)
         g, F = transform(Tn)
         u = T*[F \ exp.(g); zeros(∞)]

@@ -12,12 +12,12 @@ end
 
 @simplify function *(H::Hilbert{<:Any,<:ChebyshevInterval}, wT::WeightedBasis{<:Any,<:ChebyshevTWeight,<:ChebyshevT}) 
     T = promote_type(eltype(H), eltype(wT))
-    ChebyshevU{T}() * _BandedMatrix(Fill(-convert(T,π),1,∞), ∞, -1, 1)
+    ApplyQuasiArray(*, ChebyshevU{T}(), _BandedMatrix(Fill(-convert(T,π),1,∞), ∞, -1, 1))
 end
 
 @simplify function *(H::Hilbert{<:Any,<:ChebyshevInterval}, wU::WeightedBasis{<:Any,<:ChebyshevUWeight,<:ChebyshevU}) 
     T = promote_type(eltype(H), eltype(wU))
-    ChebyshevT{T}() * _BandedMatrix(Fill(convert(T,π),1,∞), ∞, 1, -1)
+    ApplyQuasiArray(*, ChebyshevT{T}(), _BandedMatrix(Fill(convert(T,π),1,∞), ∞, 1, -1))
 end
 
 
@@ -32,5 +32,5 @@ end
 @simplify function *(H::Hilbert, wT::SubQuasiArray{<:Any,2,<:WeightedBasis,<:Tuple{<:AffineQuasiVector,<:Any}}) 
     P = parent(wT)
     x = axes(P,1)
-    (inv.(x .- x') * P)[parentindices(wT)...]
+    apply(*, inv.(x .- x'), P)[parentindices(wT)...]
 end
