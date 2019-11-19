@@ -45,3 +45,26 @@ end
     @test (Ultraspherical(1)[y,:]\(H*wT2))[1:10,1:10] == diagm(1 => fill(-π,9))
     @test (Chebyshev()[y,:]\(H*wU2))[1:10,1:10] == diagm(-1 => fill(1.0π,9))
 end
+
+@testset "Log kernel" begin
+    T = Chebyshev()
+    wT = ChebyshevWeight() .* Chebyshev()
+    x = axes(wT,1)
+    L = log.(abs.(x .- x'))
+    D = T \ (L * wT)
+    @test (L * (wT * (T \ exp.(x))))[0.] ≈ -2.3347795490945797  # Mathematica
+
+    x = Inclusion(-1..1)
+    T = Chebyshev()[1x, :]
+    L = log.(abs.(x .- x'))
+    wT = (ChebyshevWeight() .* Chebyshev())[1x, :]
+    @test (T \ (L*wT))[1:10,1:10] ≈ D[1:10,1:10]
+
+    x = Inclusion(0..1)
+    T = Chebyshev()[2x.-1, :]
+    wT = (ChebyshevWeight() .* Chebyshev())[2x .- 1, :]
+    L = log.(abs.(x .- x'))
+    u =  wT * (2 *(T \ exp.(x)))
+    @test u[0.1] ≈ exp(0.1)/sqrt(0.1-0.1^2)
+    @test (L * u)[0.5] ≈ -7.471469928754152 # Mathematica
+end
