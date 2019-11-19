@@ -57,7 +57,7 @@ end
 @testset "Ultraspherical" begin
     @testset "operators" begin
         T = Chebyshev()
-        U = Ultraspherical(1)
+        U = ChebyshevU()
         C = Ultraspherical(2)
         D = Derivative(axes(T,1))
 
@@ -100,11 +100,11 @@ end
         f = T*Vcat(randn(10), Zeros(∞))
         @test (U*(U\f)).args[1] isa Ultraspherical
         @test (U*(U\f))[0.1] ≈ f[0.1]
-        @test (D*f)[0.1] ≈ ForwardDiff.derivative(x -> (Chebyshev{eltype(x)}()*f.args[2])[x],0.1)
+        @test (D*f)[0.1] ≈ ForwardDiff.derivative(x -> (ChebyshevT{eltype(x)}()*f.args[2])[x],0.1)
     end
     @testset "U->T lowering"  begin
         wT = ChebyshevWeight() .* Chebyshev()
-        wU = UltrasphericalWeight(1) .*  Ultraspherical(1)
+        wU = ChebyshevUWeight() .*  ChebyshevU()
         @test (wT \ wU)[1:10,1:10] == diagm(0 => fill(0.5,10), -2 => fill(-0.5,8))
     end
     @testset "sub-of-sub" begin
@@ -384,13 +384,13 @@ end
     U = Ultraspherical(1)
     C = Ultraspherical(2)
 
-    f = x -> Chebyshev{eltype(x)}()[x,5]
+    f = x -> ChebyshevT{eltype(x)}()[x,5]
     @test ForwardDiff.derivative(f,0.1) ≈ 4*U[0.1,4]
-    f = x -> Chebyshev{eltype(x)}()[x,5][1]
+    f = x -> ChebyshevT{eltype(x)}()[x,5][1]
     @test ForwardDiff.gradient(f,[0.1]) ≈ [4*U[0.1,4]]
     @test ForwardDiff.hessian(f,[0.1]) ≈ [8*C[0.1,3]]
 
-    f = x -> Chebyshev{eltype(x)}()[x,1:5]
+    f = x -> ChebyshevT{eltype(x)}()[x,1:5]
     @test ForwardDiff.derivative(f,0.1) ≈ [0;(1:4).*U[0.1,1:4]]
 end
 
@@ -490,7 +490,7 @@ end
     wT = ChebyshevWeight() .* Chebyshev()
     @test sum(wT; dims=1)[1,1:10] == [π; zeros(9)]
     @test sum(wT * [[1,2,3]; zeros(∞)]) == 1.0π
-    wU = UltrasphericalWeight(1) .* Ultraspherical(1)
+    wU = ChebyshevUWeight() .* ChebyshevU()
     @test sum(wU; dims=1)[1,1:10] == [π/2; zeros(9)]
     @test sum(wU * [[1,2,3]; zeros(∞)]) == π/2
 

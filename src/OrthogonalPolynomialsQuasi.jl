@@ -19,8 +19,8 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex, grid, transform, transform_ldiv
 
-export Hermite, Jacobi, Legendre, Chebyshev, Ultraspherical, Fourier,
-            JacobiWeight, ChebyshevWeight, ChebyshevGrid, UltrasphericalWeight,
+export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
+            JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             fullmaterialize, ∞
 
 _getindex(::IndexStyle, A::AbstractQuasiArray, i::Real, j::Slice{<:OneToInf}) =
@@ -56,7 +56,7 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
             return zeros(T,∞)
         end
 
-        un = An * cfs
+        un = ApplyQuasiArray(*, An, cfs)
         # we allow for transformed coefficients being a different size
         ##TODO: how to do scaling for unnormalized bases like Jacobi?
         if maximum(abs,@views(cfs[n-8:end])) < 10tol*maxabsc &&
@@ -64,6 +64,7 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
             return [cfs; zeros(T,∞)]
         end
     end
+    error("Have not converged")
 end    
 
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
@@ -194,6 +195,7 @@ getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
 include("hermite.jl")
 include("jacobi.jl")
+include("chebyshev.jl")
 include("ultraspherical.jl")
 include("fourier.jl")
 include("stieltjes.jl")
