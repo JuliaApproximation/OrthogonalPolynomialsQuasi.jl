@@ -28,7 +28,7 @@ julia = "1.1"
 QuasiArrays = "0.0.6"
 ContinuumArrays = "0.0.2"
 InfiniteLinearAlgebra = "0.1"
-InfiniteArrays = "0.4"
+InfiniteArrays = "0.5"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
