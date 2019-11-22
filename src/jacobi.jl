@@ -10,7 +10,7 @@ JacobiWeight(b::T, a::V) where {T,V} = JacobiWeight{promote_type(T,V)}(b,a)
 
 ==(A::JacobiWeight, B::JacobiWeight) = A.b == B.b && A.a == B.a
 
-axes(::AbstractJacobiWeight) = (Inclusion(ChebyshevInterval()),)
+axes(::AbstractJacobiWeight{T}) where T = (Inclusion(ChebyshevInterval{T}()),)
 function getindex(w::JacobiWeight, x::Number)
     x ∈ axes(w,1) || throw(BoundsError())
     (1-x)^w.a * (1+x)^w.b
@@ -35,7 +35,7 @@ Jacobi(b::T, a::V) where {T,V} = Jacobi{promote_type(T,V)}(b,a)
 
 Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
 
-axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
+axes(::AbstractJacobi{T}) where T = (Inclusion(ChebyshevInterval{T}()), OneTo(∞))
 ==(P::Jacobi, Q::Jacobi) = P.a == Q.a && P.b == Q.b
 ==(P::Legendre, Q::Jacobi) = Jacobi(P) == Q
 ==(P::Jacobi, Q::Legendre) = P == Jacobi(Q)
@@ -49,6 +49,15 @@ axes(::AbstractJacobi) = (Inclusion(ChebyshevInterval()), OneTo(∞))
     JacobiWeight(zero(T),zero(T)).*A == B
 ==(A::Legendre, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) =     
     Jacobi(A) == B
+
+###
+# transforms
+###
+
+function grid(Tn::SubQuasiArray{<:Any,2,<:AbstractJacobi,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) 
+    kr,jr = parentindices(Tn)
+    ChebyshevGrid{1,eltype(kr)}(maximum(jr))
+end    
 
 ########
 # Mass Matrix

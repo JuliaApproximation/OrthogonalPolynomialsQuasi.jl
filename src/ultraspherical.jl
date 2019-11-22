@@ -1,15 +1,15 @@
-struct ChebyshevWeight{T} <: AbstractJacobiWeight{T} end
-ChebyshevWeight() = ChebyshevWeight{Float64}()
 
-function getindex(w::ChebyshevWeight, x::Number)
-    x ∈ axes(w,1) || throw(BoundsError())
-    1/sqrt(1-x^2)
-end
+
+
+##
+# Ultraspherical
+##
 
 struct UltrasphericalWeight{T,Λ} <: AbstractJacobiWeight{T} 
     λ::Λ
 end
 
+UltrasphericalWeight{T}(λ) where T = UltrasphericalWeight{T,typeof(λ)}(λ)
 UltrasphericalWeight(λ) = UltrasphericalWeight{typeof(λ),typeof(λ)}(λ)
 
 function getindex(w::UltrasphericalWeight, x::Number)
@@ -18,35 +18,37 @@ function getindex(w::UltrasphericalWeight, x::Number)
 end
 
 
-struct Chebyshev{T} <: AbstractJacobi{T} end
-Chebyshev() = Chebyshev{Float64}()
-==(a::Chebyshev, b::Chebyshev) = true
 
-struct Ultraspherical{T,Λ<:Real} <: AbstractJacobi{T} 
+struct Ultraspherical{T,Λ} <: AbstractJacobi{T} 
     λ::Λ
 end
-Ultraspherical{T}(λ::Λ) where {T,Λ<:Real} = Ultraspherical{T,Λ}(λ)
-Ultraspherical(λ::Λ) where Λ<:Real = Ultraspherical{Float64,Λ}(λ)
+Ultraspherical{T}(λ::Λ) where {T,Λ} = Ultraspherical{T,Λ}(λ)
+Ultraspherical(λ::Λ) where Λ = Ultraspherical{Float64,Λ}(λ)
 Ultraspherical(P::Legendre{T}) where T = Ultraspherical(one(T)/2)
 function Ultraspherical(P::Jacobi{T}) where T
     P.a == P.b || throw(ArgumentError("$P is not ultraspherical"))
     Ultraspherical(P.a+one(T)/2)
 end
 
-Jacobi(C::Ultraspherical{T}) where T = Jacobi(C.λ-one(T)/2,C.λ-one(T)/2)
-Jacobi(C::Chebyshev{T}) where T = Jacobi(-one(T)/2,-one(T)/2)
+Ultraspherical(::ChebyshevU{T}) where T = Ultraspherical{T}(1)
 
 ==(a::Ultraspherical, b::Ultraspherical) = a.λ == b.λ
+==(::Ultraspherical, ::ChebyshevT) = false
+==(::ChebyshevT, ::Ultraspherical) = false
+==(C::Ultraspherical, ::ChebyshevU) = isone(C.λ)
+==(::ChebyshevU, C::Ultraspherical) = isone(C.λ)
+
+
+###
+# interrelationships
+###
+
+Jacobi(C::Ultraspherical{T}) where T = Jacobi(C.λ-one(T)/2,C.λ-one(T)/2)
 
 
 ########
 # Jacobi Matrix
 ########
-
-jacobimatrix(C::Chebyshev{T}) where T = 
-    _BandedMatrix(Vcat(Fill(one(T)/2,1,∞), 
-                        Zeros(1,∞), 
-                        Hcat(one(T), Fill(one(T)/2,1,∞))), ∞, 1, 1)
 
 function jacobimatrix(P::Ultraspherical{T}) where T
     λ = P.λ
@@ -61,11 +63,7 @@ end
 ##########
 
 # Ultraspherical(1)\(D*Chebyshev())
-@simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Chebyshev)
-    T = promote_type(eltype(D),eltype(S))
-    A = _BandedMatrix((zero(T):∞)', ∞, -1,1)
-    ApplyQuasiMatrix(*, Ultraspherical{T}(1), A)
-end
+@simplify *(D::Derivative{<:Any,<:ChebyshevInterval}, S::ChebyshevU) = D * Ultraspherical(S)
 
 # Ultraspherical(1/2)\(D*Legendre())
 @simplify function *(D::Derivative{<:Any,<:ChebyshevInterval}, S::Legendre)
@@ -98,17 +96,14 @@ end
     (A\B̃)*Diagonal(B[1,:]./B̃[1,:])
 end
 
-@simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::Chebyshev)
-    if U.λ == 1
-        T = promote_type(eltype(U), eltype(C))
-        _BandedMatrix(Vcat(-Ones{T}(1,∞)/2,
-                            Zeros{T}(1,∞), 
-                            Hcat(Ones{T}(1,1),Ones{T}(1,∞)/2)), ∞, 0,2)
-    elseif U.λ > 0
-        (U\Ultraspherical(1)) * (Ultraspherical(1)\C)
-    else
-        error("Not implemented")
-    end
+@simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevT)    
+    T = promote_type(eltype(U), eltype(C))
+    (U\Ultraspherical{T}(1)) * (ChebyshevU{T}()\C)
+end
+
+@simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevU)    
+    T = promote_type(eltype(U), eltype(C))
+    U\Ultraspherical(C)
 end
 
 @simplify function \(C2::Ultraspherical{<:Any,<:Integer}, C1::Ultraspherical{<:Any,<:Integer})
@@ -137,14 +132,6 @@ end
     end
 end
 
-@simplify function \(w_A::WeightedBasis{<:Any,<:ChebyshevWeight,<:Chebyshev}, w_B::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}) 
-    wA,A = w_A.args
-    wB,B = w_B.args
-    T = promote_type(eltype(w_A), eltype(w_B))
-    @assert wB.λ == B.λ == 1
-    _BandedMatrix(Vcat(Fill(one(T)/2, 1, ∞), Zeros{T}(1, ∞), Fill(-one(T)/2, 1, ∞)), ∞, 2, 0)
-end
-
 # @simplify function \(w_A::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}, w_B::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}) 
 #     wA,A = w_A.args
 #     wB,B = w_B.args
@@ -169,14 +156,3 @@ end
 # end
 
 
-####
-# interrelationships
-####
-
-# (18.7.3)
-
-@simplify function \(A::Chebyshev, B::Jacobi)
-    T = promote_type(eltype(A), eltype(B))
-    (B.a == B.b == -T/2) || throw(ArgumentError())
-    Diagonal(Jacobi(-T/2,-T/2)[1,:])
-end

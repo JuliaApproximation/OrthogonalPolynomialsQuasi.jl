@@ -3,7 +3,7 @@ using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, Inte
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last, Slice
+                first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
 import LinearAlgebra: pinv
@@ -14,22 +14,61 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle,
-                    _getindex
+                    _getindex, lazy_getindex
 
 import InfiniteArrays: OneToInf
-import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex
+import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex, grid, transform, transform_ldiv
 
-export Hermite, Jacobi, Legendre, Chebyshev, Ultraspherical, Fourier,
-            JacobiWeight, ChebyshevWeight, UltrasphericalWeight,
+export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
+            JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             fullmaterialize, ∞
 
 _getindex(::IndexStyle, A::AbstractQuasiArray, i::Real, j::Slice{<:OneToInf}) =
-    materialize(view(A, i, j))
+    lazy_getindex(A, i, j)
 _getindex(::IndexStyle, A::AbstractQuasiArray, i::Slice{<:OneToInf}, j::Real) =
-    materialize(view(A, i, j))
+    lazy_getindex(A, i, j)
 
+
+checkpoints(::ChebyshevInterval) = [-0.823972,0.01,0.3273484]
+checkpoints(::UnitInterval) = [0.823972,0.01,0.3273484]
+checkpoints(d::AbstractInterval) = width(d) .* checkpoints(UnitInterval()) .+ leftendpoint(d)
+checkpoints(x::Inclusion) = checkpoints(x.domain)
+checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
+
+transform_ldiv(A, f, ::Tuple{<:Any,OneToInf})  = adaptivetransform_ldiv(A, f)
+transform_ldiv(A, f, ::Tuple{<:Any,IdentityUnitRange{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
+transform_ldiv(A, f, ::Tuple{<:Any,Slice{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
+
+function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
+    T = promote_type(U,V)
+
+    r = checkpoints(A)
+    fr = f[r]
+    maxabsfr = norm(fr,Inf)
+
+    tol = eps(T)
+
+    for n = 2 .^ (4:∞)
+        An = A[:,OneTo(n)]
+        cfs = An \ f
+        maxabsc = maximum(abs, cfs)
+        if maxabsc == 0 && maxabsfr == 0
+            return zeros(T,∞)
+        end
+
+        un = ApplyQuasiArray(*, An, cfs)
+        # we allow for transformed coefficients being a different size
+        ##TODO: how to do scaling for unnormalized bases like Jacobi?
+        if maximum(abs,@views(cfs[n-8:end])) < 10tol*maxabsc &&
+                all(norm.(un[r] - fr, 1) .< tol * n * maxabsfr*1000)
+            return [cfs; zeros(T,∞)]
+        end
+    end
+    error("Have not converged")
+end    
 
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
+
 
 """
     jacobimatrix(S)
@@ -156,6 +195,7 @@ getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
 include("hermite.jl")
 include("jacobi.jl")
+include("chebyshev.jl")
 include("ultraspherical.jl")
 include("fourier.jl")
 include("stieltjes.jl")
