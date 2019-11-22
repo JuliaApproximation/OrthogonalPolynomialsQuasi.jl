@@ -14,25 +14,25 @@ InfiniteArrays = "4858937d-0d70-526a-a4dd-2d5cb5dd786c"
 InfiniteLinearAlgebra = "cde9dba0-b1de-11e9-2c62-0bab9446c55c"
 IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
-QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
-DomainSets = "0.1"
 BandedMatrices = "0.14"
-FastTransforms = "0.6"
+ContinuumArrays = "0.0.3"
+DomainSets = "0.1"
+FastTransforms = "0.6, 0.7"
 FillArrays = "0.8"
+InfiniteArrays = "0.5"
+InfiniteLinearAlgebra = "0.1.1"
 IntervalSets = "0.3.1"
 LazyArrays = "0.14"
-julia = "1.2"
 QuasiArrays = "0.0.6"
-ContinuumArrays = "0.0.3"
-InfiniteLinearAlgebra = "0.1.1"
-InfiniteArrays = "0.5"
+julia = "1.2"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test","ForwardDiff"]
+test = ["Test", "ForwardDiff"]
