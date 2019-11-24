@@ -105,6 +105,17 @@ end
     Diagonal(Jacobi(-T/2,-T/2)[1,:])
 end
 
+# TODO: Toeplitz dot Hankel will be faster to generate
+@simplify function \(A::ChebyshevT, B::Legendre)
+    T = promote_type(eltype(A), eltype(B))
+   UpperTriangular( BroadcastArray((k,j) -> begin
+            (iseven(k) == iseven(j) && j ≥ k) || return zero(T)
+            k == 1 && return Λ(convert(T,j-1)/2)^2/π
+            2/π * Λ(convert(T,j-k)/2) * Λ(convert(T,k+j-2)/2)
+        end, 1:∞, (1:∞)'))
+end
+
+
 
 ####
 # sum
