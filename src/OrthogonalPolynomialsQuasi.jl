@@ -17,7 +17,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     _getindex, lazy_getindex
 
 import InfiniteArrays: OneToInf
-import ContinuumArrays: Basis, Weight, @simplify, Identity, AffineQuasiVector, inbounds_getindex, grid, transform, transform_ldiv
+import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, inbounds_getindex, grid, transform, transform_ldiv
 import FastTransforms: Λ
 
 export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
@@ -91,7 +91,7 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Ort
     C*jacobimatrix(C)
 end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AffineQuasiVector, C::OrthogonalPolynomial) 
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AbstractAffineQuasiVector, C::OrthogonalPolynomial) 
     x = axes(C,1) 
     axes(y,1) == x || throw(DimensionMismatch())
     broadcast(+, y.A * (x.*C), y.b.*C)
@@ -105,7 +105,7 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Wei
     (w .* P) * J
 end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,Tuple{<:AffineQuasiVector,<:Any}}) 
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,Tuple{<:AbstractAffineQuasiVector,<:Any}}) 
     x == axes(C,1) || throw(DimensionMismatch())
     P = parent(C)
     kr,jr = parentindices(C)
