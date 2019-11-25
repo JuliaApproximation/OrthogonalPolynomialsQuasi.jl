@@ -85,7 +85,7 @@ jacobimatrix(::Legendre) = _BandedMatrix(Vcat(((0:∞)./(1:2:∞))', Zeros(1,∞
 function jacobimatrix(J::Jacobi) 
     b,a = J.b,J.a
     n = 0:∞
-    B = @. 2*(n+1)*(n+a+b+1) / ((2n+a+b+1)*(2n+a+b+2))
+    B = Vcat(2 / (a+b+2),  @. 2*(n+2)*(n+a+b+2) / ((2n+a+b+3)*(2n+a+b+4)))
     A = Vcat((b-a) / (a+b+2), (b^2-a^2) ./ ((2n.+a.+b.+2).*(2n.+a.+b.+4)))
     C = @. 2*(n+a)*(n+b) / ((2n+a+b)*(2n+a+b+1))
 
@@ -109,9 +109,25 @@ end
     a,b = B.a,B.b
     if A.a == a && A.b == b
         Eye{T}(∞)
+    elseif isone(-a-b) && A.a == a && A.b == b+1
+        _BandedMatrix(Vcat((((0:∞) .+ a)./((1:2:∞) .+ (a+b)))', 
+                            Vcat(1,((2:∞) .+ (a+b))./((3:2:∞) .+ (a+b)))'), ∞, 0,1)
+    elseif isone(-a-b) && A.a == a+1 && A.b == b
+        _BandedMatrix(Vcat((-((0:∞) .+ b)./((1:2:∞) .+ (a+b)))', 
+                            Vcat(1,((2:∞) .+ (a+b))./((3:2:∞) .+ (a+b)))'), ∞, 0,1)
     elseif A.a == a && A.b == b+1
-        _BandedMatrix(Vcat((((0:∞) .+ a)./((1:2:∞) .+ (a+b)))', (((1:∞) .+ (a+b))./((1:2:∞) .+ (a+b)))'), ∞, 0,1)
-    else
+        _BandedMatrix(Vcat((((0:∞) .+ a)./((1:2:∞) .+ (a+b)))', 
+                            (((1:∞) .+ (a+b))./((1:2:∞) .+ (a+b)))'), ∞, 0,1)
+    elseif A.a == a+1 && A.b == b
+        _BandedMatrix(Vcat((-((0:∞) .+ b)./((1:2:∞) .+ (a+b)))', 
+                            (((1:∞) .+ (a+b))./((1:2:∞) .+ (a+b)))'), ∞, 0,1)
+    elseif A.a ≥ a+1
+        J = Jacobi(a+1,b)
+        (A \ J) * (J \ B)
+    elseif A.b ≥ b+1
+        J = Jacobi(a,b+1)
+        (A \ J) * (J \ B)
+    else        
         error("not implemented for $A and $B")
     end
 end
