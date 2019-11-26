@@ -195,6 +195,7 @@ getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
 
 include("hermite.jl")
+include("laguerre.jl")
 include("jacobi.jl")
 include("chebyshev.jl")
 include("ultraspherical.jl")
