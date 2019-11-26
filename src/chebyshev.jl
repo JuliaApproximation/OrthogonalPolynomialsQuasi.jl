@@ -102,19 +102,23 @@ end
 # (18.7.3)
 
 @simplify function \(A::ChebyshevT, B::Jacobi)
-    T = promote_type(eltype(A), eltype(B))
-    (B.a == B.b == -one(T)/2) || throw(ArgumentError())
-    Diagonal(B[1,:])
+    J = Jacobi(A)
+    Diagonal(J[1,:]) * (J \ B)
 end
 
 @simplify function \(A::Jacobi, B::ChebyshevT)
-    T = promote_type(eltype(A), eltype(B))
-    if A.a == A.b == -one(T)/2
-        Diagonal(inv.(A[1,:]))
-    else
-        J = Jacobi(-one(T)/2,-one(T)/2)
-        (A \ J) * (J \ B)
-    end
+    J = Jacobi(B)
+    (A \ J) * Diagonal(inv.(J[1,:]))
+end
+
+@simplify function \(A::Chebyshev, B::Jacobi)
+    J = Jacobi(A)
+    Diagonal(A[1,:] .\ J[1,:]) * (J \ B)
+end
+
+@simplify function \(A::Jacobi, B::Chebyshev)
+    J = Jacobi(B)
+    (A \ J) * Diagonal(J[1,:] .\ B[1,:])
 end
 
 @simplify function \(A::Jacobi, B::ChebyshevU)
@@ -131,6 +135,24 @@ end
             k == 1 && return Λ(convert(T,j-1)/2)^2/π
             2/π * Λ(convert(T,j-k)/2) * Λ(convert(T,k+j-2)/2)
         end, 1:∞, (1:∞)'))
+end
+
+
+@simplify function \(A::Jacobi, B::WeightedBasis{<:Any,<:JacobiWeight,<:Chebyshev})
+    w, T = B.args
+    J = Jacobi(T)
+    wJ = w .* J
+    (A \ wJ) * (J \ T)
+end
+
+@simplify function \(A::Chebyshev, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi})
+    J = Jacobi(A)
+    (A \ J) * (J \ B)
+end
+
+@simplify function \(A::Chebyshev, B::WeightedBasis{<:Any,<:JacobiWeight,<:Chebyshev})
+    J = Jacobi(A)
+    (A \ J) * (J \ B)
 end
 
 
