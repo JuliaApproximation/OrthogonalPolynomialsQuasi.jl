@@ -1,5 +1,6 @@
 struct Laguerre{T} <: OrthogonalPolynomial{T} 
     α::T
+    Laguerre{T}(α) where T = new{T}(convert(T, α))
 end
 Laguerre{T}() where T = Laguerre{T}(zero(T))
 Laguerre() = Laguerre{Float64}()
