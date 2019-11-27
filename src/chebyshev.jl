@@ -31,6 +31,17 @@ function getindex(w::ChebyshevUWeight, x::Number)
     sqrt(1-x^2)
 end
 
+
+
+
+Jacobi(C::ChebyshevT{T}) where T = Jacobi(-one(T)/2,-one(T)/2)
+Jacobi(C::ChebyshevU{T}) where T = Jacobi(one(T)/2,one(T)/2)
+
+
+#######
+# transform
+#######
+
 struct ChebyshevGrid{kind,T} <: AbstractVector{T}
     n::Int
 end
@@ -47,9 +58,8 @@ function getindex(g::ChebyshevGrid{2,T}, k::Integer) where T
 end
 
 
-
-Jacobi(C::ChebyshevT{T}) where T = Jacobi(-one(T)/2,-one(T)/2)
-Jacobi(C::ChebyshevU{T}) where T = Jacobi(one(T)/2,one(T)/2)
+factorize(L::SubArray{T,2,<:ChebyshevT,<:Tuple{<:Inclusion,<:OneTo}}) where T =
+    TransformFactorization(grid(L), plan_chebyshevtransform(Array{T}(undef, size(L,2))))
 
 ########
 # Jacobi Matrix

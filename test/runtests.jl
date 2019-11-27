@@ -21,12 +21,16 @@ end
         T = Chebyshev()
         Tn = @inferred(T[:,OneTo(100)])
         @test grid(Tn) == chebyshevpoints(100; kind=1)
-        g, F = transform(Tn)
-        u = T*[F \ exp.(g); zeros(∞)]
+        P = factorize(Tn)
+        u = T*[P.iplan \ exp.(P.grid); zeros(∞)]
         @test u[0.1] ≈ exp(0.1)
+
 
         # auto-transform
         x = axes(T,1)
+        u = Tn * (P \ exp.(x))
+        @test u[0.1] ≈ exp(0.1)
+
         u = Tn * (Tn \ exp.(x))
         @test u[0.1] ≈ exp(0.1)
 
