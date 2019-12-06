@@ -5,7 +5,7 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize
 import LinearAlgebra: pinv, factorize
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
 import FillArrays: AbstractFill, getindex_value
@@ -20,9 +20,16 @@ import InfiniteArrays: OneToInf
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, inbounds_getindex, grid, transform, transform_ldiv
 import FastTransforms: Λ
 
+import ContinuumArrays: QInfAxes
+import InfiniteArrays: InfAxes
+
 export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
             JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             fullmaterialize, ∞
+
+# ambiguity error
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V            
 
 _getindex(::IndexStyle, A::AbstractQuasiArray, i::Real, j::Slice{<:OneToInf}) =
     lazy_getindex(A, i, j)
@@ -105,12 +112,15 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Wei
     (w .* P) * J
 end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,Tuple{<:AbstractAffineQuasiVector,<:Any}}) 
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) 
+    T = promote_type(eltype(x), eltype(C))
     x == axes(C,1) || throw(DimensionMismatch())
     P = parent(C)
     kr,jr = parentindices(C)
     y = axes(P,1)
-    kr.A \ (y .* P .- kr.b .* P)
+    Y = P \ (y .* P)
+    X = kr.A \ (Y     - kr.b * Eye{T}(∞))
+    P[kr, :] * view(X,:,jr)
 end
   
 function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, a::AbstractVector, c::AbstractVector, x) where T
