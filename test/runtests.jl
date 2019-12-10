@@ -135,7 +135,7 @@ end
         D = Derivative(axes(T,1))
 
         @test C\C === pinv(C)*C === Eye(∞)
-
+        D₀ = U\(D*T)
         D₁ = C\(D*U)
         @test D₁ isa BandedMatrix
         @test apply(*,D₁,D₀)[1:10,1:10] == diagm(2 => 4:2:18)
