@@ -181,15 +181,15 @@ end
     a,b = S.a, S.b
     if w.a == 0 && w.b == 0
         D*S
+    elseif iszero(w.a) && w.b == b #L_6
+        A = _BandedMatrix((b:∞)', ∞, 0,0)
+        ApplyQuasiMatrix(*, JacobiWeight(b-1,w.a) .* Jacobi(b-1,a+1), A)
+    elseif iszero(w.b) && w.a == a #L_6^t
+        A = _BandedMatrix((a:∞)', ∞, 0,0)
+        ApplyQuasiMatrix(*, JacobiWeight(w.b,a-1) .* Jacobi(b+1,a-1), A)        
     elseif w.a == a && w.b == b # L_1^t
         A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
-        ApplyQuasiMatrix(*, JacobiWeight(b-1,a-1) .* Jacobi(b-1,a-1), A)
-    elseif w.a == 0 && w.b == b #L_6
-        A = _BandedMatrix((b:∞)', ∞, 0,0)
-        ApplyQuasiMatrix(*, JacobiWeight(b-1,a) .* Jacobi(b-1,a+1), A)
-    elseif w.b == 0 && w.a == a #L_6^t
-        A = _BandedMatrix((a:∞)', ∞, 0,0)
-        ApplyQuasiMatrix(*, JacobiWeight(b,a-1) .* Jacobi(b+1,a-1), A)        
+        ApplyQuasiMatrix(*, JacobiWeight(b-1,a-1) .* Jacobi(b-1,a-1), A)    
     else
         error("Not implemented")
     end
