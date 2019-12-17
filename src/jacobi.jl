@@ -122,10 +122,10 @@ end
         _BandedMatrix(Vcat((-((0:∞) .+ b)./((1:2:∞) .+ (a+b)))', 
                             (((1:∞) .+ (a+b))./((1:2:∞) .+ (a+b)))'), ∞, 0,1)
     elseif A.a ≥ a+1
-        J = Jacobi(a+1,b)
+        J = Jacobi(b,a+1)
         (A \ J) * (J \ B)
     elseif A.b ≥ b+1
-        J = Jacobi(a,b+1)
+        J = Jacobi(b+1,a)
         (A \ J) * (J \ B)
     else        
         error("not implemented for $A and $B")
@@ -169,7 +169,7 @@ end
 # Derivatives
 ##########
 
-# Jacobi(b+1,a+1)\(D*Jacobi(a,b))
+# Jacobi(b+1,a+1)\(D*Jacobi(b,a))
 @simplify function *(D::Derivative{<:Any,<:AbstractInterval}, S::Jacobi)
     A = _BandedMatrix((((1:∞) .+ (S.a + S.b))/2)', ∞, -1,1)
     ApplyQuasiMatrix(*, Jacobi(S.b+1,S.a+1), A)
@@ -184,7 +184,7 @@ end
         D*S
     else
         A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
-        ApplyQuasiMatrix(*, JacobiWeight(a-1,b-1) .* Jacobi(a-1,b-1), A)
+        ApplyQuasiMatrix(*, JacobiWeight(b-1,a-1) .* Jacobi(b-1,a-1), A)
     end
 end
 
