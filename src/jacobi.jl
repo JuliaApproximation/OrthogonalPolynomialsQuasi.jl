@@ -72,9 +72,9 @@ function legendre_massmatrix(Ac, B)
     (P\A)'*(P'P)*(P\B)
 end
 
-@simplify *(Ac::QuasiAdjoint{<:Any,<:Jacobi}, B::Jacobi) = legendre_massmatrix(Ac,B)
-@simplify *(Ac::QuasiAdjoint{<:Any,<:WeightedBasis{<:Any,<:JacobiWeight}}, B::WeightedBasis{<:Any,<:JacobiWeight}) = legendre_massmatrix(Ac,B)
-@simplify *(Ac::QuasiAdjoint{<:Any,<:Jacobi}, B::WeightedBasis{<:Any,<:JacobiWeight})  = legendre_massmatrix(Ac,B)
+@simplify *(Ac::QuasiAdjoint{<:Any,<:AbstractJacobi}, B::AbstractJacobi) = legendre_massmatrix(Ac,B)
+@simplify *(Ac::QuasiAdjoint{<:Any,<:WeightedBasis{<:Any,<:AbstractJacobiWeight}}, B::WeightedBasis{<:Any,<:AbstractJacobiWeight}) = legendre_massmatrix(Ac,B)
+@simplify *(Ac::QuasiAdjoint{<:Any,<:AbstractJacobi}, B::WeightedBasis{<:Any,<:AbstractJacobiWeight})  = legendre_massmatrix(Ac,B)
 
 ########
 # Jacobi Matrix
@@ -190,6 +190,12 @@ end
     elseif w.a == a && w.b == b # L_1^t
         A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
         ApplyQuasiMatrix(*, JacobiWeight(b-1,a-1) .* Jacobi(b-1,a-1), A)    
+    elseif iszero(w.a)
+        W = (JacobiWeight(b-1,w.a) .* Jacobi(b-1,a+1)) \ (D * (JacobiWeight(b,w.a) .* S))
+        J = Jacobi(b,a+1) # range Jacobi
+        C1 = J \ Jacobi(b-1,a+1)
+        C2 = J \ Jacobi(b,a)
+        ApplyQuasiMatrix(*, JacobiWeight(w.b-1,w.a) .* J, (w.b-b) * C2 + C1 * W)
     else
         error("Not implemented")
     end
