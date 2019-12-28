@@ -58,7 +58,7 @@ function getindex(g::ChebyshevGrid{2,T}, k::Integer) where T
 end
 
 
-factorize(L::SubArray{T,2,<:ChebyshevT,<:Tuple{<:Inclusion,<:OneTo}}) where T =
+factorize(L::SubQuasiArray{T,2,<:ChebyshevT,<:Tuple{<:Inclusion,<:OneTo}}) where T =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{T}(undef, size(L,2))))
 
 ########

@@ -16,12 +16,10 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle,
                     _getindex, lazy_getindex, _factorize
 
-import InfiniteArrays: OneToInf
-import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, inbounds_getindex, grid, transform, transform_ldiv
+import InfiniteArrays: OneToInf, InfAxes
+import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, 
+    inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes
 import FastTransforms: Λ
-
-import ContinuumArrays: QInfAxes
-import InfiniteArrays: InfAxes
 
 export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
             JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,

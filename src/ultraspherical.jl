@@ -12,6 +12,8 @@ end
 UltrasphericalWeight{T}(λ) where T = UltrasphericalWeight{T,typeof(λ)}(λ)
 UltrasphericalWeight(λ) = UltrasphericalWeight{typeof(λ),typeof(λ)}(λ)
 
+==(a::UltrasphericalWeight, b::UltrasphericalWeight) = a.λ == b.λ
+
 function getindex(w::UltrasphericalWeight, x::Number)
     x ∈ axes(w,1) || throw(BoundsError())
     (1-x^2)^(w.λ-one(w.λ)/2)
@@ -132,27 +134,20 @@ end
     end
 end
 
-# @simplify function \(w_A::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}, w_B::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}) 
-#     wA,A = w_A.args
-#     wB,B = w_B.args
+@simplify function \(w_A::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}, w_B::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}) 
+    wA,A = w_A.args
+    wB,B = w_B.args
 
-#     if wA == wB
-#         A \ B
-#     elseif B.λ == A.λ+1 && wB.λ == wA.λ+1
-#         λ = B.λ
-#         _BandedMatrix(Vcat((, 
-#                             Zeros(1,∞),
-#                             ((2:2:∞)./((2:2:∞) .+ (A.a+A.b)))'), ∞, 2,0)
-
-#     elseif wB.a ≥ wA.a+1
-#         J = JacobiWeight(wB.b,wB.a-1) .* Jacobi(B.b,B.a-1) 
-#         (w_A\J) * (J\w_B)
-#     elseif wB.b ≥ wA.b+1
-#         J = JacobiWeight(wB.b-1,wB.a) .* Jacobi(B.b-1,B.a) 
-#         (w_A\J) * (J\w_B)
-#     else
-#         error("not implemented for $A and $wB")
-#     end
-# end
+    if wA == wB
+        A \ B
+    elseif B.λ == A.λ+1 && wB.λ == wA.λ+1
+        λ = A.λ
+        _BandedMatrix(Vcat(((2λ:∞) .* ((2λ+1):∞) ./ (4λ .* (λ+1:∞)))', 
+                            Zeros(1,∞),
+                            ((1:∞) .* (2:∞) ./ (4λ .* (λ+1:∞)))'), ∞, 2,0)
+    else
+        error("not implemented for $A and $wB")
+    end
+end
 
 
