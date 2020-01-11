@@ -72,6 +72,13 @@ function legendre_massmatrix(Ac, B)
     (P\A)'*(P'P)*(P\B)
 end
 
+# 2^{a + b + 1} {\Gamma(n+a+1) \Gamma(n+b+1) \over (2n+a+b+1) \Gamma(n+a+b+1) n!}.
+
+function jacobi_massmatrix(b, a) 
+    n = 0:∞
+    Diagonal(2^(a+b+1) * (@. exp(loggamma(n+a+1) + loggamma(n+b+1) - loggamma(n+a+b+1) - loggamma(n+1)) / (2n+a+b+1)))
+end
+
 @simplify *(Ac::QuasiAdjoint{<:Any,<:AbstractJacobi}, B::AbstractJacobi) = legendre_massmatrix(Ac,B)
 @simplify *(Ac::QuasiAdjoint{<:Any,<:WeightedBasis{<:Any,<:AbstractJacobiWeight}}, B::WeightedBasis{<:Any,<:AbstractJacobiWeight}) = legendre_massmatrix(Ac,B)
 @simplify *(Ac::QuasiAdjoint{<:Any,<:AbstractJacobi}, B::WeightedBasis{<:Any,<:AbstractJacobiWeight})  = legendre_massmatrix(Ac,B)
