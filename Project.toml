@@ -1,7 +1,7 @@
 name = "OrthogonalPolynomialsQuasi"
 uuid = "aa41a628-2c43-45df-899b-83ab96621781"
 authors = ["Sheehan Olver <solver@mac.com>"]
-version = "0.0.1"
+version = "0.0.2"
 
 [deps]
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
@@ -19,15 +19,15 @@ QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
 BandedMatrices = "0.14"
-BlockBandedMatrices = "0.6, 0.7"
-ContinuumArrays = "0.1"
+BlockBandedMatrices = "0.7"
+ContinuumArrays = "0.2"
 DomainSets = "0.1"
 FastTransforms = "0.8"
 FillArrays = "0.8"
-InfiniteArrays = "0.5, 0.6"
+InfiniteArrays = "0.6"
 InfiniteLinearAlgebra = "0.1.1"
 IntervalSets = "0.3.1"
-LazyArrays = "0.14.8"
+LazyArrays = "0.14.11"
 QuasiArrays = "0.1"
 julia = "1.3"
 
