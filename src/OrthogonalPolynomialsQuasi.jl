@@ -17,7 +17,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     _getindex, lazy_getindex, _factorize
 
 import InfiniteArrays: OneToInf, InfAxes
-import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, 
+import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes
 import FastTransforms: Λ
 
@@ -201,6 +201,16 @@ getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer
 
 getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
+
+function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T
+    p = grid(L)
+    TransformFactorization(p, nothing, factorize(L[p,:]))
+end
+
+function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T
+    _,jr = parentindices(L)
+    ProjectionFactorization(factorize(parent(L)[:,Base.OneTo(maximum(jr))]), jr)
+end
 
 include("hermite.jl")
 include("jacobi.jl")

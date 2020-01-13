@@ -22,9 +22,8 @@ end
         Tn = @inferred(T[:,OneTo(100)])
         @test grid(Tn) == chebyshevpoints(100; kind=1)
         P = factorize(Tn)
-        u = T*[P.iplan \ exp.(P.grid); zeros(∞)]
+        u = T*[P.plan * exp.(P.grid); zeros(∞)]
         @test u[0.1] ≈ exp(0.1)
-
 
         # auto-transform
         x = axes(T,1)
@@ -34,7 +33,8 @@ end
         u = Tn * (Tn \ exp.(x))
         @test u[0.1] ≈ exp(0.1)
 
-        Tn = T[:,2:100]        
+        Tn = T[:,2:100]       
+        @test factorize(Tn) isa ContinuumArrays.ProjectionFactorization 
         @test grid(Tn) == chebyshevpoints(100; kind=1)
         @test (Tn \ (exp.(x) .- 1.26606587775201)) ≈ (Tn \ u) ≈ (T\u)[2:100]
 
@@ -44,6 +44,7 @@ end
         v = T[:,2:end] \ (exp.(x) .- 1.26606587775201)
         @test v[1:10] ≈ (T\u)[2:11]
     end
+
     @testset "Mapped Chebyshev" begin
         x = Inclusion(0..1)
         T = Chebyshev()[2x .- 1,:]
@@ -54,7 +55,10 @@ end
     @testset "Ultraspherical" begin
         U = Ultraspherical(1)
         x = axes(U,1)
-        (U * (U \ exp.(x)))[0.1]
+        Un = U[:,Base.OneTo(5)]
+        @test factorize(Un) isa ContinuumArrays.TransformFactorization
+        @test (Un \ x) ≈ [0,0.5,0,0,0]
+        @test (U * (U \ exp.(x)))[0.1] ≈ exp(0.1)
     end
 end
 
