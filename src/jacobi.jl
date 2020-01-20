@@ -72,9 +72,16 @@ function legendre_massmatrix(Ac, B)
     (P\A)'*(P'P)*(P\B)
 end
 
-@simplify *(Ac::QuasiAdjoint{<:Any,<:Jacobi}, B::Jacobi) = legendre_massmatrix(Ac,B)
-@simplify *(Ac::QuasiAdjoint{<:Any,<:WeightedBasis{<:Any,<:JacobiWeight}}, B::WeightedBasis{<:Any,<:JacobiWeight}) = legendre_massmatrix(Ac,B)
-@simplify *(Ac::QuasiAdjoint{<:Any,<:Jacobi}, B::WeightedBasis{<:Any,<:JacobiWeight})  = legendre_massmatrix(Ac,B)
+# 2^{a + b + 1} {\Gamma(n+a+1) \Gamma(n+b+1) \over (2n+a+b+1) \Gamma(n+a+b+1) n!}.
+
+function jacobi_massmatrix(b, a) 
+    n = 0:∞
+    Diagonal(2^(a+b+1) * (@. exp(loggamma(n+a+1) + loggamma(n+b+1) - loggamma(n+a+b+1) - loggamma(n+1)) / (2n+a+b+1)))
+end
+
+@simplify *(Ac::QuasiAdjoint{<:Any,<:AbstractJacobi}, B::AbstractJacobi) = legendre_massmatrix(Ac,B)
+@simplify *(Ac::QuasiAdjoint{<:Any,<:WeightedBasis{<:Any,<:AbstractJacobiWeight}}, B::WeightedBasis{<:Any,<:AbstractJacobiWeight}) = legendre_massmatrix(Ac,B)
+@simplify *(Ac::QuasiAdjoint{<:Any,<:AbstractJacobi}, B::WeightedBasis{<:Any,<:AbstractJacobiWeight})  = legendre_massmatrix(Ac,B)
 
 ########
 # Jacobi Matrix
@@ -122,10 +129,10 @@ end
         _BandedMatrix(Vcat((-((0:∞) .+ b)./((1:2:∞) .+ (a+b)))', 
                             (((1:∞) .+ (a+b))./((1:2:∞) .+ (a+b)))'), ∞, 0,1)
     elseif A.a ≥ a+1
-        J = Jacobi(a+1,b)
+        J = Jacobi(b,a+1)
         (A \ J) * (J \ B)
     elseif A.b ≥ b+1
-        J = Jacobi(a,b+1)
+        J = Jacobi(b+1,a)
         (A \ J) * (J \ B)
     else        
         error("not implemented for $A and $B")
@@ -169,7 +176,7 @@ end
 # Derivatives
 ##########
 
-# Jacobi(b+1,a+1)\(D*Jacobi(a,b))
+# Jacobi(b+1,a+1)\(D*Jacobi(b,a))
 @simplify function *(D::Derivative{<:Any,<:AbstractInterval}, S::Jacobi)
     A = _BandedMatrix((((1:∞) .+ (S.a + S.b))/2)', ∞, -1,1)
     ApplyQuasiMatrix(*, Jacobi(S.b+1,S.a+1), A)
@@ -179,12 +186,25 @@ end
 @simplify function *(D::Derivative{<:Any,<:AbstractInterval}, WS::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi})
     w,S = WS.args
     a,b = S.a, S.b
-    (w.a == a && w.b == b) || throw(ArgumentError())
     if w.a == 0 && w.b == 0
         D*S
-    else
+    elseif iszero(w.a) && w.b == b #L_6
+        A = _BandedMatrix((b:∞)', ∞, 0,0)
+        ApplyQuasiMatrix(*, JacobiWeight(b-1,w.a) .* Jacobi(b-1,a+1), A)
+    elseif iszero(w.b) && w.a == a #L_6^t
+        A = _BandedMatrix((a:∞)', ∞, 0,0)
+        ApplyQuasiMatrix(*, JacobiWeight(w.b,a-1) .* Jacobi(b+1,a-1), A)        
+    elseif w.a == a && w.b == b # L_1^t
         A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
-        ApplyQuasiMatrix(*, JacobiWeight(a-1,b-1) .* Jacobi(a-1,b-1), A)
+        ApplyQuasiMatrix(*, JacobiWeight(b-1,a-1) .* Jacobi(b-1,a-1), A)    
+    elseif iszero(w.a)
+        W = (JacobiWeight(b-1,w.a) .* Jacobi(b-1,a+1)) \ (D * (JacobiWeight(b,w.a) .* S))
+        J = Jacobi(b,a+1) # range Jacobi
+        C1 = J \ Jacobi(b-1,a+1)
+        C2 = J \ Jacobi(b,a)
+        ApplyQuasiMatrix(*, JacobiWeight(w.b-1,w.a) .* J, (w.b-b) * C2 + C1 * W)
+    else
+        error("Not implemented")
     end
 end
 

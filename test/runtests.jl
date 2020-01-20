@@ -21,16 +21,20 @@ end
         T = Chebyshev()
         Tn = @inferred(T[:,OneTo(100)])
         @test grid(Tn) == chebyshevpoints(100; kind=1)
-        g, F = transform(Tn)
-        u = T*[F \ exp.(g); zeros(∞)]
+        P = factorize(Tn)
+        u = T*[P.plan * exp.(P.grid); zeros(∞)]
         @test u[0.1] ≈ exp(0.1)
 
         # auto-transform
         x = axes(T,1)
+        u = Tn * (P \ exp.(x))
+        @test u[0.1] ≈ exp(0.1)
+
         u = Tn * (Tn \ exp.(x))
         @test u[0.1] ≈ exp(0.1)
 
-        Tn = T[:,2:100]        
+        Tn = T[:,2:100]       
+        @test factorize(Tn) isa ContinuumArrays.ProjectionFactorization 
         @test grid(Tn) == chebyshevpoints(100; kind=1)
         @test (Tn \ (exp.(x) .- 1.26606587775201)) ≈ (Tn \ u) ≈ (T\u)[2:100]
 
@@ -40,6 +44,7 @@ end
         v = T[:,2:end] \ (exp.(x) .- 1.26606587775201)
         @test v[1:10] ≈ (T\u)[2:11]
     end
+
     @testset "Mapped Chebyshev" begin
         x = Inclusion(0..1)
         T = Chebyshev()[2x .- 1,:]
@@ -50,21 +55,22 @@ end
     @testset "Ultraspherical" begin
         U = Ultraspherical(1)
         x = axes(U,1)
-        (U * (U \ exp.(x)))[0.1]
+        Un = U[:,Base.OneTo(5)]
+        @test factorize(Un) isa ContinuumArrays.TransformFactorization
+        @test (Un \ x) ≈ [0,0.5,0,0,0]
+        @test (U * (U \ exp.(x)))[0.1] ≈ exp(0.1)
     end
 end
 
-@testset "Ultraspherical" begin
+@testset "Chebyshev" begin
     @testset "operators" begin
-        T = Chebyshev()
+        T = ChebyshevT()
         U = ChebyshevU()
-        C = Ultraspherical(2)
         D = Derivative(axes(T,1))
 
         @test T\T === pinv(T)*T === Eye(∞)
-        @test U\U === pinv(U)*U === Eye(∞)
-        @test C\C === pinv(C)*C === Eye(∞)
-
+        @test U\U === pinv(U)*U === Eye(∞)       
+        
         @test ApplyStyle(*,typeof(D),typeof(T)) == SimplifyStyle()
         @test D*T isa MulQuasiMatrix
         D₀ = U\(D*T)
@@ -73,32 +79,22 @@ end
         @test D₀[1:10,1:10] == diagm(1 => 1:9)
         @test colsupport(D₀,1) == 1:0
 
-        D₁ = C\(D*U)
-        @test D₁ isa BandedMatrix
-        @test apply(*,D₁,D₀)[1:10,1:10] == diagm(2 => 4:2:18)
-        @test (D₁*D₀)[1:10,1:10] == diagm(2 => 4:2:18)
-        @test D₁*D₀ isa MulMatrix
-        @test bandwidths(D₁*D₀) == (-2,2)
-
         S₀ = (U\T)[1:10,1:10]
         @test S₀ isa BandedMatrix{Float64}
         @test S₀ == diagm(0 => [1.0; fill(0.5,9)], 2=> fill(-0.5,8))
 
-        S₁ = (C\U)[1:10,1:10]
-        @test S₁ isa BandedMatrix{Float64}
-        @test S₁ == diagm(0 => 1 ./ (1:10), 2=> -(1 ./ (3:10)))
-
         x = axes(T,1)
         J = T\(x.*T)
         @test J isa BandedMatrix
-        @test J[1:10,1:10] == jacobimatrix(T)[1:10,1:10]
+        @test J[1:10,1:10] == jacobimatrix(T)[1:10,1:10]        
     end
+
     @testset "test on functions" begin
-        T = Chebyshev()
-        U = Ultraspherical(1)
+        T = ChebyshevT()
+        U = ChebyshevU()
         D = Derivative(axes(T,1))
         f = T*Vcat(randn(10), Zeros(∞))
-        @test (U*(U\f)).args[1] isa Ultraspherical
+        @test (U*(U\f)).args[1] isa Chebyshev{2}
         @test (U*(U\f))[0.1] ≈ f[0.1]
         @test (D*f)[0.1] ≈ ForwardDiff.derivative(x -> (ChebyshevT{eltype(x)}()*f.args[2])[x],0.1)
     end
@@ -115,6 +111,56 @@ end
         @test V[0.1:0.1:1,:][:,1:5] == T[0.1:0.1:1,2:6]
         @test parentindices(V[:,OneTo(5)])[1] isa Inclusion
     end
+
+    @testset "Jacobi and Chebyshev" begin
+        T = ChebyshevT()
+        U = ChebyshevU()
+        JT = Jacobi(T)
+        JU = Jacobi(U)
+        @test ((T \ JT) * (JT \ T))[1:10,1:10] ≈ Eye(10)
+        @test ((U \ JU) * (JU \ U))[1:10,1:10] ≈ Eye(10)
+
+        @test T[0.1,1:10]' ≈ JT[0.1,1:10]' * (JT \ T)[1:10,1:10]
+        @test U[0.1,1:10]' ≈ JU[0.1,1:10]' * (JU \ U)[1:10,1:10]
+
+        w = JacobiWeight(1,1)
+        @test (w .* U)[0.1,1:10] ≈ (T * (T \ (w .* U)))[0.1,1:10]
+        @test (w .* U)[0.1,1:10] ≈ (JT * (JT \ (w .* U)))[0.1,1:10]
+        @test (w .* JU)[0.1,1:10] ≈ (T * (T \ (w .* JU)))[0.1,1:10]
+        @test (w .* JU)[0.1,1:10] ≈ (JT * (JT \ (w .* JU)))[0.1,1:10]
+    end
+end
+
+@testset "Ultraspherical" begin
+    @testset "operators" begin
+        T = Chebyshev()
+        U = ChebyshevU()
+        C = Ultraspherical(2)
+        D = Derivative(axes(T,1))
+
+        @test C\C === pinv(C)*C === Eye(∞)
+        D₀ = U\(D*T)
+        D₁ = C\(D*U)
+        @test D₁ isa BandedMatrix
+        @test apply(*,D₁,D₀)[1:10,1:10] == diagm(2 => 4:2:18)
+        @test (D₁*D₀)[1:10,1:10] == diagm(2 => 4:2:18)
+        @test D₁*D₀ isa MulMatrix
+        @test bandwidths(D₁*D₀) == (-2,2)
+
+        S₁ = (C\U)[1:10,1:10]
+        @test S₁ isa BandedMatrix{Float64}
+        @test S₁ == diagm(0 => 1 ./ (1:10), 2=> -(1 ./ (3:10)))
+    end
+
+    @testset "test on functions" begin
+        T = Chebyshev()
+        U = Ultraspherical(1)
+        D = Derivative(axes(T,1))
+        f = T*Vcat(randn(10), Zeros(∞))
+        @test (U*(U\f)).args[1] isa Ultraspherical
+        @test (U*(U\f))[0.1] ≈ f[0.1]
+        @test (D*f)[0.1] ≈ ForwardDiff.derivative(x -> (ChebyshevT{eltype(x)}()*f.args[2])[x],0.1)
+    end    
 end
 
 
