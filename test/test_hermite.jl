@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, ContinuumArrays, DomainSets, Test
+using OrthogonalPolynomialsQuasi, ContinuumArrays, DomainSets, FillArrays, Test
 import OrthogonalPolynomialsQuasi: jacobimatrix
 
 @testset "Hermite" begin
@@ -6,7 +6,15 @@ import OrthogonalPolynomialsQuasi: jacobimatrix
     @test axes(H) == (Inclusion(ℝ), Base.OneTo(∞))
     x = axes(H,1)
     X = jacobimatrix(H)
-    X*X
+
+    w = HermiteWeight()
+    wH = w.*H
+    M = H'* ( w.*H)
+    S = Diagonal(M.diag .^ (-1/2))
+    Si = Diagonal(M.diag .^ (1/2))
+    J = Si*X*S
+
+    (J - im*Eye(∞)) \ [1;zeros(∞)]
 
     @test H[0.1,1] === 1.0 # equivalent to H_0(0.1) == 1.0
     D = Derivative(x)

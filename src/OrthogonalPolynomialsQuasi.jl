@@ -22,7 +22,7 @@ import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiV
 import FastTransforms: Λ
 
 export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
-            JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
+            HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             fullmaterialize, ∞
 
 # ambiguity error
