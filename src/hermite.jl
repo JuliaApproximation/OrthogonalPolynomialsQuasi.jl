@@ -1,3 +1,13 @@
+struct HermiteWeight{T} <: Weight{T} end
+
+HermiteWeight() = HermiteWeight{Float64}()
+axes(::HermiteWeight{T}) where T = (Inclusion(ℝ),)
+function getindex(w::HermiteWeight, x::Number)
+    x ∈ axes(w,1) || throw(BoundsError())
+    exp(-x^2)
+end
+
+
 struct Hermite{T} <: OrthogonalPolynomial{T} end
 Hermite() = Hermite{Float64}()
 
@@ -10,6 +20,11 @@ axes(::Hermite{T}) where T = (Inclusion(ℝ), OneTo(∞))
 function jacobimatrix(H::Hermite{T}) where T
     # X = BandedMatrix(1 => 1:∞, -1 => Fill(one(T)/2,∞))
     _BandedMatrix(Vcat((0:∞)', Zeros(1,∞), Fill(one(T)/2,1,∞)), ∞, 1, 1)
+end
+
+@simplify function *(Ac::QuasiAdjoint{<:Any,<:Hermite}, B::WeightedBasis{<:Any,<:HermiteWeight,<:Hermite})  
+    T = promote_type(eltype(Ac), eltype(B))
+    Diagonal(sqrt(convert(T,π)) .* convert(T,2) .^ (0:∞) .* factorial.(convert(T,0):∞))
 end
 
 ##########
