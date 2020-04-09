@@ -14,7 +14,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     QuasiDiagonal, MulQuasiArray, MulQuasiMatrix, MulQuasiVector, QuasiMatMulMat,
                     ApplyQuasiArray, ApplyQuasiMatrix, LazyQuasiArrayApplyStyle, AbstractQuasiArrayApplyStyle,
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle,
-                    _getindex, lazy_getindex, _factorize
+                    _getindex, layout_getindex, _factorize
 
 import InfiniteArrays: OneToInf, InfAxes
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
@@ -30,9 +30,9 @@ sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V            
 
 _getindex(::IndexStyle, A::AbstractQuasiArray, i::Real, j::Slice{<:OneToInf}) =
-    lazy_getindex(A, i, j)
+    layout_getindex(A, i, j)
 _getindex(::IndexStyle, A::AbstractQuasiArray, i::Slice{<:OneToInf}, j::Real) =
-    lazy_getindex(A, i, j)
+    layout_getindex(A, i, j)
 
 
 checkpoints(::ChebyshevInterval) = [-0.823972,0.01,0.3273484]
@@ -156,18 +156,24 @@ function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, ::Zeros{<:A
     v
 end
 
-function forwardrecurrence!(v::AbstractVector{T}, b_v::AbstractFill, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, x) where T
+function forwardrecurrence!(v::AbstractVector{T}, b_v::AbstractFill, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, x, shift=0) where T
     isempty(v) && return v
     c0,c∞_v = c.args
     b = getindex_value(b_v)
     c∞ = getindex_value(c∞_v) 
     mbc  = -b/c∞
     xc = x/c∞
-    v[1] = one(x) # assume OPs are normalized to one for now
+    p0 = one(x) # assume OPs are normalized to one for now
+    p1 = x/c0
+    for n = 1:shift
+        p1,p0 = muladd(xc,p1,mbc*p0),p1
+    end
+    v[1] = p0
     length(v) == 1 && return v
-    v[2] = x/c0
-    @inbounds for n=3:length(v)
-        v[n] = muladd(xc,v[n-1],mbc*v[n-2])
+    v[2] = p1
+    @inbounds for n = 3:length(v)
+        p1,p0 = muladd(xc,p1,mbc*p0),p1
+        v[n] = p1
     end
     v
 end
@@ -183,12 +189,19 @@ function getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T
     forwardrecurrence!(similar(n,T),b,a,c,x)
 end
 
-function getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::OneTo) where T
+getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::AbstractUnitRange{Int}) where T =
+    copyto!(Matrix{T}(undef,length(x),length(n)), view(P, x, n))
+
+
+function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial,<:Tuple{<:AbstractVector,<:UnitRange}})
+    checkbounds(dest, axes(V)...)
+    P = parent(V)
+    xr,jr = parentindices(V)
     J = jacobimatrix(P)
     b,a,c = bands(J)
-    V = Matrix{T}(undef,length(x),length(n))
-    for k = eachindex(x)
-        forwardrecurrence!(view(V,k,:),b,a,c,x[k])
+    shift = first(jr)-1
+    for (k,x) = enumerate(xr)
+        forwardrecurrence!(view(dest,k,:), b, a, c, x, shift)
     end
     V
 end

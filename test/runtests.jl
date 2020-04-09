@@ -562,10 +562,18 @@ end
     @test L[1:10,1:10] isa AlmostBandedMatrix
     @test MemoryLayout(typeof(L)) isa VcatAlmostBandedLayout
     u = L \ [ℯ; zeros(∞)]
-    @test T[0.1,:]'*u ≈ (T*u)[0.1] ≈ exp(0.1)
+    @test T[0.1,:]'u ≈ (T*u)[0.1] ≈ exp(0.1)
 
     C = Ultraspherical(2)
     A = C \ (D^2 * T) - C\(x .* T)
     L = Vcat(T[[-1,1],:], A)
-    L \ Vcat([airyai(-1), airyai(1)], Zeros(∞))
+    @test qr(L).factors[1:10,1:10] ≈ qr(L[1:13,1:10]).factors[1:10,1:10]
+    u = L \ [airyai(-1); airyai(1); Zeros(∞)]
+    @test T[0.1,:]'u ≈ airyai(0.1)
+
+    ε = 0.0001
+    A = ε^2 * (C \ (D^2 * T)) - C\(x .* T)
+    L = Vcat(T[[-1,1],:], A)
+    u = L \ [airyai(-ε^(-2/3)); airyai(ε^(2/3)); zeros(∞)]
+    @test T[-0.1,:]'u ≈ airyai(-0.1*ε^(-2/3))
 end
