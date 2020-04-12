@@ -121,42 +121,60 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Sub
     P[kr, :] * view(X,:,jr)
 end
   
-function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, a::AbstractVector, c::AbstractVector, x) where T
+function forwardrecurrence!(v::AbstractVector, b::AbstractVector, a::AbstractVector, c::AbstractVector, x, shift=0)
     isempty(v) && return v
-    v[1] = one(x) # assume OPs are normalized to one for now
+    p0 = one(x) # assume OPs are normalized to one for now
+    p1 = (x-a[1])/c[1]
+    @inbounds for n = 1:shift
+        p1,p0 = muladd(x-a[n-1],v[n-1],-b[n-1]*v[n-2])/c[n-1],p1
+    end
+    v[1] = p0
     length(v) == 1 && return v
-    v[2] = (x-a[1])/c[1]
-    @inbounds for n=3:length(v)
-        v[n] = muladd(x-a[n-1],v[n-1],-b[n-1]*v[n-2])/c[n-1]
+    v[2] = p1
+    @inbounds for n = 3:length(v)
+        p1,p0 = muladd(x-a[n-1],v[n-1],-b[n-1]*v[n-2])/c[n-1],p1
+        v[n] = p1
     end
     v
 end
 
-function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, ::Zeros{<:Any,1}, c::AbstractVector, x) where T
+function forwardrecurrence!(v::AbstractVector, b::AbstractVector, ::Zeros{<:Any,1}, c::AbstractVector, x, shift=0)
     isempty(v) && return v
-    v[1] = one(x) # assume OPs are normalized to one for now
+    p0 = one(x) # assume OPs are normalized to one for now
+    p1 = x/c[1]
+    @inbounds for n = 1:shift
+        p1,p0 = muladd(x,p1,-b[n-1]*p0)/c[n-1],p1
+    end
+    v[1] = p0
     length(v) == 1 && return v
-    v[2] = x/c[1]
-    @inbounds for n=3:length(v)
-        v[n] = muladd(x,v[n-1],-b[n-1]*v[n-2])/c[n-1]
+    v[2] = p1
+    @inbounds for n = 3:length(v)
+        p1,p0 = muladd(x,p1,-b[n-1]*p0)/c[n-1],p1
+        v[n] = p1
     end
     v
 end
 
 # special case for Chebyshev
-function forwardrecurrence!(v::AbstractVector{T}, b::AbstractVector, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractVector}}, x) where T
+function forwardrecurrence!(v::AbstractVector, b::AbstractVector, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractVector}}, x, shift=0)s
     isempty(v) && return v
     c0,c∞ = c.args
-    v[1] = one(x) # assume OPs are normalized to one for now
+    p0 = one(x) # assume OPs are normalized to one for now
+    p1 = x/c0
+    @inbounds for n = 1:shift
+        p1,p0 = muladd(x,p1,-b[n-2]*p0)/c∞[n-2],p1
+    end
+    v[1] = p0
     length(v) == 1 && return v
-    v[2] = x/c0
-    @inbounds for n=3:length(v)
-        v[n] = muladd(x,v[n-1],-b[n-2]*v[n-2])/c∞[n-2]
+    v[2] = p1
+    @inbounds for n = 3:length(v)
+        p1,p0 = muladd(x,p1,-b[n-2]*p0)/c∞[n-2],p1
+        v[n] = p1
     end
     v
 end
 
-function forwardrecurrence!(v::AbstractVector{T}, b_v::AbstractFill, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, x, shift=0) where T
+function forwardrecurrence!(v::AbstractVector, b_v::AbstractFill, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, x, shift=0)
     isempty(v) && return v
     c0,c∞_v = c.args
     b = getindex_value(b_v)
@@ -203,7 +221,7 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial
     for (k,x) = enumerate(xr)
         forwardrecurrence!(view(dest,k,:), b, a, c, x, shift)
     end
-    V
+    dest
 end
 
 getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) =
