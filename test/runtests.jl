@@ -62,6 +62,18 @@ end
         @test (Un \ x) ≈ [0,0.5,0,0,0]
         @test (U * (U \ exp.(x)))[0.1] ≈ exp(0.1)
     end
+
+    @testset "point-inf eval" begin
+        T = Chebyshev()
+        @test T[0.1,:][1:10] ≈ T[0.1,1:10] ≈ (T')[1:10,0.1]
+    end
+
+    @testset "==" begin
+        @test Chebyshev() == ChebyshevT() == ChebyshevT{Float32}()
+        @test ChebyshevU() == ChebyshevU{Float32}()
+        @test Chebyshev{3}() == Chebyshev{3,Float32}()
+        
+    end
 end
 
 @testset "Chebyshev" begin

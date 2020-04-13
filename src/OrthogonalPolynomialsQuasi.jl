@@ -29,11 +29,6 @@ export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspheri
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V            
 
-_getindex(::IndexStyle, A::AbstractQuasiArray, i::Real, j::Slice{<:OneToInf}) =
-    layout_getindex(A, i, j)
-_getindex(::IndexStyle, A::AbstractQuasiArray, i::Slice{<:OneToInf}, j::Real) =
-    layout_getindex(A, i, j)
-
 
 checkpoints(::ChebyshevInterval) = [-0.823972,0.01,0.3273484]
 checkpoints(::UnitInterval) = [0.823972,0.01,0.3273484]
