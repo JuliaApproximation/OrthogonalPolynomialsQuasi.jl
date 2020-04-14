@@ -2,7 +2,7 @@ using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays
         LazyArrays, BandedMatrices, LinearAlgebra, FastTransforms, ForwardDiff, IntervalSets, 
         InfiniteLinearAlgebra, SemiseparableMatrices, SpecialFunctions, Test
 import ContinuumArrays: SimplifyStyle, BasisLayout, MappedBasisLayout
-import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
+import OrthogonalPolynomialsQuasi: jacobimatrix, ∞, ChebyshevInterval
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout
 import QuasiArrays: MulQuasiMatrix
@@ -67,19 +67,13 @@ end
         T = Chebyshev()
         @test T[0.1,:][1:10] ≈ T[0.1,1:10] ≈ (T')[1:10,0.1]
     end
-
-    @testset "==" begin
-        @test Chebyshev() == ChebyshevT() == ChebyshevT{Float32}()
-        @test ChebyshevU() == ChebyshevU{Float32}()
-        @test Chebyshev{3}() == Chebyshev{3,Float32}()
-        
-    end
 end
 
 @testset "Chebyshev" begin
     @testset "operators" begin
         T = ChebyshevT()
         U = ChebyshevU()
+        @test axes(T) == axes(U) == (Inclusion(ChebyshevInterval()),Base.OneTo(∞))
         D = Derivative(axes(T,1))
 
         @test T\T === pinv(T)*T === Eye(∞)
@@ -143,6 +137,13 @@ end
         @test (w .* JU)[0.1,1:10] ≈ (T * (T \ (w .* JU)))[0.1,1:10]
         @test (w .* JU)[0.1,1:10] ≈ (JT * (JT \ (w .* JU)))[0.1,1:10]
     end
+
+    @testset "==" begin
+        @test Chebyshev() == ChebyshevT() == ChebyshevT{Float32}()
+        @test ChebyshevU() == ChebyshevU{Float32}()
+        @test Chebyshev{3}() == Chebyshev{3,Float32}()
+        @test Chebyshev() ≠ ChebyshevU()
+    end     
 end
 
 @testset "Ultraspherical" begin
@@ -179,6 +180,12 @@ end
 
 
 @testset "Legendre" begin
+    @testset "basics" begin
+        P = Legendre()
+        @test axes(P) == (Inclusion(ChebyshevInterval()),Base.OneTo(∞))
+        @test P == P == Legendre{Float32}()
+    end
+
     @testset "operators" begin
         @test jacobimatrix(Jacobi(0.,0.))[1,1] == 0.0
         @test jacobimatrix(Jacobi(0.,0.))[1:10,1:10] == jacobimatrix(Legendre())[1:10,1:10] == jacobimatrix(Ultraspherical(1/2))[1:10,1:10]
@@ -187,6 +194,10 @@ end
         P = Legendre()
         P̃ = Jacobi(0.0,0.0)
         P̄ = Ultraspherical(1/2)
+
+        @test Ultraspherical(P) == P̄
+        @test Jacobi(P) == P̃
+
         @test P̃\P === P\P̃ === P̄\P === P\P̄ === Eye(∞)
         @test_broken P̄\P̃ === P̃\P̄ === Eye(∞)
         

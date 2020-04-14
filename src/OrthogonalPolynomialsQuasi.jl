@@ -151,24 +151,6 @@ function forwardrecurrence!(v::AbstractVector, b::AbstractVector, ::Zeros{<:Any,
 end
 
 # special case for Chebyshev
-function forwardrecurrence!(v::AbstractVector, b::AbstractVector, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractVector}}, x, shift=0)s
-    isempty(v) && return v
-    c0,c∞ = c.args
-    p0 = one(x) # assume OPs are normalized to one for now
-    p1 = x/c0
-    @inbounds for n = 1:shift
-        p1,p0 = muladd(x,p1,-b[n-2]*p0)/c∞[n-2],p1
-    end
-    v[1] = p0
-    length(v) == 1 && return v
-    v[2] = p1
-    @inbounds for n = 3:length(v)
-        p1,p0 = muladd(x,p1,-b[n-2]*p0)/c∞[n-2],p1
-        v[n] = p1
-    end
-    v
-end
-
 function forwardrecurrence!(v::AbstractVector, b_v::AbstractFill, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, x, shift=0)
     isempty(v) && return v
     c0,c∞_v = c.args
@@ -218,6 +200,20 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial
     end
     dest
 end
+
+function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial,<:Tuple{<:Number,<:UnitRange}})
+    checkbounds(dest, axes(V)...)
+    P = parent(V)
+    x,jr = parentindices(V)
+    J = jacobimatrix(P)
+    b,a,c = bands(J)
+    shift = first(jr)-1
+    forwardrecurrence!(dest, b, a, c, x, shift)
+    dest
+end
+
+getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = layout_getindex(P, x, n)
+getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = layout_getindex(P, x, n)
 
 getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) =
     P[x,OneTo(maximum(n))][n]
