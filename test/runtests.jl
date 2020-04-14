@@ -1,8 +1,10 @@
 using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, 
-        LazyArrays, BandedMatrices, LinearAlgebra, FastTransforms, ForwardDiff, IntervalSets, Test
+        LazyArrays, BandedMatrices, LinearAlgebra, FastTransforms, ForwardDiff, IntervalSets, 
+        InfiniteLinearAlgebra, SemiseparableMatrices, SpecialFunctions, Test
 import ContinuumArrays: SimplifyStyle, BasisLayout, MappedBasisLayout
-import OrthogonalPolynomialsQuasi: jacobimatrix, ∞
+import OrthogonalPolynomialsQuasi: jacobimatrix, ∞, ChebyshevInterval
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
+import SemiseparableMatrices: VcatAlmostBandedLayout
 import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
 
@@ -60,12 +62,18 @@ end
         @test (Un \ x) ≈ [0,0.5,0,0,0]
         @test (U * (U \ exp.(x)))[0.1] ≈ exp(0.1)
     end
+
+    @testset "point-inf eval" begin
+        T = Chebyshev()
+        @test T[0.1,:][1:10] ≈ T[0.1,1:10] ≈ (T')[1:10,0.1]
+    end
 end
 
 @testset "Chebyshev" begin
     @testset "operators" begin
         T = ChebyshevT()
         U = ChebyshevU()
+        @test axes(T) == axes(U) == (Inclusion(ChebyshevInterval()),Base.OneTo(∞))
         D = Derivative(axes(T,1))
 
         @test T\T === pinv(T)*T === Eye(∞)
@@ -129,6 +137,13 @@ end
         @test (w .* JU)[0.1,1:10] ≈ (T * (T \ (w .* JU)))[0.1,1:10]
         @test (w .* JU)[0.1,1:10] ≈ (JT * (JT \ (w .* JU)))[0.1,1:10]
     end
+
+    @testset "==" begin
+        @test Chebyshev() == ChebyshevT() == ChebyshevT{Float32}()
+        @test ChebyshevU() == ChebyshevU{Float32}()
+        @test Chebyshev{3}() == Chebyshev{3,Float32}()
+        @test Chebyshev() ≠ ChebyshevU()
+    end     
 end
 
 @testset "Ultraspherical" begin
@@ -165,6 +180,12 @@ end
 
 
 @testset "Legendre" begin
+    @testset "basics" begin
+        P = Legendre()
+        @test axes(P) == (Inclusion(ChebyshevInterval()),Base.OneTo(∞))
+        @test P == P == Legendre{Float32}()
+    end
+
     @testset "operators" begin
         @test jacobimatrix(Jacobi(0.,0.))[1,1] == 0.0
         @test jacobimatrix(Jacobi(0.,0.))[1:10,1:10] == jacobimatrix(Legendre())[1:10,1:10] == jacobimatrix(Ultraspherical(1/2))[1:10,1:10]
@@ -173,6 +194,10 @@ end
         P = Legendre()
         P̃ = Jacobi(0.0,0.0)
         P̄ = Ultraspherical(1/2)
+
+        @test Ultraspherical(P) == P̄
+        @test Jacobi(P) == P̃
+
         @test P̃\P === P\P̃ === P̄\P === P\P̄ === Eye(∞)
         @test_broken P̄\P̃ === P̃\P̄ === Eye(∞)
         
@@ -376,32 +401,36 @@ end
     @test B*(F \ b) ≈ b
 end
 
-@testset "Chebyshev evaluation" begin
-    P = Chebyshev()
-    @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
-    @test @inferred(P[0.1,Base.OneTo(1)]) == [1.0]
-    @test @inferred(P[0.1,Base.OneTo(2)]) == [1.0,0.1]
+@testset "Evaluation" begin
+    T = Chebyshev()
+    @test @inferred(T[0.1,Base.OneTo(0)]) == Float64[]
+    @test @inferred(T[0.1,Base.OneTo(1)]) == [1.0]
+    @test @inferred(T[0.1,Base.OneTo(2)]) == [1.0,0.1]
     for N = 1:10
-        @test @inferred(P[0.1,Base.OneTo(N)]) ≈ @inferred(P[0.1,1:N]) ≈ [cos(n*acos(0.1)) for n = 0:N-1]
-        @test @inferred(P[0.1,N]) ≈ cos((N-1)*acos(0.1))
+        @test @inferred(T[0.1,Base.OneTo(N)]) ≈ @inferred(T[0.1,1:N]) ≈ [cos(n*acos(0.1)) for n = 0:N-1]
+        @test @inferred(T[0.1,N]) ≈ cos((N-1)*acos(0.1))
     end
-    @test P[0.1,[2,5,10]] ≈ [0.1,cos(4acos(0.1)),cos(9acos(0.1))]
+    @test T[0.1,[2,5,10]] ≈ [0.1,cos(4acos(0.1)),cos(9acos(0.1))]
 
-    P = Ultraspherical(1)
-    @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
-    @test @inferred(P[0.1,Base.OneTo(1)]) == [1.0]
-    @test @inferred(P[0.1,Base.OneTo(2)]) == [1.0,0.2]
+
+    @test axes(T[1:1,:]) === (Base.OneTo(1), Base.OneTo(∞))
+    @test T[1:1,:][:,1:5] == ones(1,5)
+
+    U = ChebyshevU()
+    @test @inferred(U[0.1,Base.OneTo(0)]) == Float64[]
+    @test @inferred(U[0.1,Base.OneTo(1)]) == [1.0]
+    @test @inferred(U[0.1,Base.OneTo(2)]) == [1.0,0.2]
     for N = 1:10
-        @test @inferred(P[0.1,Base.OneTo(N)]) ≈ @inferred(P[0.1,1:N]) ≈ [sin((n+1)*acos(0.1))/sin(acos(0.1)) for n = 0:N-1]
-        @test @inferred(P[0.1,N]) ≈ sin(N*acos(0.1))/sin(acos(0.1))
+        @test @inferred(U[0.1,Base.OneTo(N)]) ≈ @inferred(U[0.1,1:N]) ≈ [sin((n+1)*acos(0.1))/sin(acos(0.1)) for n = 0:N-1]
+        @test @inferred(U[0.1,N]) ≈ sin(N*acos(0.1))/sin(acos(0.1))
     end
-    @test P[0.1,[2,5,10]] ≈ [0.2,sin(5acos(0.1))/sin(acos(0.1)),sin(10acos(0.1))/sin(acos(0.1))]
+    @test U[0.1,[2,5,10]] ≈ [0.2,sin(5acos(0.1))/sin(acos(0.1)),sin(10acos(0.1))/sin(acos(0.1))]
 
-    P = Ultraspherical(2)
-    @test @inferred(P[0.1,Base.OneTo(0)]) == Float64[]
-    @test @inferred(P[0.1,Base.OneTo(1)]) == [1.0]
-    @test @inferred(P[0.1,Base.OneTo(2)]) == [1.0,0.4]
-    @test @inferred(P[0.1,Base.OneTo(3)]) == [1.0,0.4,-1.88]
+    C = Ultraspherical(2)
+    @test @inferred(C[0.1,Base.OneTo(0)]) == Float64[]
+    @test @inferred(C[0.1,Base.OneTo(1)]) == [1.0]
+    @test @inferred(C[0.1,Base.OneTo(2)]) == [1.0,0.4]
+    @test @inferred(C[0.1,Base.OneTo(3)]) == [1.0,0.4,-1.88]
 end
 
 @testset "Collocation" begin
@@ -543,4 +572,31 @@ end
     x = Inclusion(0..1)
     @test sum(wT[2x .- 1, :]; dims=1)[1,1:10] == [π/2; zeros(9)]
     @test sum(wT[2x .- 1, :] * [[1,2,3]; zeros(∞)]) == π/2
+end
+
+@testset "Ultraspherical spectral method" begin
+    T = Chebyshev()
+    U = ChebyshevU()
+    x = axes(T,1)
+    D = Derivative(x) 
+    A = U\(D*T) - U\T
+    @test copyto!(BandedMatrix{Float64}(undef, (10,10), (0,2)), view(A,1:10,1:10)) == A[1:10,1:10]
+    L = Vcat(T[1:1,:], A)
+    @test L[1:10,1:10] isa AlmostBandedMatrix
+    @test MemoryLayout(typeof(L)) isa VcatAlmostBandedLayout
+    u = L \ [ℯ; zeros(∞)]
+    @test T[0.1,:]'u ≈ (T*u)[0.1] ≈ exp(0.1)
+
+    C = Ultraspherical(2)
+    A = C \ (D^2 * T) - C\(x .* T)
+    L = Vcat(T[[-1,1],:], A)
+    @test qr(L).factors[1:10,1:10] ≈ qr(L[1:13,1:10]).factors[1:10,1:10]
+    u = L \ [airyai(-1); airyai(1); Zeros(∞)]
+    @test T[0.1,:]'u ≈ airyai(0.1)
+
+    ε = 0.0001
+    A = ε^2 * (C \ (D^2 * T)) - C\(x .* T)
+    L = Vcat(T[[-1,1],:], A)
+    u = L \ [airyai(-ε^(-2/3)); airyai(ε^(2/3)); zeros(∞)]
+    @test T[-0.1,:]'u ≈ airyai(-0.1*ε^(-2/3))
 end
