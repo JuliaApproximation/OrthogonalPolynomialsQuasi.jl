@@ -17,13 +17,12 @@ LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
-
 [compat]
 BandedMatrices = "0.15.3"
 BlockBandedMatrices = "0.8"
 ContinuumArrays = "0.2.2"
 DomainSets = "0.1, 0.2"
-FastTransforms = "0.8"
+FastTransforms = "0.8, 0.9"
 FillArrays = "0.8"
 InfiniteArrays = "0.7"
 InfiniteLinearAlgebra = "0.3"
