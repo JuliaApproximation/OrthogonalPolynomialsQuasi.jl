@@ -5,7 +5,7 @@
 # Ultraspherical
 ##
 
-struct UltrasphericalWeight{T,Λ} <: AbstractJacobiWeight{T} 
+struct UltrasphericalWeight{T,Λ} <: AbstractJacobiWeight{T}
     λ::Λ
 end
 
@@ -21,7 +21,7 @@ end
 
 
 
-struct Ultraspherical{T,Λ} <: AbstractJacobi{T} 
+struct Ultraspherical{T,Λ} <: AbstractJacobi{T}
     λ::Λ
 end
 Ultraspherical{T}(λ::Λ) where {T,Λ} = Ultraspherical{T,Λ}(λ)
@@ -81,6 +81,25 @@ end
     ApplyQuasiMatrix(*, Ultraspherical{eltype(S)}(S.λ+1), A)
 end
 
+# Ultraspherical(λ-1)\ (D*w*Ultraspherical(λ))
+@simplify function *(D::Derivative{<:Any,<:AbstractInterval}, WS::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical})
+    w,S = WS.args
+    λ = S.λ
+    T = eltype(WS)
+    if iszero(w.λ)
+        D*S
+    elseif w.λ == λ == 1
+        A = _BandedMatrix((-(1:∞))', ∞, 1,-1)
+        ApplyQuasiMatrix(*, ChebyshevTWeight{T}() .* ChebyshevT{T}(), A)
+    elseif w.λ == λ
+        n = (0:∞)
+        A = _BandedMatrix((-one(T)/(2*(λ-1)) * ((n.+1) .* (n .+ (2λ-1))))', ∞, 1,-1)
+        ApplyQuasiMatrix(*, Ultraspherical{T}(λ-1) .* Ultraspherical{T}(λ-1), A)
+    else
+        error("Not implemented")
+    end
+end
+
 
 ##########
 # Conversion
@@ -89,21 +108,21 @@ end
 @simplify \(A::Ultraspherical, B::Legendre) = A\Ultraspherical(B)
 @simplify \(A::Legendre, B::Ultraspherical) = Ultraspherical(A)\B
 
-@simplify function \(A::Ultraspherical, B::Jacobi) 
+@simplify function \(A::Ultraspherical, B::Jacobi)
     Ã = Jacobi(A)
     Diagonal(Ã[1,:]./A[1,:]) * (Ã\B)
 end
-@simplify function \(A::Jacobi, B::Ultraspherical) 
+@simplify function \(A::Jacobi, B::Ultraspherical)
     B̃ = Jacobi(B)
     (A\B̃)*Diagonal(B[1,:]./B̃[1,:])
 end
 
-@simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevT)    
+@simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevT)
     T = promote_type(eltype(U), eltype(C))
     (U\Ultraspherical{T}(1)) * (ChebyshevU{T}()\C)
 end
 
-@simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevU)    
+@simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevU)
     T = promote_type(eltype(U), eltype(C))
     U\Ultraspherical(C)
 end
@@ -111,7 +130,7 @@ end
 @simplify function \(C2::Ultraspherical{<:Any,<:Integer}, C1::Ultraspherical{<:Any,<:Integer})
     λ = C1.λ
     T = promote_type(eltype(C2), eltype(C1))
-    if C2.λ == λ+1 
+    if C2.λ == λ+1
         _BandedMatrix( Vcat(-(λ ./ ((0:∞) .+ λ))', Zeros(1,∞), (λ ./ ((0:∞) .+ λ))'), ∞, 0, 2)
     elseif C2.λ == λ
         Eye{T}(∞)
@@ -125,7 +144,7 @@ end
 @simplify function \(C2::Ultraspherical, C1::Ultraspherical)
     λ = C1.λ
     T = promote_type(eltype(C2), eltype(C1))
-    if C2.λ == λ+1 
+    if C2.λ == λ+1
         _BandedMatrix( Vcat(-(λ ./ ((0:∞) .+ λ))', Zeros(1,∞), (λ ./ ((0:∞) .+ λ))'), ∞, 0, 2)
     elseif C2.λ == λ
         Eye{T}(∞)
@@ -134,7 +153,7 @@ end
     end
 end
 
-@simplify function \(w_A::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}, w_B::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}) 
+@simplify function \(w_A::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}, w_B::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical})
     wA,A = w_A.args
     wB,B = w_B.args
 
@@ -142,12 +161,18 @@ end
         A \ B
     elseif B.λ == A.λ+1 && wB.λ == wA.λ+1
         λ = A.λ
-        _BandedMatrix(Vcat(((2λ:∞) .* ((2λ+1):∞) ./ (4λ .* (λ+1:∞)))', 
+        _BandedMatrix(Vcat(((2λ:∞) .* ((2λ+1):∞) ./ (4λ .* (λ+1:∞)))',
                             Zeros(1,∞),
                             ((1:∞) .* (2:∞) ./ (4λ .* (λ+1:∞)))'), ∞, 2,0)
     else
         error("not implemented for $A and $wB")
     end
+end
+
+\(A::Legendre, wB::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}) = Ultraspherical(A) \ wB
+
+@simplify function \(A::Ultraspherical, w_B::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}) 
+    (UltrasphericalWeight(zero(A.λ)) .* A) \ w_B
 end
 
 

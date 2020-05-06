@@ -7,6 +7,7 @@ import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout
 import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
+import InfiniteLinearAlgebra: KronTrav
 
 @testset "ChebyshevGrid" begin
     for kind in (1,2)
@@ -599,4 +600,28 @@ end
     L = Vcat(T[[-1,1],:], A)
     u = L \ [airyai(-ε^(-2/3)); airyai(ε^(2/3)); zeros(∞)]
     @test T[-0.1,:]'u ≈ airyai(-0.1*ε^(-2/3))
+end
+
+@testset "2D p-FEM" begin
+    W = JacobiWeight(1,1) .* Jacobi(1,1)
+    x = axes(W,1)
+    D = Derivative(x)
+
+    using BlockArrays
+
+    D2 = -((D*W)'*(D*W))
+    M = W'W
+    A = KronTrav(D2,M)
+    N = 30; 
+    V = view(A,Block(N,N));
+    @time MemoryLayout(arguments(V)[2]) isa LazyBandedMatrices.MulBandedLayout
+
+    Δ = KronTrav(D2,M) + KronTrav(M,D2-M)
+    N = 100; @time L = Δ[Block.(1:N+2),Block.(1:N)];
+    r = PseudoBlockArray(KronTrav(M,M)[Block.(1:N+2),1])
+    @time F = qr(L);
+    @time u = F \ r;
+
+
+    u = Δ \ [1; zeros(∞)];
 end
