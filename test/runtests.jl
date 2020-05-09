@@ -1,13 +1,14 @@
 using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays, 
-        LazyArrays, BandedMatrices, LinearAlgebra, FastTransforms, ForwardDiff, IntervalSets, 
-        InfiniteLinearAlgebra, SemiseparableMatrices, SpecialFunctions, Test
+        LazyArrays, BandedMatrices, LinearAlgebra, FastTransforms, IntervalSets, 
+        InfiniteLinearAlgebra, Test
+using ForwardDiff, SemiseparableMatrices, SpecialFunctions, LazyBandedMatrices
 import ContinuumArrays: SimplifyStyle, BasisLayout, MappedBasisLayout
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞, ChebyshevInterval
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout
 import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
-import InfiniteLinearAlgebra: KronTrav
+import InfiniteLinearAlgebra: KronTrav, Block
 
 @testset "ChebyshevGrid" begin
     for kind in (1,2)
@@ -340,7 +341,7 @@ end
     @test W[0.1,0.2] ≈ 0.0
 end
 
-@testset "P-FEM" begin
+@testset "p-FEM" begin
     S = Jacobi(true,true)
     w = JacobiWeight(true,true)
     D = Derivative(axes(S,1))
@@ -375,6 +376,8 @@ end
     Δ = L'L
     @test Δ isa MulMatrix
     @test bandwidths(Δ) == (0,0)
+    @test BandedMatrix(Δ) == Δ
+    @test BandedMatrix(Δ) isa BandedMatrix
 end
 
 @testset "∞-FEM" begin
@@ -607,8 +610,6 @@ end
     x = axes(W,1)
     D = Derivative(x)
 
-    using BlockArrays
-
     D2 = -((D*W)'*(D*W))
     M = W'W
     A = KronTrav(D2,M)
@@ -618,10 +619,9 @@ end
 
     Δ = KronTrav(D2,M) + KronTrav(M,D2-M)
     N = 100; @time L = Δ[Block.(1:N+2),Block.(1:N)];
-    r = PseudoBlockArray(KronTrav(M,M)[Block.(1:N+2),1])
+    r = KronTrav(M,M)[Block.(1:N+2),1]
     @time F = qr(L);
     @time u = F \ r;
 
-
-    u = Δ \ [1; zeros(∞)];
+    # u = Δ \ [1; zeros(∞)];
 end
