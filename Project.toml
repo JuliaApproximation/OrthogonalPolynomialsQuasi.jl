@@ -20,7 +20,7 @@ QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 [compat]
 BandedMatrices = "0.15.8"
 BlockBandedMatrices = "0.8.4"
-ContinuumArrays = "0.2.3"
+ContinuumArrays = "0.2.2"
 DomainSets = "0.1, 0.2, 0.3"
 FastTransforms = "0.8, 0.9"
 FillArrays = "0.8.8"
