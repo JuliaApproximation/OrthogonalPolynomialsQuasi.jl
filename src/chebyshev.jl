@@ -10,10 +10,18 @@ struct Chebyshev{kind,T} <: AbstractJacobi{T} end
 Chebyshev() = Chebyshev{1,Float64}()
 Chebyshev{kind}() where kind = Chebyshev{kind,Float64}()
 
+
+const WeightedChebyshev{kind,T} = WeightedBasis{T,<:ChebyshevWeight{kind},<:Chebyshev{kind}}
+
+WeightedChebyshev{kind}() where kind = ChebyshevWeight{kind}() .* Chebyshev{kind}()
+WeightedChebyshev{kind,T}() where {kind,T} = ChebyshevWeight{kind,T}(λ) .* Chebyshev{kind,T}(λ)
+
 const ChebyshevTWeight = ChebyshevWeight{1}
 const ChebyshevUWeight = ChebyshevWeight{2}
 const ChebyshevT = Chebyshev{1}
 const ChebyshevU = Chebyshev{2}
+const WeightedChebyshevT = WeightedChebyshev{1}
+const WeightedChebyshevU = WeightedChebyshev{2}
 
 ==(a::Chebyshev{kind}, b::Chebyshev{kind}) where kind = true
 ==(a::Chebyshev, b::Chebyshev) = false
@@ -97,7 +105,7 @@ end
                         Hcat(Ones{T}(1,1),Ones{T}(1,∞)/2)), ∞, 0,2)
 end
 
-@simplify function \(w_A::WeightedBasis{<:Any,<:ChebyshevTWeight,<:ChebyshevT}, w_B::WeightedBasis{<:Any,<:ChebyshevUWeight,<:ChebyshevU}) 
+@simplify function \(w_A::WeightedChebyshevT, w_B::WeightedChebyshevU) 
     wA,A = w_A.args
     wB,B = w_B.args
     T = promote_type(eltype(w_A), eltype(w_B))

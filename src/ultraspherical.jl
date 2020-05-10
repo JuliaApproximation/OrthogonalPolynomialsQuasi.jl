@@ -34,12 +34,17 @@ end
 
 Ultraspherical(::ChebyshevU{T}) where T = Ultraspherical{T}(1)
 
+const WeightedUltraspherical{T} = WeightedBasis{T,<:UltrasphericalWeight,<:Ultraspherical}
+
+WeightedUltraspherical(λ) = UltrasphericalWeight(λ) .* Ultraspherical(λ)
+WeightedUltraspherical{T}(λ) where T = UltrasphericalWeight{T}(λ) .* Ultraspherical{T}(λ)
+
+
 ==(a::Ultraspherical, b::Ultraspherical) = a.λ == b.λ
 ==(::Ultraspherical, ::ChebyshevT) = false
 ==(::ChebyshevT, ::Ultraspherical) = false
 ==(C::Ultraspherical, ::ChebyshevU) = isone(C.λ)
 ==(::ChebyshevU, C::Ultraspherical) = isone(C.λ)
-
 
 ###
 # interrelationships
@@ -82,7 +87,7 @@ end
 end
 
 # Ultraspherical(λ-1)\ (D*w*Ultraspherical(λ))
-@simplify function *(D::Derivative{<:Any,<:AbstractInterval}, WS::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical})
+@simplify function *(D::Derivative{<:Any,<:AbstractInterval}, WS::WeightedUltraspherical)
     w,S = WS.args
     λ = S.λ
     T = eltype(WS)
@@ -94,7 +99,7 @@ end
     elseif w.λ == λ
         n = (0:∞)
         A = _BandedMatrix((-one(T)/(2*(λ-1)) * ((n.+1) .* (n .+ (2λ-1))))', ∞, 1,-1)
-        ApplyQuasiMatrix(*, Ultraspherical{T}(λ-1) .* Ultraspherical{T}(λ-1), A)
+        ApplyQuasiMatrix(*, WeightedUltraspherical{T}(λ-1), A)
     else
         error("Not implemented")
     end
@@ -153,7 +158,7 @@ end
     end
 end
 
-@simplify function \(w_A::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}, w_B::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical})
+@simplify function \(w_A::WeightedUltraspherical, w_B::WeightedUltraspherical)
     wA,A = w_A.args
     wB,B = w_B.args
 
@@ -163,15 +168,15 @@ end
         λ = A.λ
         _BandedMatrix(Vcat(((2λ:∞) .* ((2λ+1):∞) ./ (4λ .* (λ+1:∞)))',
                             Zeros(1,∞),
-                            ((1:∞) .* (2:∞) ./ (4λ .* (λ+1:∞)))'), ∞, 2,0)
+                            (-(1:∞) .* (2:∞) ./ (4λ .* (λ+1:∞)))'), ∞, 2,0)
     else
         error("not implemented for $A and $wB")
     end
 end
 
-\(A::Legendre, wB::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}) = Ultraspherical(A) \ wB
+\(A::Legendre, wB::WeightedUltraspherical) = Ultraspherical(A) \ wB
 
-@simplify function \(A::Ultraspherical, w_B::WeightedBasis{<:Any,<:UltrasphericalWeight,<:Ultraspherical}) 
+@simplify function \(A::Ultraspherical, w_B::WeightedUltraspherical) 
     (UltrasphericalWeight(zero(A.λ)) .* A) \ w_B
 end
 
