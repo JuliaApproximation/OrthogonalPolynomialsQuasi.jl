@@ -35,19 +35,25 @@ Jacobi(b::T, a::V) where {T,V} = Jacobi{promote_type(T,V)}(b,a)
 
 Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
 
+const WeightedJacobi{T} = WeightedBasis{T,<:JacobiWeight,<:Jacobi}
+
+WeightedJacobi(b,a) = JacobiWeight(b,a) .* Jacobi(b,a)
+WeightedJacobi{T}(b,a) where T = JacobiWeight{T}(b,a) .* Jacobi{T}(b,a)
+
+
 axes(::AbstractJacobi{T}) where T = (Inclusion(ChebyshevInterval{T}()), OneTo(∞))
 ==(P::Jacobi, Q::Jacobi) = P.a == Q.a && P.b == Q.b
 ==(P::Legendre, Q::Jacobi) = Jacobi(P) == Q
 ==(P::Jacobi, Q::Legendre) = P == Jacobi(Q)
-==(A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) = 
+==(A::WeightedJacobi, B::WeightedJacobi) = 
     A.args == B.args
-==(A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, B::Jacobi{T}) where T = 
+==(A::WeightedJacobi, B::Jacobi{T}) where T = 
     A == JacobiWeight(zero(T),zero(T)).*B
-==(A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, B::Legendre) = 
+==(A::WeightedJacobi, B::Legendre) = 
     A == Jacobi(B)
-==(A::Jacobi{T}, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) where T = 
+==(A::Jacobi{T}, B::WeightedJacobi) where T = 
     JacobiWeight(zero(T),zero(T)).*A == B
-==(A::Legendre, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) =     
+==(A::Legendre, B::WeightedJacobi) =     
     Jacobi(A) == B
 
 ###
@@ -139,17 +145,17 @@ end
     end
 end
 
-@simplify function \(A::Jacobi, w_B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) 
+@simplify function \(A::Jacobi, w_B::WeightedJacobi) 
     a,b = A.a,A.b
     (JacobiWeight(zero(a),zero(b)) .* A) \ w_B
 end
 
-@simplify function \(w_A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, B::Jacobi) 
+@simplify function \(w_A::WeightedJacobi, B::Jacobi) 
     a,b = B.a,B.b
     w_A \ (JacobiWeight(zero(a),zero(b)) .* B)
 end
 
-@simplify function \(w_A::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}, w_B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) 
+@simplify function \(w_A::WeightedJacobi, w_B::WeightedJacobi) 
     wA,A = w_A.args
     wB,B = w_B.args
 
@@ -170,7 +176,7 @@ end
     end
 end
 
-\(A::Legendre, wB::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi}) = Jacobi(A) \ wB
+\(A::Legendre, wB::WeightedJacobi) = Jacobi(A) \ wB
 
 ##########
 # Derivatives
@@ -183,7 +189,7 @@ end
 end
 
 # Jacobi(b-1,a-1)\ (D*w*Jacobi(b,a))
-@simplify function *(D::Derivative{<:Any,<:AbstractInterval}, WS::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi})
+@simplify function *(D::Derivative{<:Any,<:AbstractInterval}, WS::WeightedJacobi)
     w,S = WS.args
     a,b = S.a, S.b
     if w.a == 0 && w.b == 0
