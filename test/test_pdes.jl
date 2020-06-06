@@ -8,7 +8,7 @@
     A = KronTrav(D2,M)
     N = 30;
     V = view(A,Block(N,N));
-    @time MemoryLayout(arguments(V)[2]) isa LazyBandedMatrices.MulBandedLayout
+    @time MemoryLayout(arguments(V)[2]) isa LazyBandedMatrices.ApplyBandedLayout{typeof(*)}
 
     Δ = KronTrav(D2,M) + KronTrav(M,D2-M)
     N = 100; @time L = Δ[Block.(1:N+2),Block.(1:N)];
