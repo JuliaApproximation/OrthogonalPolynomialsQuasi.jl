@@ -14,6 +14,7 @@ include("test_chebyshev.jl")
 include("test_legendre.jl")
 include("test_ultraspherical.jl")
 include("test_jacobi.jl")
+include("test_fourier.jl")
 include("test_odes.jl")
 
 @testset "Auto-diff" begin
