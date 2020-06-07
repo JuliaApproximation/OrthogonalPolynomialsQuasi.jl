@@ -20,7 +20,7 @@ end
 
 @simplify function *(D::Derivative, F::Fourier)
     TV = promote_type(eltype(D),eltype(F))
-    Fourier{TV}()*mortar(Diagonal(Vcat([reshape([0.0],1,1)], (1.0:∞) .* Fill([0 -one(TV); one(TV) 0], ∞))))
+    Fourier{TV}()*_BlockArray(Diagonal(Vcat([reshape([0.0],1,1)], (1.0:∞) .* Fill([0 -one(TV); one(TV) 0], ∞))), (axes(F,2),axes(F,2)))
 end
 
 

@@ -27,6 +27,7 @@ import BlockBandedMatrices: _BlockBandedMatrix
         @test (F \ (D*F))[Block.(1:3),Block.(1:3)] == [0 0 0 0 0; 0 0.0 -1 0 0; 0 1 0 0 0; 0 0 0 0 -2; 0 0 0 2 0]
 
         u = F * PseudoBlockVector([[1,2,3,4,5]; zeros(∞)], (axes(F,2),));
+        @test blockisequal(axes(D̃,2),axes(u.args[2],1))
         @test (D*u)[0.1] ≈ 2cos(0.1) - 3sin(0.1) + 8cos(2*0.1) - 10sin(2*0.1)
     end
 

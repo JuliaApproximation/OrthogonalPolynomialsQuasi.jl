@@ -29,7 +29,7 @@ export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspheri
             WeightedUltraspherical, WeightedChebyshev, WeightedJacobi,
             ∞, Derivative
 
-import BlockArrays: blockedrange, _BlockedUnitRange, unblock
+import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 
 # ambiguity error
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
