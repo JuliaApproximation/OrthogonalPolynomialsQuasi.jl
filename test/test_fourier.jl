@@ -1,11 +1,16 @@
 using OrthogonalPolynomialsQuasi, InfiniteArrays
 using BlockBandedMatrices, BlockArrays, LazyArrays, Test, FillArrays, InfiniteLinearAlgebra, ArrayLayouts, LazyBandedMatrices
 import BlockBandedMatrices: _BlockBandedMatrix
+import OrthogonalPolynomialsQuasi: Inclusion
 
 @testset "Fourier" begin
     @testset "Evaluation" begin
         F = Fourier()
+
+        @test F == F
+
         @test axes(F,2) isa BlockedUnitRange{InfiniteArrays.InfStepRange{Int,Int}}
+        @test axes(F) isa Tuple{<:Inclusion,BlockedUnitRange{InfiniteArrays.InfStepRange{Int,Int}}}
         @test axes(F,2)[Block(2)] == 2:3
         @test F[0.1,1] == 1.0
         @test F[0.1,2] == sin(0.1)
@@ -20,6 +25,8 @@ import BlockBandedMatrices: _BlockBandedMatrix
     @testset "Derivative" begin
         F = Fourier()
         @test F\F === Eye((axes(F,2),))
+        @test (F'F)[1:10,1:10] == Diagonal(Vcat(2π,Fill(1.0π,9)))
+        @test blockisequal(axes(F'F), (axes(F,2),axes(F,2)))
         D = Derivative(axes(F,1))
         D̃ = (D*F).args[2]
         @test BlockArrays.blockcolsupport(D̃,Block(3)) == Block.(3:3)

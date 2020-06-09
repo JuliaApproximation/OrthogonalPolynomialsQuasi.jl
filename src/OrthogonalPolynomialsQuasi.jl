@@ -24,12 +24,12 @@ import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiV
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes
 import FastTransforms: Λ
 
+import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
+
 export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
-            WeightedUltraspherical, WeightedChebyshev, WeightedJacobi,
+            WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
             ∞, Derivative
-
-import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 
 # ambiguity error
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V

@@ -15,7 +15,7 @@ import BlockBandedMatrices: _BlockSkylineMatrix
 
 @simplify function *(A::QuasiAdjoint{<:Any,<:Fourier}, B::Fourier)
     TV = promote_type(eltype(A),eltype(B))
-    Diagonal(Vcat(2convert(TV,π),Fill(convert(TV,π),∞)))
+    PseudoBlockArray(Diagonal(Vcat(2convert(TV,π),Fill(convert(TV,π),∞))), (axes(A,1),axes(B,2)))
 end
 
 @simplify function *(D::Derivative, F::Fourier)
