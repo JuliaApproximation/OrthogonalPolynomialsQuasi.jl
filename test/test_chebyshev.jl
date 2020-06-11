@@ -1,4 +1,4 @@
-using QuasiArrays, Test
+using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, Test
 
 
 @testset "Chebyshev" begin
@@ -45,6 +45,12 @@ using QuasiArrays, Test
         T = Chebyshev()[2x .- 1,:]
         @test (T*(T\x))[0.1] ≈ 0.1
         @test (T* (T \ exp.(x)))[0.1] ≈ exp(0.1)
+    end
+
+    @testset "weighted" begin
+        wT = WeightedChebyshevT()
+        x = axes(wT,1)
+        @test (x .* wT).args[2] isa BandedMatrix
     end
 
     @testset "point-inf eval" begin

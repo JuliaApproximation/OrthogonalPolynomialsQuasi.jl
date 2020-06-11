@@ -1,9 +1,12 @@
 module OrthogonalPolynomialsQuasi
-using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, IntervalSets, DomainSets, InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra, FastTransforms
+using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, BlockArrays,
+    IntervalSets, DomainSets,
+    InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra, FastTransforms
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
-                first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum
+                first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
+                to_indices, _maybetail, tail
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize
 import LinearAlgebra: pinv, factorize
@@ -21,15 +24,27 @@ import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiV
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes
 import FastTransforms: Λ
 
+import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
+
 export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
-            WeightedUltraspherical, WeightedChebyshev, WeightedJacobi,
+            WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
             ∞, Derivative
 
 # ambiguity error
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
-sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V            
+sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
 
+#
+# BlockQuasiArrays
+
+@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{Block{1}, Vararg{Any}}) =
+    (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
+@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockRange{1,R}, Vararg{Any}}) where R =
+    (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
+
+cardinality(::FullSpace{<:AbstractFloat}) = ℵ₁
+cardinality(::EuclideanDomain) = ℵ₁
 
 checkpoints(::ChebyshevInterval) = [-0.823972,0.01,0.3273484]
 checkpoints(::UnitInterval) = [0.823972,0.01,0.3273484]
@@ -67,7 +82,7 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
         end
     end
     error("Have not converged")
-end    
+end
 
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
 
@@ -78,7 +93,7 @@ abstract type OrthogonalPolynomial{T} <: Basis{T} end
 returns the Jacobi matrix `X` associated to a quasi-matrix of orthogonal polynomials
 satisfying
 ```julia
-x = axes(S,1)    
+x = axes(S,1)
 x*S == S*X
 ```
 Note that `X` is the transpose of the usual definition of the Jacobi matrix.
@@ -87,18 +102,18 @@ jacobimatrix(S) = error("Override for $(typeof(S))")
 
 @simplify *(B::Identity, C::OrthogonalPolynomial) = C*jacobimatrix(C)
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::OrthogonalPolynomial) 
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::OrthogonalPolynomial)
     x == axes(C,1) || throw(DimensionMismatch())
     C*jacobimatrix(C)
 end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AbstractAffineQuasiVector, C::OrthogonalPolynomial) 
-    x = axes(C,1) 
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AbstractAffineQuasiVector, C::OrthogonalPolynomial)
+    x = axes(C,1)
     axes(y,1) == x || throw(DimensionMismatch())
     broadcast(+, y.A * (x.*C), y.b.*C)
 end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::WeightedBasis{<:Any,<:Any,<:OrthogonalPolynomial}) 
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::WeightedBasis{<:Any,<:Any,<:OrthogonalPolynomial})
     x == axes(C,1) || throw(DimensionMismatch())
     w,P = C.args
     P2, J = (x .* P).args
@@ -106,7 +121,7 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Wei
     (w .* P) * J
 end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}}) 
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
     T = promote_type(eltype(x), eltype(C))
     x == axes(C,1) || throw(DimensionMismatch())
     P = parent(C)
@@ -116,7 +131,7 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Sub
     X = kr.A \ (Y     - kr.b * Eye{T}(∞))
     P[kr, :] * view(X,:,jr)
 end
-  
+
 function forwardrecurrence!(v::AbstractVector, b::AbstractVector, a::AbstractVector, c::AbstractVector, x, shift=0)
     isempty(v) && return v
     p0 = one(x) # assume OPs are normalized to one for now
@@ -156,7 +171,7 @@ function forwardrecurrence!(v::AbstractVector, b_v::AbstractFill, ::Zeros{<:Any,
     isempty(v) && return v
     c0,c∞_v = c.args
     b = getindex_value(b_v)
-    c∞ = getindex_value(c∞_v) 
+    c∞ = getindex_value(c∞_v)
     mbc  = -b/c∞
     xc = x/c∞
     p0 = one(x) # assume OPs are normalized to one for now
@@ -220,7 +235,7 @@ getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) =
     P[x,OneTo(maximum(n))][n]
 
 getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer}) =
-    P[x,OneTo(maximum(n))][:,n]    
+    P[x,OneTo(maximum(n))][:,n]
 
 getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
