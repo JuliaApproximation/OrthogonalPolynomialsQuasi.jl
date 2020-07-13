@@ -28,12 +28,12 @@ using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, Test
         u = Tn * (Tn \ exp.(x))
         @test u[0.1] ≈ exp(0.1)
 
-        Tn = T[:,2:100]       
-        @test factorize(Tn) isa ContinuumArrays.ProjectionFactorization 
+        Tn = T[:,2:100]
+        @test factorize(Tn) isa ContinuumArrays.ProjectionFactorization
         @test grid(Tn) == chebyshevpoints(100; kind=1)
         @test (Tn \ (exp.(x) .- 1.26606587775201)) ≈ (Tn \ u) ≈ (T\u)[2:100]
 
-        u = T * (T \ exp.(x))        
+        u = T * (T \ exp.(x))
         @test u[0.1] ≈ exp(0.1)
 
         v = T[:,2:end] \ (exp.(x) .- 1.26606587775201)
@@ -65,8 +65,8 @@ using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, Test
         D = Derivative(axes(T,1))
 
         @test T\T === pinv(T)*T === Eye(∞)
-        @test U\U === pinv(U)*U === Eye(∞)       
-        
+        @test U\U === pinv(U)*U === Eye(∞)
+
         @test ApplyStyle(*,typeof(D),typeof(T)) == SimplifyStyle()
         @test D*T isa MulQuasiMatrix
         D₀ = U\(D*T)
@@ -82,7 +82,7 @@ using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, Test
         x = axes(T,1)
         J = T\(x.*T)
         @test J isa BandedMatrix
-        @test J[1:10,1:10] == jacobimatrix(T)[1:10,1:10]        
+        @test J[1:10,1:10] == jacobimatrix(T)[1:10,1:10]
     end
 
     @testset "test on functions" begin
@@ -109,7 +109,7 @@ using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, Test
         @test V[0.1:0.1:1,:][:,1:5] == T[0.1:0.1:1,2:6]
         @test parentindices(V[:,OneTo(5)])[1] isa Inclusion
     end
-    
+
     @testset "==" begin
         @test Chebyshev() == ChebyshevT() == ChebyshevT{Float32}()
         @test ChebyshevU() == ChebyshevU{Float32}()
@@ -154,5 +154,18 @@ using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, Test
         x = Inclusion(0..1)
         @test sum(wT[2x .- 1, :]; dims=1)[1,1:10] == [π/2; zeros(9)]
         @test sum(wT[2x .- 1, :] * [[1,2,3]; zeros(∞)]) == π/2
+    end
+
+    @testset "algebra" begin
+        T = ChebyshevT()
+        U = ChebyshevU()
+
+        a = T * [1; zeros(∞)]
+        b = T * [1; 2; 3; zeros(∞)]
+        c = U * [4; 5; zeros(∞)]
+
+        @test a + b == b + a == T * [2;  2;  3; zeros(∞)]
+        @test a - b == T * [0; -2; -3; zeros(∞)]
+        @test a + c == c + a == U * [5; 5; zeros(∞)]
     end
 end

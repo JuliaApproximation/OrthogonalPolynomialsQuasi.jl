@@ -189,3 +189,11 @@ function _sum(A::WeightedBasis{T,<:ChebyshevWeight,<:Chebyshev}, dims) where T
     @assert dims == 1
     Hcat(convert(T, π), Zeros{T}(1,∞))
 end
+
+
+####
+# algebra
+####
+
+broadcastbasis(::typeof(+), ::ChebyshevT, U::ChebyshevU) = U
+broadcastbasis(::typeof(+), U::ChebyshevU, ::ChebyshevT) = U
