@@ -1,3 +1,5 @@
+using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, Test
+
 @testset "ODEs" begin
     @testset "p-FEM" begin
         S = Jacobi(true,true)
