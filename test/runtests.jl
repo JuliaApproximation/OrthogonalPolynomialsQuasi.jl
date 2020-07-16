@@ -11,19 +11,6 @@ import Base: OneTo
 import InfiniteLinearAlgebra: KronTrav, Block
 import FastTransforms: clenshaw!
 
-@testset "Clenshaw" begin
-    J = Tridiagonal([1.0,0.5], fill(0.0,3), fill(0.5,2))
-    c = randn(3)
-    B,A,C = bands(J)
-    clenshaw!(c, [0.1], c
-
-    a = randn(3)
-    J = Tridiagonal(randn(2), randn(3), randn(2))
-    b,a,c = bands(J)
-    a'forwardrecurrence!(Vector{Float64}(undef, 3), b, a, c, 0.1)
-    clenshaw!(
-end
-
 include("test_chebyshev.jl")
 include("test_legendre.jl")
 include("test_ultraspherical.jl")

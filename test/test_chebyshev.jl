@@ -12,6 +12,32 @@ import OrthogonalPolynomialsQuasi: Clenshaw
         end
     end
 
+    @testset "Evaluation" begin
+        T = Chebyshev()
+        @test @inferred(T[0.1,Base.OneTo(0)]) == Float64[]
+        @test @inferred(T[0.1,Base.OneTo(1)]) == [1.0]
+        @test @inferred(T[0.1,Base.OneTo(2)]) == [1.0,0.1]
+        for N = 1:10
+            @test @inferred(T[0.1,Base.OneTo(N)]) ≈ @inferred(T[0.1,1:N]) ≈ cos.((0:N-1)*acos(0.1))
+            @test @inferred(T[0.1,N]) ≈ cos((N-1)*acos(0.1))
+        end
+        @test T[0.1,[2,5,10]] ≈ [0.1,cos(4acos(0.1)),cos(9acos(0.1))]
+
+        @test axes(T[1:1,:]) === (Base.OneTo(1), Base.OneTo(∞))
+        @test T[1:1,:][:,1:5] == ones(1,5)
+        @test T[0.1,:][1:10] ≈ T[0.1,1:10] ≈ (T')[1:10,0.1]
+
+        U = ChebyshevU()
+        @test @inferred(U[0.1,Base.OneTo(0)]) == Float64[]
+        @test @inferred(U[0.1,Base.OneTo(1)]) == [1.0]
+        @test @inferred(U[0.1,Base.OneTo(2)]) == [1.0,0.2]
+        for N = 1:10
+            @test @inferred(U[0.1,Base.OneTo(N)]) ≈ @inferred(U[0.1,1:N]) ≈ [sin((n+1)*acos(0.1))/sin(acos(0.1)) for n = 0:N-1]
+            @test @inferred(U[0.1,N]) ≈ sin(N*acos(0.1))/sin(acos(0.1))
+        end
+        @test U[0.1,[2,5,10]] ≈ [0.2,sin(5acos(0.1))/sin(acos(0.1)),sin(10acos(0.1))/sin(acos(0.1))]
+    end
+
     @testset "Transform" begin
         T = Chebyshev()
         Tn = @inferred(T[:,OneTo(100)])
@@ -51,11 +77,6 @@ import OrthogonalPolynomialsQuasi: Clenshaw
         wT = WeightedChebyshevT()
         x = axes(wT,1)
         @test (x .* wT).args[2] isa BandedMatrix
-    end
-
-    @testset "point-inf eval" begin
-        T = Chebyshev()
-        @test T[0.1,:][1:10] ≈ T[0.1,1:10] ≈ (T')[1:10,0.1]
     end
 
     @testset "operators" begin
@@ -115,32 +136,6 @@ import OrthogonalPolynomialsQuasi: Clenshaw
         @test ChebyshevU() == ChebyshevU{Float32}()
         @test Chebyshev{3}() == Chebyshev{3,Float32}()
         @test Chebyshev() ≠ ChebyshevU()
-    end
-
-    @testset "Evaluation" begin
-        T = Chebyshev()
-        @test @inferred(T[0.1,Base.OneTo(0)]) == Float64[]
-        @test @inferred(T[0.1,Base.OneTo(1)]) == [1.0]
-        @test @inferred(T[0.1,Base.OneTo(2)]) == [1.0,0.1]
-        for N = 1:10
-            @test @inferred(T[0.1,Base.OneTo(N)]) ≈ @inferred(T[0.1,1:N]) ≈ [cos(n*acos(0.1)) for n = 0:N-1]
-            @test @inferred(T[0.1,N]) ≈ cos((N-1)*acos(0.1))
-        end
-        @test T[0.1,[2,5,10]] ≈ [0.1,cos(4acos(0.1)),cos(9acos(0.1))]
-
-
-        @test axes(T[1:1,:]) === (Base.OneTo(1), Base.OneTo(∞))
-        @test T[1:1,:][:,1:5] == ones(1,5)
-
-        U = ChebyshevU()
-        @test @inferred(U[0.1,Base.OneTo(0)]) == Float64[]
-        @test @inferred(U[0.1,Base.OneTo(1)]) == [1.0]
-        @test @inferred(U[0.1,Base.OneTo(2)]) == [1.0,0.2]
-        for N = 1:10
-            @test @inferred(U[0.1,Base.OneTo(N)]) ≈ @inferred(U[0.1,1:N]) ≈ [sin((n+1)*acos(0.1))/sin(acos(0.1)) for n = 0:N-1]
-            @test @inferred(U[0.1,N]) ≈ sin(N*acos(0.1))/sin(acos(0.1))
-        end
-        @test U[0.1,[2,5,10]] ≈ [0.2,sin(5acos(0.1))/sin(acos(0.1)),sin(10acos(0.1))/sin(acos(0.1))]
     end
 
     @testset "sum" begin

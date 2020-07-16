@@ -22,7 +22,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf, InfAxes
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis
-import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, clenshaw, clenshaw!
+import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, _forwardrecurrence_next
 
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 
@@ -31,8 +31,6 @@ export OrthogonalPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, C
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
             ∞, Derivative
 
-
-include("clenshaw.jl")
 
 # ambiguity error
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
@@ -142,24 +140,46 @@ bands(J::AbstractBandedMatrix) = _vec.(bandeddata(J).args)
 bands(J::Tridiagonal) = J.du, J.d, J.dl
 
 
-function getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T
-    A,B,C = recurrencecoefficients(P)
-    forwardrecurrence(length(n), A, B, C, x)
-end
+##
+# For Chebyshev T. Note the shift in indexing is fine due to the AbstractFill
+##
+Base.@propagate_inbounds _forwardrecurrence_next(n, A::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, B::Zeros, C::Ones, x, p0, p1) = 
+    _forwardrecurrence_next(n, A.args[2], B, C, x, p0, p1)
+
+
+getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T =
+    copyto!(Vector{T}(undef,length(n)), view(P, x, n))
 
 getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::AbstractUnitRange{Int}) where T =
     copyto!(Matrix{T}(undef,length(x),length(n)), view(P, x, n))
 
+function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial,<:Tuple{<:Number,<:OneTo}})
+    P = parent(V)
+    x,n = parentindices(V)
+    A,B,C = recurrencecoefficients(P)
+    forwardrecurrence!(dest, A, B, C, x)
+end
+
+function initiateforwardrecurrence(N, A, B, C, x)
+    T = promote_type(eltype(A), eltype(B), eltype(C), typeof(x))
+    p0 = one(T)
+    p1 = convert(T, A[1]x + B[1])
+    @inbounds for n = 2:N
+        p1,p0 = _forwardrecurrence_next(n, A, B, C, x, p0, p1),p1
+    end
+    p0,p1
+end
 
 function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial,<:Tuple{<:AbstractVector,<:UnitRange}})
     checkbounds(dest, axes(V)...)
     P = parent(V)
     xr,jr = parentindices(V)
-    J = jacobimatrix(P)
-    b,a,c = bands(J)
-    shift = first(jr)-1
+    A,B,C = recurrencecoefficients(P)
+    shift = first(jr)
+    Ã,B̃,C̃ = A[shift:∞],B[shift:∞],C[shift:∞]
     for (k,x) = enumerate(xr)
-        forwardrecurrence!(view(dest,k,:), b, a, c, x, shift)
+        p0, p1 = initiateforwardrecurrence(shift, A, B, C, x)
+        _forwardrecurrence!(view(dest,k,:), Ã, B̃, C̃, x, p0, p1)
     end
     dest
 end
@@ -168,10 +188,11 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial
     checkbounds(dest, axes(V)...)
     P = parent(V)
     x,jr = parentindices(V)
-    J = jacobimatrix(P)
-    b,a,c = bands(J)
-    shift = first(jr)-1
-    forwardrecurrence!(dest, b, a, c, x, shift)
+    A,B,C = recurrencecoefficients(P)
+    shift = first(jr)
+    Ã,B̃,C̃ = A[shift:∞],B[shift:∞],C[shift:∞]
+    p0, p1 = initiateforwardrecurrence(shift, A, B, C, x)
+    _forwardrecurrence!(dest, Ã, B̃, C̃, x, p0, p1)
     dest
 end
 

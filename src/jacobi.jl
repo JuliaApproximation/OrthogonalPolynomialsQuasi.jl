@@ -112,7 +112,7 @@ function jacobimatrix(J::Jacobi)
 end
 
 function recurrencecoefficients(P::Jacobi)
-    n = 0:
+    n = 0:∞
     a,b = P.a,P.b
     A = (2n .+ (a+b+1)) .* (2n .+ (a+b+2)) ./ ((2*(n .+ 1)) .* (n .+ (a+b+1)))
     B = (a^2 - b^2) * (2n .+ (a + b+1)) ./ ((2*(n .+ 1)) .* (n .+ (a+b+1)) .* (2n .+ (a+b)))
