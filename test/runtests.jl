@@ -3,12 +3,26 @@ using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays
         InfiniteLinearAlgebra, Test
 using ForwardDiff, SemiseparableMatrices, SpecialFunctions, LazyBandedMatrices
 import ContinuumArrays: SimplifyStyle, BasisLayout, MappedBasisLayout
-import OrthogonalPolynomialsQuasi: jacobimatrix, ∞, ChebyshevInterval
+import OrthogonalPolynomialsQuasi: jacobimatrix, ∞, ChebyshevInterval, Clenshaw, bands, forwardrecurrence!
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout
 import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
 import InfiniteLinearAlgebra: KronTrav, Block
+import FastTransforms: clenshaw!
+
+@testset "Clenshaw" begin
+    J = Tridiagonal([1.0,0.5], fill(0.0,3), fill(0.5,2))
+    c = randn(3)
+    B,A,C = bands(J)
+    clenshaw!(c, [0.1], c
+
+    a = randn(3)
+    J = Tridiagonal(randn(2), randn(3), randn(2))
+    b,a,c = bands(J)
+    a'forwardrecurrence!(Vector{Float64}(undef, 3), b, a, c, 0.1)
+    clenshaw!(
+end
 
 include("test_chebyshev.jl")
 include("test_legendre.jl")

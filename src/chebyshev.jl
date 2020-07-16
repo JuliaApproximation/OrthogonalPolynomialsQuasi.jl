@@ -57,7 +57,7 @@ end
 ChebyshevGrid{kind}(n::Integer) where kind = ChebyshevGrid{kind,Float64}(n)
 
 size(g::ChebyshevGrid) = (g.n,)
-getindex(g::ChebyshevGrid{1,T}, k::Integer) where T = 
+getindex(g::ChebyshevGrid{1,T}, k::Integer) where T =
     sinpi(convert(T,g.n-2k+1)/(2g.n))
 
 function getindex(g::ChebyshevGrid{2,T}, k::Integer) where T
@@ -73,16 +73,22 @@ factorize(L::SubQuasiArray{T,2,<:ChebyshevT,<:Tuple{<:Inclusion,<:OneTo}}) where
 # Jacobi Matrix
 ########
 
-jacobimatrix(C::ChebyshevT{T}) where T = 
-    _BandedMatrix(Vcat(Fill(one(T)/2,1,∞), 
-                        Zeros{T}(1,∞), 
+jacobimatrix(C::ChebyshevT{T}) where T =
+    _BandedMatrix(Vcat(Fill(one(T)/2,1,∞),
+                        Zeros{T}(1,∞),
                         Hcat(one(T), Fill(one(T)/2,1,∞))), ∞, 1, 1)
 
-jacobimatrix(C::ChebyshevU{T}) where T = 
-    _BandedMatrix(Vcat(Fill(one(T)/2,1,∞), 
-                        Zeros{T}(1,∞), 
-                        Fill(one(T)/2,1,∞)), ∞, 1, 1)   
-                        
+jacobimatrix(C::ChebyshevU{T}) where T =
+    _BandedMatrix(Vcat(Fill(one(T)/2,1,∞),
+                        Zeros{T}(1,∞),
+                        Fill(one(T)/2,1,∞)), ∞, 1, 1)
+
+
+
+# These return vectors A[k], B[k], C[k] are from DLMF. 
+recurrencecoefficients(C::ChebyshevT) = (Vcat(1, Fill(2,∞)), Zeros{Int}(∞), Ones{Int}(∞))
+recurrencecoefficients(C::ChebyshevU) = (Fill(2,∞), Zeros{Int}(∞), Ones{Int}(∞))
+
 ##########
 # Derivatives
 ##########
@@ -92,7 +98,7 @@ jacobimatrix(C::ChebyshevU{T}) where T =
     T = promote_type(eltype(D),eltype(S))
     A = _BandedMatrix((zero(T):∞)', ∞, -1,1)
     ApplyQuasiMatrix(*, ChebyshevU{T}(), A)
-end                        
+end
 
 #####
 # Conversion
@@ -101,11 +107,11 @@ end
 @simplify function \(U::ChebyshevU, C::ChebyshevT)
     T = promote_type(eltype(U), eltype(C))
     _BandedMatrix(Vcat(-Ones{T}(1,∞)/2,
-                        Zeros{T}(1,∞), 
+                        Zeros{T}(1,∞),
                         Hcat(Ones{T}(1,1),Ones{T}(1,∞)/2)), ∞, 0,2)
 end
 
-@simplify function \(w_A::WeightedChebyshevT, w_B::WeightedChebyshevU) 
+@simplify function \(w_A::WeightedChebyshevT, w_B::WeightedChebyshevU)
     wA,A = w_A.args
     wB,B = w_B.args
     T = promote_type(eltype(w_A), eltype(w_B))
@@ -185,7 +191,7 @@ function _sum(A::WeightedBasis{T,<:ChebyshevUWeight,<:ChebyshevU}, dims) where T
     Hcat(convert(T, π)/2, Zeros{T}(1,∞))
 end
 
-function _sum(A::WeightedBasis{T,<:ChebyshevWeight,<:Chebyshev}, dims) where T 
+function _sum(A::WeightedBasis{T,<:ChebyshevWeight,<:Chebyshev}, dims) where T
     @assert dims == 1
     Hcat(convert(T, π), Zeros{T}(1,∞))
 end

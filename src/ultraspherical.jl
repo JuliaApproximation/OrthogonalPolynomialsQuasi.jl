@@ -64,6 +64,13 @@ function jacobimatrix(P::Ultraspherical{T}) where T
                         ((one(T):∞) ./ (2 .*((zero(T):∞) .+ λ)))'), ∞, 1, 1)
 end
 
+# These return vectors A[k], B[k], C[k] are from DLMF. Cause of MikaelSlevinsky we need an extra entry in C ... for now.
+function recurrencecoefficients(C::Ultraspherical)
+    λ = C.λ
+    n = 0:∞
+    (2(n .+ λ) ./ (n .+ 1), Zeros{typeof(λ)}(∞), (n .+ (2λ-1)) ./ (n .+ 1))
+end
+
 
 ##########
 # Derivatives

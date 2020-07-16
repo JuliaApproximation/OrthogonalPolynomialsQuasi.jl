@@ -8,9 +8,9 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
                 to_indices, _maybetail, tail
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize, arguments
 import LinearAlgebra: pinv, factorize
-import BandedMatrices: AbstractBandedLayout, _BandedMatrix
+import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
 import FillArrays: AbstractFill, getindex_value
 
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
@@ -22,7 +22,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf, InfAxes
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis
-import FastTransforms: Λ
+import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, clenshaw, clenshaw!
 
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 
@@ -30,6 +30,9 @@ export OrthogonalPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, C
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
             ∞, Derivative
+
+
+include("clenshaw.jl")
 
 # ambiguity error
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
@@ -132,72 +135,16 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Sub
     P[kr, :] * view(X,:,jr)
 end
 
-function forwardrecurrence!(v::AbstractVector, b::AbstractVector, a::AbstractVector, c::AbstractVector, x, shift=0)
-    isempty(v) && return v
-    p0 = one(x) # assume OPs are normalized to one for now
-    p1 = (x-a[1])/c[1]
-    @inbounds for n = 1:shift
-        p1,p0 = muladd(x-a[n-1],v[n-1],-b[n-1]*v[n-2])/c[n-1],p1
-    end
-    v[1] = p0
-    length(v) == 1 && return v
-    v[2] = p1
-    @inbounds for n = 3:length(v)
-        p1,p0 = muladd(x-a[n-1],v[n-1],-b[n-1]*v[n-2])/c[n-1],p1
-        v[n] = p1
-    end
-    v
-end
-
-function forwardrecurrence!(v::AbstractVector, b::AbstractVector, ::Zeros{<:Any,1}, c::AbstractVector, x, shift=0)
-    isempty(v) && return v
-    p0 = one(x) # assume OPs are normalized to one for now
-    p1 = x/c[1]
-    @inbounds for n = 1:shift
-        p1,p0 = muladd(x,p1,-b[n-1]*p0)/c[n-1],p1
-    end
-    v[1] = p0
-    length(v) == 1 && return v
-    v[2] = p1
-    @inbounds for n = 3:length(v)
-        p1,p0 = muladd(x,p1,-b[n-1]*p0)/c[n-1],p1
-        v[n] = p1
-    end
-    v
-end
-
-# special case for Chebyshev
-function forwardrecurrence!(v::AbstractVector, b_v::AbstractFill, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, x, shift=0)
-    isempty(v) && return v
-    c0,c∞_v = c.args
-    b = getindex_value(b_v)
-    c∞ = getindex_value(c∞_v)
-    mbc  = -b/c∞
-    xc = x/c∞
-    p0 = one(x) # assume OPs are normalized to one for now
-    p1 = x/c0
-    for n = 1:shift
-        p1,p0 = muladd(xc,p1,mbc*p0),p1
-    end
-    v[1] = p0
-    length(v) == 1 && return v
-    v[2] = p1
-    @inbounds for n = 3:length(v)
-        p1,p0 = muladd(xc,p1,mbc*p0),p1
-        v[n] = p1
-    end
-    v
-end
-
 _vec(a) = vec(a)
 _vec(a::InfiniteArrays.ReshapedArray) = _vec(parent(a))
 _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
-bands(J) = _vec.(J.data.args)
+bands(J::AbstractBandedMatrix) = _vec.(bandeddata(J).args)
+bands(J::Tridiagonal) = J.du, J.d, J.dl
+
 
 function getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T
-    J = jacobimatrix(P)
-    b,a,c = bands(J)
-    forwardrecurrence!(similar(n,T),b,a,c,x)
+    A,B,C = recurrencecoefficients(P)
+    forwardrecurrence(length(n), A, B, C, x)
 end
 
 getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::AbstractUnitRange{Int}) where T =
@@ -249,6 +196,39 @@ function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusi
     _,jr = parentindices(L)
     ProjectionFactorization(factorize(parent(L)[:,Base.OneTo(maximum(jr))]), jr)
 end
+
+
+"""
+    Clenshaw(a, X)
+
+represents the operator `a(X)` where a is a polynomial.
+Here `a` is to stored as a quasi-vector.
+"""
+struct Clenshaw{T, CoefsA<:AbstractVector, JacA<:AbstractMatrix, JacB<:AbstractMatrix} <: AbstractBandedMatrix{T}
+    a::CoefsA
+    J::JacA
+    X::JacB
+end
+
+Clenshaw(a::AbstractVector{T}, J::AbstractMatrix{T}, X::AbstractMatrix{T}) where T = 
+    Clenshaw{T,typeof(a),typeof(J),typeof(X)}(a, J, X)
+
+function Clenshaw(a::AbstractQuasiVector, X::AbstractQuasiMatrix)
+    P,c = arguments(a)
+    Clenshaw(c,jacobimatrix(P),jacobimatrix(X))
+end
+
+coefficients(a) = a.args[2]
+ncoefficients(a) = colsupport(coefficients(C.a),1)
+size(C::Clenshaw) = size(C.X)
+axes(C::Clenshaw) = axes(C.X)
+bandwidths(C::Clenshaw) = (ncoefficients(C.a)-1,ncoefficients(C.a)-1)
+
+
+# struct ClenshawLayout <: MemoryLayout end
+# sublayout(::ClenshawLayout, ::Type{NTuple{2,OneTo{Int}}}) = ClenshawLayout()
+# sub_materialize(::ClenshawLayout, V) = BandedMatrix(V)
+
 
 include("hermite.jl")
 include("jacobi.jl")

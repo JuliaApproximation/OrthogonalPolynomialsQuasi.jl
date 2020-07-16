@@ -1,5 +1,5 @@
 using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, Test
-
+import OrthogonalPolynomialsQuasi: Clenshaw
 
 @testset "Chebyshev" begin
     @testset "ChebyshevGrid" begin
@@ -167,5 +167,13 @@ using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, Test
         @test a + b == b + a == T * [2;  2;  3; zeros(∞)]
         @test a - b == T * [0; -2; -3; zeros(∞)]
         @test a + c == c + a == U * [5; 5; zeros(∞)]
+    end
+
+    @testset "multiplication" begin
+        T = ChebyshevT()
+        x = axes(T,1)
+        a = T * (T \ exp.(x))
+        C = Clenshaw(a, T)
+        M = T \ (a .* T)
     end
 end
