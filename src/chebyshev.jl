@@ -89,6 +89,14 @@ jacobimatrix(C::ChebyshevU{T}) where T =
 recurrencecoefficients(C::ChebyshevT) = (Vcat(1, Fill(2,∞)), Zeros{Int}(∞), Ones{Int}(∞))
 recurrencecoefficients(C::ChebyshevU) = (Fill(2,∞), Zeros{Int}(∞), Ones{Int}(∞))
 
+# special clenshaw!
+function copyto!(dest::AbstractVector{T}, v::SubArray{<:Any,1,<:Expansion{<:Any,<:ChebyshevT}, <:Tuple{AbstractVector{<:Number}}}) where T
+    f = parent(v)
+    (x,) = parentindices(v)
+    P,c = arguments(f)
+    clenshaw!(paddeddata(c), x, dest)
+end
+
 ##########
 # Derivatives
 ##########

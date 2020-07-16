@@ -8,7 +8,7 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
                 to_indices, _maybetail, tail
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize, arguments
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize, arguments, paddeddata
 import LinearAlgebra: pinv, factorize
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
 import FillArrays: AbstractFill, getindex_value
@@ -21,8 +21,8 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 
 import InfiniteArrays: OneToInf, InfAxes
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
-    inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis
-import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, _forwardrecurrence_next
+    inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion
+import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, _forwardrecurrence_next, _clenshaw_next
 
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 
@@ -146,6 +146,9 @@ bands(J::Tridiagonal) = J.du, J.d, J.dl
 Base.@propagate_inbounds _forwardrecurrence_next(n, A::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, B::Zeros, C::Ones, x, p0, p1) = 
     _forwardrecurrence_next(n, A.args[2], B, C, x, p0, p1)
 
+Base.@propagate_inbounds _clenshaw_next(n, A::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, B::Zeros, C::Ones, x, c, bn1, bn2) = 
+    _clenshaw_next(n, A.args[2], B, C, x, c, bn1, bn2)
+
 
 getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T =
     copyto!(Vector{T}(undef,length(n)), view(P, x, n))
@@ -208,16 +211,25 @@ getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer
 getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
 
-function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T
-    p = grid(L)
-    TransformFactorization(p, nothing, factorize(L[p,:]))
+
+###
+# Clenshaw
+###
+
+function getindex(f::Expansion{<:Any,<:OrthogonalPolynomial}, x::Number)
+    P,c = arguments(f)
+    clenshaw(paddeddata(c), recurrencecoefficients(P)..., x)
 end
 
-function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T
-    _,jr = parentindices(L)
-    ProjectionFactorization(factorize(parent(L)[:,Base.OneTo(maximum(jr))]), jr)
-end
+getindex(f::Expansion{T,<:OrthogonalPolynomial}, x::AbstractVector{<:Number}) where T = 
+    copyto!(Vector{T}(undef, length(x)), view(f, x))
 
+function copyto!(dest::AbstractVector{T}, v::SubArray{<:Any,1,<:Expansion{<:Any,<:OrthogonalPolynomial}, <:Tuple{AbstractVector{<:Number}}}) where T
+    f = parent(v)
+    (x,) = parentindices(v)
+    P,c = arguments(f)
+    clenshaw!(paddeddata(c), recurrencecoefficients(P)..., x, Ones{T}(length(x)), dest)
+end
 
 """
     Clenshaw(a, X)
@@ -249,6 +261,16 @@ bandwidths(C::Clenshaw) = (ncoefficients(C.a)-1,ncoefficients(C.a)-1)
 # struct ClenshawLayout <: MemoryLayout end
 # sublayout(::ClenshawLayout, ::Type{NTuple{2,OneTo{Int}}}) = ClenshawLayout()
 # sub_materialize(::ClenshawLayout, V) = BandedMatrix(V)
+
+function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T
+    p = grid(L)
+    TransformFactorization(p, nothing, factorize(L[p,:]))
+end
+
+function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T
+    _,jr = parentindices(L)
+    ProjectionFactorization(factorize(parent(L)[:,Base.OneTo(maximum(jr))]), jr)
+end
 
 
 include("hermite.jl")

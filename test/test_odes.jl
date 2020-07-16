@@ -1,4 +1,7 @@
-using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, Test
+using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, BandedMatrices, 
+        SemiseparableMatrices, LazyArrays, ArrayLayouts, Test
+
+import SemiseparableMatrices: VcatAlmostBandedLayout
 
 @testset "ODEs" begin
     @testset "p-FEM" begin
@@ -141,7 +144,7 @@ using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, Test
     end
 
     @testset "Ultraspherical spectral method" begin
-        T = Chebyshev()
+        T = ChebyshevT()
         U = ChebyshevU()
         x = axes(T,1)
         D = Derivative(x)
@@ -149,7 +152,7 @@ using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, Test
         @test copyto!(BandedMatrix{Float64}(undef, (10,10), (0,2)), view(A,1:10,1:10)) == A[1:10,1:10]
         L = Vcat(T[1:1,:], A)
         @test L[1:10,1:10] isa AlmostBandedMatrix
-        @test MemoryLayout(typeof(L)) isa VcatAlmostBandedLayout
+        @test MemoryLayout(L) isa VcatAlmostBandedLayout
         u = L \ [ℯ; zeros(∞)]
         @test T[0.1,:]'u ≈ (T*u)[0.1] ≈ exp(0.1)
 

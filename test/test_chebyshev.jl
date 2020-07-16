@@ -13,29 +13,41 @@ import OrthogonalPolynomialsQuasi: Clenshaw
     end
 
     @testset "Evaluation" begin
-        T = Chebyshev()
-        @test @inferred(T[0.1,Base.OneTo(0)]) == Float64[]
-        @test @inferred(T[0.1,Base.OneTo(1)]) == [1.0]
-        @test @inferred(T[0.1,Base.OneTo(2)]) == [1.0,0.1]
-        for N = 1:10
-            @test @inferred(T[0.1,Base.OneTo(N)]) ≈ @inferred(T[0.1,1:N]) ≈ cos.((0:N-1)*acos(0.1))
-            @test @inferred(T[0.1,N]) ≈ cos((N-1)*acos(0.1))
-        end
-        @test T[0.1,[2,5,10]] ≈ [0.1,cos(4acos(0.1)),cos(9acos(0.1))]
+        @testset "T" begin
+            T = Chebyshev()
+            @test @inferred(T[0.1,Base.OneTo(0)]) == Float64[]
+            @test @inferred(T[0.1,Base.OneTo(1)]) == [1.0]
+            @test @inferred(T[0.1,Base.OneTo(2)]) == [1.0,0.1]
+            for N = 1:10
+                @test @inferred(T[0.1,Base.OneTo(N)]) ≈ @inferred(T[0.1,1:N]) ≈ cos.((0:N-1)*acos(0.1))
+                @test @inferred(T[0.1,N]) ≈ cos((N-1)*acos(0.1))
+            end
+            @test T[0.1,[2,5,10]] ≈ [0.1,cos(4acos(0.1)),cos(9acos(0.1))]
 
-        @test axes(T[1:1,:]) === (Base.OneTo(1), Base.OneTo(∞))
-        @test T[1:1,:][:,1:5] == ones(1,5)
-        @test T[0.1,:][1:10] ≈ T[0.1,1:10] ≈ (T')[1:10,0.1]
-
-        U = ChebyshevU()
-        @test @inferred(U[0.1,Base.OneTo(0)]) == Float64[]
-        @test @inferred(U[0.1,Base.OneTo(1)]) == [1.0]
-        @test @inferred(U[0.1,Base.OneTo(2)]) == [1.0,0.2]
-        for N = 1:10
-            @test @inferred(U[0.1,Base.OneTo(N)]) ≈ @inferred(U[0.1,1:N]) ≈ [sin((n+1)*acos(0.1))/sin(acos(0.1)) for n = 0:N-1]
-            @test @inferred(U[0.1,N]) ≈ sin(N*acos(0.1))/sin(acos(0.1))
+            @test axes(T[1:1,:]) === (Base.OneTo(1), Base.OneTo(∞))
+            @test T[1:1,:][:,1:5] == ones(1,5)
+            @test T[0.1,:][1:10] ≈ T[0.1,1:10] ≈ (T')[1:10,0.1]
         end
-        @test U[0.1,[2,5,10]] ≈ [0.2,sin(5acos(0.1))/sin(acos(0.1)),sin(10acos(0.1))/sin(acos(0.1))]
+
+        @testset "U" begin
+            U = ChebyshevU()
+            @test @inferred(U[0.1,Base.OneTo(0)]) == Float64[]
+            @test @inferred(U[0.1,Base.OneTo(1)]) == [1.0]
+            @test @inferred(U[0.1,Base.OneTo(2)]) == [1.0,0.2]
+            for N = 1:10
+                @test @inferred(U[0.1,Base.OneTo(N)]) ≈ @inferred(U[0.1,1:N]) ≈ [sin((n+1)*acos(0.1))/sin(acos(0.1)) for n = 0:N-1]
+                @test @inferred(U[0.1,N]) ≈ sin(N*acos(0.1))/sin(acos(0.1))
+            end
+            @test U[0.1,[2,5,10]] ≈ [0.2,sin(5acos(0.1))/sin(acos(0.1)),sin(10acos(0.1))/sin(acos(0.1))]
+        end
+
+        @testset "Function eval" begin
+            T = Chebyshev()
+            f = T * [1; 2; 3; zeros(∞)]
+            @test f[0.1] ≈ 1 + 2*0.1 + 3*cos(2acos(0.1))
+            x = [0.1,0.2]
+            @test f[x] ≈ @.(1 + 2*x + 3*cos(2acos(x)))
+        end
     end
 
     @testset "Transform" begin
@@ -169,6 +181,6 @@ import OrthogonalPolynomialsQuasi: Clenshaw
         x = axes(T,1)
         a = T * (T \ exp.(x))
         C = Clenshaw(a, T)
-        M = T \ (a .* T)
+        # M = T \ (a .* T)
     end
 end

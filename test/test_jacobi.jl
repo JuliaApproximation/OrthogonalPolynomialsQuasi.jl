@@ -1,3 +1,6 @@
+using OrthogonalPolynomialsQuasi, FillArrays, Test
+import OrthogonalPolynomialsQuasi: recurrencecoefficients
+
 @testset "Jacobi" begin
     @testset "basis" begin
         b,a = 0.1,0.2
@@ -123,6 +126,15 @@
         U = ChebyshevU()
         JT = Jacobi(T)
         JU = Jacobi(U)
+        
+        @testset "recurrence degenerecies" begin
+            A,B,C = recurrencecoefficients(JT)
+            @test A[1] == 0.5
+            @test B[1] == 0.0
+        end
+
+        @test JT[0.1,1:4] ≈ [1.0,0.05,-0.3675,-0.0925]
+
         @test ((T \ JT) * (JT \ T))[1:10,1:10] ≈ Eye(10)
         @test ((U \ JU) * (JU \ U))[1:10,1:10] ≈ Eye(10)
 

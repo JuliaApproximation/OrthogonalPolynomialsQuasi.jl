@@ -98,7 +98,7 @@ jacobimatrix(::Legendre) = _BandedMatrix(Vcat(((0:∞)./(1:2:∞))', Zeros(1,∞
 # These return vectors A[k], B[k], C[k] are from DLMF. Cause of MikaelSlevinsky we need an extra entry in C ... for now.
 function recurrencecoefficients(::Legendre{T}) where T
     n = zero(T):∞
-    (2(n .+ 1) ./ (n .+ 1), Zeros{T}(∞), n ./ (n .+ 1))
+    ((2n .+ 1) ./ (n .+ 1), Zeros{T}(∞), n ./ (n .+ 1))
 end
 
 function jacobimatrix(J::Jacobi) 
@@ -113,10 +113,12 @@ end
 
 function recurrencecoefficients(P::Jacobi)
     n = 0:∞
+    ñ = 1:∞
     a,b = P.a,P.b
-    A = (2n .+ (a+b+1)) .* (2n .+ (a+b+2)) ./ ((2*(n .+ 1)) .* (n .+ (a+b+1)))
-    B = (a^2 - b^2) * (2n .+ (a + b+1)) ./ ((2*(n .+ 1)) .* (n .+ (a+b+1)) .* (2n .+ (a+b)))
-    C = ((n .+ a) .* (n .+ b) .* (2n .+ (a+b+2))) ./ ((n .+ 1) .* (n .+ (a +b+1)) .* (2n .+ (a+b)))
+    A = Vcat((a+b+2)/2, (2ñ .+ (a+b+1)) .* (2ñ .+ (a+b+2)) ./ ((2*(ñ .+ 1)) .* (ñ .+ (a+b+1))))
+    # n = 0 is special to avoid divide-by-zero
+    B = Vcat((a-b)/2, (a^2 - b^2) * (2ñ .+ (a + b+1)) ./ ((2*(ñ .+ 1)) .* (ñ .+ (a+b+1)) .* (2ñ .+ (a+b))))
+    C = ((n .+ a) .* (n .+ b) .* (2n .+ (a+b+2))) ./ (ñ .* (n .+ (a +b+1)) .* (2n .+ (a+b)))
     (A,B,C)
 end
 

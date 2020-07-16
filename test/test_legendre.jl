@@ -1,18 +1,27 @@
+using OrthogonalPolynomialsQuasi, LazyArrays, Test
+import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix
+
 @testset "Legendre" begin
     @testset "basics" begin
         P = Legendre()
         @test axes(P) == (Inclusion(ChebyshevInterval()),Base.OneTo(∞))
         @test P == P == Legendre{Float32}()
+
+        P = Jacobi(0.0,0.0)
+        A,B,C = recurrencecoefficients(P)
+        @test B[1] == 0.0
     end
 
     @testset "operators" begin
-        @test jacobimatrix(Jacobi(0.,0.))[1,1] == 0.0
-        @test jacobimatrix(Jacobi(0.,0.))[1:10,1:10] == jacobimatrix(Legendre())[1:10,1:10] == jacobimatrix(Ultraspherical(1/2))[1:10,1:10]
-        @test Jacobi(0.,0.)[0.1,1:10] ≈ Legendre()[0.1,1:10] ≈ Ultraspherical(1/2)[0.1,1:10]
-
         P = Legendre()
         P̃ = Jacobi(0.0,0.0)
         P̄ = Ultraspherical(1/2)
+
+        @test jacobimatrix(P̃)[1,1] == 0.0
+        @test jacobimatrix(P̃)[1:10,1:10] == jacobimatrix(P)[1:10,1:10] == jacobimatrix(P̄)[1:10,1:10]
+
+        @test P[0.1,Base.OneTo(4)] ≈ [1,0.1,-0.485,-0.1475]
+        @test P̃[0.1,1:10] ≈ P[0.1,1:10] ≈ P̄[0.1,1:10]
 
         @test Ultraspherical(P) == P̄
         @test Jacobi(P) == P̃
@@ -23,6 +32,7 @@
         D = Derivative(axes(P,1))
         @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Fill}
     end
+
     @testset "test on functions" begin
         P = Legendre()
         D = Derivative(axes(P,1))
