@@ -145,7 +145,7 @@ include("clenshaw.jl")
 
 function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T
     p = grid(L)
-    TransformFactorization(p, nothing, factorize(L[p,:]))
+    TransformFactorization(p, nothing, qr(L[p,:])) # Use QR so type-stable
 end
 
 function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T

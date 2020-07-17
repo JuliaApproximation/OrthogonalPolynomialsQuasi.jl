@@ -51,31 +51,43 @@ import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, p
     end
 
     @testset "Transform" begin
-        T = Chebyshev()
-        Tn = @inferred(T[:,OneTo(100)])
-        @test grid(Tn) == chebyshevpoints(100; kind=1)
-        P = factorize(Tn)
-        u = T*[P.plan * exp.(P.grid); zeros(∞)]
-        @test u[0.1] ≈ exp(0.1)
+        @testset "ChebyshevT" begin
+            T = Chebyshev()
+            Tn = @inferred(T[:,OneTo(100)])
+            @test grid(Tn) == chebyshevpoints(100; kind=1)
+            P = factorize(Tn)
+            u = T*[P.plan * exp.(P.grid); zeros(∞)]
+            @test u[0.1] ≈ exp(0.1)
 
-        # auto-transform
-        x = axes(T,1)
-        u = Tn * (P \ exp.(x))
-        @test u[0.1] ≈ exp(0.1)
+            # auto-transform
+            x = axes(T,1)
+            u = Tn * (P \ exp.(x))
+            @test u[0.1] ≈ exp(0.1)
 
-        u = Tn * (Tn \ exp.(x))
-        @test u[0.1] ≈ exp(0.1)
+            u = Tn * (Tn \ exp.(x))
+            @test u[0.1] ≈ exp(0.1)
 
-        Tn = T[:,2:100]
-        @test factorize(Tn) isa ContinuumArrays.ProjectionFactorization
-        @test grid(Tn) == chebyshevpoints(100; kind=1)
-        @test (Tn \ (exp.(x) .- 1.26606587775201)) ≈ (Tn \ u) ≈ (T\u)[2:100]
+            Tn = T[:,2:100]
+            @test factorize(Tn) isa ContinuumArrays.ProjectionFactorization
+            @test grid(Tn) == chebyshevpoints(100; kind=1)
+            @test (Tn \ (exp.(x) .- 1.26606587775201)) ≈ (Tn \ u) ≈ (T\u)[2:100]
 
-        u = T * (T \ exp.(x))
-        @test u[0.1] ≈ exp(0.1)
+            u = T * (T \ exp.(x))
+            @test u[0.1] ≈ exp(0.1)
 
-        v = T[:,2:end] \ (exp.(x) .- 1.26606587775201)
-        @test v[1:10] ≈ (T\u)[2:11]
+            v = T[:,2:end] \ (exp.(x) .- 1.26606587775201)
+            @test v[1:10] ≈ (T\u)[2:11]
+        end
+        @testset "ChebyshevU" begin
+            U = ChebyshevU()
+            x = axes(U,1)
+            F = @inferred(factorize(U[:,Base.OneTo(5)]))
+            @test @inferred(F \ x) ≈ [0,0.5,0,0,0]
+            v = (x -> (3/20 + x + (2/5) * x^2)*exp(x)).(x)
+            @inferred(U[:,Base.OneTo(5)]\v)
+            w = @inferred(U\v)
+            @test U[0.1,:]'w ≈ v[0.1]
+        end
     end
 
     @testset "Mapped Chebyshev" begin
