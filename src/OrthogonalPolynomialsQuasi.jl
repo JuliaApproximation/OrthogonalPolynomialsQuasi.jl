@@ -1,6 +1,6 @@
 module OrthogonalPolynomialsQuasi
 using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, BlockArrays,
-    IntervalSets, DomainSets,
+    IntervalSets, DomainSets, ArrayLayouts,
     InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra, FastTransforms
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
@@ -22,9 +22,10 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf, InfAxes
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion
-import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, _forwardrecurrence_next, _clenshaw_next
+import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences
 
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
+import BandedMatrices: bandwidths
 
 export OrthogonalPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
@@ -139,128 +140,8 @@ _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
 bands(J::AbstractBandedMatrix) = _vec.(bandeddata(J).args)
 bands(J::Tridiagonal) = J.du, J.d, J.dl
 
+include("clenshaw.jl")
 
-##
-# For Chebyshev T. Note the shift in indexing is fine due to the AbstractFill
-##
-Base.@propagate_inbounds _forwardrecurrence_next(n, A::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, B::Zeros, C::Ones, x, p0, p1) = 
-    _forwardrecurrence_next(n, A.args[2], B, C, x, p0, p1)
-
-Base.@propagate_inbounds _clenshaw_next(n, A::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, B::Zeros, C::Ones, x, c, bn1, bn2) = 
-    _clenshaw_next(n, A.args[2], B, C, x, c, bn1, bn2)
-
-
-getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T =
-    copyto!(Vector{T}(undef,length(n)), view(P, x, n))
-
-getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::AbstractUnitRange{Int}) where T =
-    copyto!(Matrix{T}(undef,length(x),length(n)), view(P, x, n))
-
-function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial,<:Tuple{<:Number,<:OneTo}})
-    P = parent(V)
-    x,n = parentindices(V)
-    A,B,C = recurrencecoefficients(P)
-    forwardrecurrence!(dest, A, B, C, x)
-end
-
-function initiateforwardrecurrence(N, A, B, C, x)
-    T = promote_type(eltype(A), eltype(B), eltype(C), typeof(x))
-    p0 = one(T)
-    p1 = convert(T, A[1]x + B[1])
-    @inbounds for n = 2:N
-        p1,p0 = _forwardrecurrence_next(n, A, B, C, x, p0, p1),p1
-    end
-    p0,p1
-end
-
-function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial,<:Tuple{<:AbstractVector,<:UnitRange}})
-    checkbounds(dest, axes(V)...)
-    P = parent(V)
-    xr,jr = parentindices(V)
-    A,B,C = recurrencecoefficients(P)
-    shift = first(jr)
-    Ã,B̃,C̃ = A[shift:∞],B[shift:∞],C[shift:∞]
-    for (k,x) = enumerate(xr)
-        p0, p1 = initiateforwardrecurrence(shift, A, B, C, x)
-        _forwardrecurrence!(view(dest,k,:), Ã, B̃, C̃, x, p0, p1)
-    end
-    dest
-end
-
-function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial,<:Tuple{<:Number,<:UnitRange}})
-    checkbounds(dest, axes(V)...)
-    P = parent(V)
-    x,jr = parentindices(V)
-    A,B,C = recurrencecoefficients(P)
-    shift = first(jr)
-    Ã,B̃,C̃ = A[shift:∞],B[shift:∞],C[shift:∞]
-    p0, p1 = initiateforwardrecurrence(shift, A, B, C, x)
-    _forwardrecurrence!(dest, Ã, B̃, C̃, x, p0, p1)
-    dest
-end
-
-getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = layout_getindex(P, x, n)
-getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = layout_getindex(P, x, n)
-
-getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) =
-    P[x,OneTo(maximum(n))][n]
-
-getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer}) =
-    P[x,OneTo(maximum(n))][:,n]
-
-getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
-
-
-
-###
-# Clenshaw
-###
-
-function getindex(f::Expansion{<:Any,<:OrthogonalPolynomial}, x::Number)
-    P,c = arguments(f)
-    clenshaw(paddeddata(c), recurrencecoefficients(P)..., x)
-end
-
-getindex(f::Expansion{T,<:OrthogonalPolynomial}, x::AbstractVector{<:Number}) where T = 
-    copyto!(Vector{T}(undef, length(x)), view(f, x))
-
-function copyto!(dest::AbstractVector{T}, v::SubArray{<:Any,1,<:Expansion{<:Any,<:OrthogonalPolynomial}, <:Tuple{AbstractVector{<:Number}}}) where T
-    f = parent(v)
-    (x,) = parentindices(v)
-    P,c = arguments(f)
-    clenshaw!(paddeddata(c), recurrencecoefficients(P)..., x, Ones{T}(length(x)), dest)
-end
-
-"""
-    Clenshaw(a, X)
-
-represents the operator `a(X)` where a is a polynomial.
-Here `a` is to stored as a quasi-vector.
-"""
-struct Clenshaw{T, CoefsA<:AbstractVector, JacA<:AbstractMatrix, JacB<:AbstractMatrix} <: AbstractBandedMatrix{T}
-    a::CoefsA
-    J::JacA
-    X::JacB
-end
-
-Clenshaw(a::AbstractVector{T}, J::AbstractMatrix{T}, X::AbstractMatrix{T}) where T = 
-    Clenshaw{T,typeof(a),typeof(J),typeof(X)}(a, J, X)
-
-function Clenshaw(a::AbstractQuasiVector, X::AbstractQuasiMatrix)
-    P,c = arguments(a)
-    Clenshaw(c,jacobimatrix(P),jacobimatrix(X))
-end
-
-coefficients(a) = a.args[2]
-ncoefficients(a) = colsupport(coefficients(C.a),1)
-size(C::Clenshaw) = size(C.X)
-axes(C::Clenshaw) = axes(C.X)
-bandwidths(C::Clenshaw) = (ncoefficients(C.a)-1,ncoefficients(C.a)-1)
-
-
-# struct ClenshawLayout <: MemoryLayout end
-# sublayout(::ClenshawLayout, ::Type{NTuple{2,OneTo{Int}}}) = ClenshawLayout()
-# sub_materialize(::ClenshawLayout, V) = BandedMatrix(V)
 
 function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T
     p = grid(L)

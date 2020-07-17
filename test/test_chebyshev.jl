@@ -1,5 +1,5 @@
-using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, Test
-import OrthogonalPolynomialsQuasi: Clenshaw
+using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, LazyArrays, Test
+import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, paddeddata
 
 @testset "Chebyshev" begin
     @testset "ChebyshevGrid" begin
@@ -177,10 +177,28 @@ import OrthogonalPolynomialsQuasi: Clenshaw
     end
 
     @testset "multiplication" begin
-        T = ChebyshevT()
-        x = axes(T,1)
-        a = T * (T \ exp.(x))
-        C = Clenshaw(a, T)
-        # M = T \ (a .* T)
+        U = ChebyshevU()
+        x = axes(U,1)
+        a = U * Vcat([0.25; 0.5; 0.1], Zeros(∞));
+
+        A,B,C = recurrencecoefficients(U)
+        c = paddeddata(a.args[2])
+        m = 10
+        X = (U \ (x .* U))[1:m,1:m]
+        @test clenshaw(c, A, B, C, X) ≈ 3/20*I + X + (2/5) * X^2
+
+        M = Clenshaw(a, U)
+        @test bandwidths(M) == (2,2)
+        @test M[2:10,2:10] == M[1:10,1:10][2:10,2:10]
+        @test M[3:10,5:20] == M[1:10,1:20][3:10,5:20]
+        @test M[100_000:101_000,100_000:101_000] == M[2:1002,2:1002]
+
+        @test Eye(∞) * M isa Clenshaw
+
+        M = U \ (a .* U)
+        @test M isa Clenshaw
+
+        f = U \ exp.(x)
+        @test M*f ≈ U \ (x -> (3/20 + x + (2/5) * x^2)*exp(x)).(x)
     end
 end
