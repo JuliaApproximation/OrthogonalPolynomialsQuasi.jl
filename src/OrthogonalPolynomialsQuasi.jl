@@ -60,6 +60,20 @@ transform_ldiv(A, f, ::Tuple{<:Any,OneToInf})  = adaptivetransform_ldiv(A, f)
 transform_ldiv(A, f, ::Tuple{<:Any,IdentityUnitRange{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
 transform_ldiv(A, f, ::Tuple{<:Any,Slice{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
 
+function chop!(c::AbstractVector, tol::Real)
+    @assert tol >= 0
+
+    for k=length(c):-1:1
+        if abs(c[k]) > tol
+            resize!(c,k)
+            return c
+        end
+    end
+    resize!(c,0)
+    c
+end
+
+
 function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
     T = promote_type(U,V)
 
@@ -82,7 +96,7 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
         ##TODO: how to do scaling for unnormalized bases like Jacobi?
         if maximum(abs,@views(cfs[n-2:end])) < 10tol*maxabsc &&
                 all(norm.(un[r] - fr, 1) .< tol * n * maxabsfr*1000)
-            return [cfs; zeros(T,∞)]
+            return [chop!(cfs, tol); zeros(T,∞)]
         end
     end
     error("Have not converged")

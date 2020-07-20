@@ -113,6 +113,12 @@ Base.@propagate_inbounds function _clenshaw_next!(n, A::AbstractFill, ::Zeros, C
     bn2
 end
 
+Base.@propagate_inbounds function _clenshaw_next!(n, A, ::Zeros, C, x::AbstractMatrix, c, f::AbstractVector, bn1::AbstractVector{T}, bn2::AbstractVector{T}) where T
+    muladd!(A[n], x, bn1, -C[n+1], bn2)
+    bn2 .+= c[n] .* f
+    bn2
+end
+
 # allow special casing first arg, for ChebyshevT in OrthogonalPolynomialsQuasi
 Base.@propagate_inbounds function _clenshaw_first!(A, ::Zeros, C, X, c, bn1, bn2) 
     muladd!(A[1], X, bn1, -C[2], bn2)

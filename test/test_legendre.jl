@@ -6,7 +6,8 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix
         P = Legendre()
         @test axes(P) == (Inclusion(ChebyshevInterval()),Base.OneTo(∞))
         @test P == P == Legendre{Float32}()
-
+        A,B,C = recurrencecoefficients(P)
+        @test B isa Zeros
         P = Jacobi(0.0,0.0)
         A,B,C = recurrencecoefficients(P)
         @test B[1] == 0.0
