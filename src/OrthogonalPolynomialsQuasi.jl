@@ -8,7 +8,8 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
                 to_indices, _maybetail, tail
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize, arguments, paddeddata
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize, arguments, paddeddata, PaddedLayout
+import ArrayLayouts: MatMulVecAdd, materialize!
 import LinearAlgebra: pinv, factorize
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
 import FillArrays: AbstractFill, getindex_value
@@ -22,7 +23,8 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf, InfAxes
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion
-import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences
+import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, 
+                        _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 import BandedMatrices: bandwidths
@@ -30,7 +32,7 @@ import BandedMatrices: bandwidths
 export OrthogonalPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
-            ∞, Derivative
+            ∞, Derivative, ..
 
 
 # ambiguity error
@@ -65,7 +67,7 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
     fr = f[r]
     maxabsfr = norm(fr,Inf)
 
-    tol = eps(T)
+    tol = 20eps(T)
 
     for n = 2 .^ (4:∞)
         An = A[:,OneTo(n)]
@@ -75,10 +77,10 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
             return zeros(T,∞)
         end
 
-        un = ApplyQuasiArray(*, An, cfs)
+        un = A * [cfs; Zeros{T}(∞)]
         # we allow for transformed coefficients being a different size
         ##TODO: how to do scaling for unnormalized bases like Jacobi?
-        if maximum(abs,@views(cfs[n-8:end])) < 10tol*maxabsc &&
+        if maximum(abs,@views(cfs[n-2:end])) < 10tol*maxabsc &&
                 all(norm.(un[r] - fr, 1) .< tol * n * maxabsfr*1000)
             return [cfs; zeros(T,∞)]
         end

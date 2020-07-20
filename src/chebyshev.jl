@@ -50,24 +50,12 @@ Jacobi(C::ChebyshevU{T}) where T = Jacobi(one(T)/2,one(T)/2)
 # transform
 #######
 
-struct ChebyshevGrid{kind,T} <: AbstractVector{T}
-    n::Int
-end
-
-ChebyshevGrid{kind}(n::Integer) where kind = ChebyshevGrid{kind,Float64}(n)
-
-size(g::ChebyshevGrid) = (g.n,)
-getindex(g::ChebyshevGrid{1,T}, k::Integer) where T =
-    sinpi(convert(T,g.n-2k+1)/(2g.n))
-
-function getindex(g::ChebyshevGrid{2,T}, k::Integer) where T
-    g.n == 1 && return zero(T)
-    sinpi(convert(T,g.n-2k+1)/(2g.n-2))
-end
-
-
 factorize(L::SubQuasiArray{T,2,<:ChebyshevT,<:Tuple{<:Inclusion,<:OneTo}}) where T =
     TransformFactorization(grid(L), plan_chebyshevtransform(Array{T}(undef, size(L,2))))
+
+factorize(L::SubQuasiArray{T,2,<:ChebyshevU,<:Tuple{<:Inclusion,<:OneTo}}) where T =
+    TransformFactorization(grid(L), plan_chebyshevutransform(Array{T}(undef, size(L,2))))
+
 
 ########
 # Jacobi Matrix

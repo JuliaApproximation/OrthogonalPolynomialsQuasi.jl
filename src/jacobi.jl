@@ -266,3 +266,12 @@ end
     @assert B.points == -1:2:1
     Vcat(1, Zeros(∞,1))
 end
+
+###
+# sum
+###
+
+function _sum(P::Legendre{T}, dims) where T
+    @assert dims == 1
+    Hcat(convert(T, 2), Zeros{T}(1,∞))
+end

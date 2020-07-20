@@ -1,14 +1,15 @@
-using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, LazyArrays, Test
+using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, LazyArrays, FastTransforms, Test
 import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, paddeddata
+import Base: OneTo
 
 @testset "Chebyshev" begin
     @testset "ChebyshevGrid" begin
         for kind in (1,2)
-            @test all(ChebyshevGrid{kind}(10) .=== chebyshevpoints(Float64,10; kind=kind))
+            @test all(ChebyshevGrid{kind}(10) .=== chebyshevpoints(Float64,10, Val(kind)))
             for T in (Float16, Float32, Float64)
-                @test all(ChebyshevGrid{kind,T}(10) .=== chebyshevpoints(T,10; kind=kind))
+                @test all(ChebyshevGrid{kind,T}(10) .=== chebyshevpoints(T,10, Val(kind)))
             end
-            @test ChebyshevGrid{kind,BigFloat}(10) == chebyshevpoints(BigFloat,10; kind=kind)
+            @test ChebyshevGrid{kind,BigFloat}(10) == chebyshevpoints(BigFloat,10, Val(kind))
         end
     end
 
@@ -81,7 +82,7 @@ import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, p
         @testset "ChebyshevU" begin
             U = ChebyshevU()
             x = axes(U,1)
-            F = @inferred(factorize(U[:,Base.OneTo(5)]))
+            F = factorize(U[:,Base.OneTo(5)])
             @test @inferred(F \ x) ≈ [0,0.5,0,0,0]
             v = (x -> (3/20 + x + (2/5) * x^2)*exp(x)).(x)
             @inferred(U[:,Base.OneTo(5)]\v)
@@ -191,7 +192,8 @@ import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, p
     @testset "multiplication" begin
         U = ChebyshevU()
         x = axes(U,1)
-        a = U * Vcat([0.25; 0.5; 0.1], Zeros(∞));
+        a = U * [[0.25; 0.5; 0.1]; Zeros(∞)];
+        M = Clenshaw(a, U)
 
         A,B,C = recurrencecoefficients(U)
         c = paddeddata(a.args[2])
@@ -199,7 +201,6 @@ import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, p
         X = (U \ (x .* U))[1:m,1:m]
         @test clenshaw(c, A, B, C, X) ≈ 3/20*I + X + (2/5) * X^2
 
-        M = Clenshaw(a, U)
         @test bandwidths(M) == (2,2)
         @test M[2:10,2:10] == M[1:10,1:10][2:10,2:10]
         @test M[3:10,5:20] == M[1:10,1:20][3:10,5:20]

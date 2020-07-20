@@ -57,4 +57,11 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix
         Q = P[2x.-1,:]
         x .* Q
     end
+
+    @testset "sum" begin
+        P = Legendre()
+        x = axes(P,1)
+        w = P * (P \ exp.(x))
+        @test sum(w) ≈ ℯ - inv(ℯ)
+    end
 end
