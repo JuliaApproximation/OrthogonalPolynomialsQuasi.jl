@@ -247,8 +247,10 @@ function materialize!(M::MatMulVecAdd{<:ClenshawLayout,<:PaddedLayout,<:PaddedLa
     jkr=1:m+b÷2
     p = [x̃; zeros(eltype(x̃),length(jkr)-m)]
     Ax = clenshaw(A.c, A.A, A.B, A.C, A.X[jkr, jkr], p)
-    v = view(y,jkr)
-    v .+= α .* Ax .+ β .* v
+    _fill_lmul!(β,y)
+    resizedata!(y, last(jkr))
+    v = view(paddeddata(y),jkr)
+    BLAS.axpy!(α, Ax, v)
     y
 end
 

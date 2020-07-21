@@ -8,8 +8,9 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
                 to_indices, _maybetail, tail
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize, arguments, paddeddata, PaddedLayout
-import ArrayLayouts: MatMulVecAdd, materialize!
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, 
+                LdivApplyStyle, sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!
+import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!
 import LinearAlgebra: pinv, factorize
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
 import FillArrays: AbstractFill, getindex_value
