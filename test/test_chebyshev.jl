@@ -55,7 +55,7 @@ import Base: OneTo
         @testset "ChebyshevT" begin
             T = Chebyshev()
             Tn = @inferred(T[:,OneTo(100)])
-            @test grid(Tn) == chebyshevpoints(100; kind=1)
+            @test grid(Tn) == chebyshevpoints(100, Val(1))
             P = factorize(Tn)
             u = T*[P.plan * exp.(P.grid); zeros(∞)]
             @test u[0.1] ≈ exp(0.1)
@@ -70,7 +70,7 @@ import Base: OneTo
 
             Tn = T[:,2:100]
             @test factorize(Tn) isa ContinuumArrays.ProjectionFactorization
-            @test grid(Tn) == chebyshevpoints(100; kind=1)
+            @test grid(Tn) == chebyshevpoints(100, Val(1))
             @test (Tn \ (exp.(x) .- 1.26606587775201)) ≈ (Tn \ u) ≈ (T\u)[2:100]
 
             u = T * (T \ exp.(x))

@@ -1,11 +1,20 @@
-##
-# Chebyshev
-##
+"""
+ChebyshevWeight{kind,T}()
 
+is a quasi-vector representing the Chebyshev weight of the specified kind on -1..1.
+That is, `ChebyshevWeight{1}()` represents `1/sqrt(1-x^2)`, and
+`ChebyshevWeight{2}()` represents `sqrt(1-x^2)`.
+"""
 struct ChebyshevWeight{kind,T} <: AbstractJacobiWeight{T} end
 ChebyshevWeight{kind}() where kind = ChebyshevWeight{kind,Float64}()
 ChebyshevWeight() = ChebyshevWeight{1,Float64}()
 
+"""
+Chebyshev{kind,T}()
+
+is a quasi-matrix representing Chebyshev polynomials of the specified kind (1, 2, 3, or 4)
+on -1..1.
+"""
 struct Chebyshev{kind,T} <: AbstractJacobi{T} end
 Chebyshev() = Chebyshev{1,Float64}()
 Chebyshev{kind}() where kind = Chebyshev{kind,Float64}()
