@@ -1,6 +1,9 @@
 using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, BandedMatrices, 
         SemiseparableMatrices, LazyArrays, ArrayLayouts, Test
 
+import QuasiArrays: MulQuasiMatrix
+import ContinuumArrays: MappedBasisLayout
+
 import SemiseparableMatrices: VcatAlmostBandedLayout
 
 @testset "ODEs" begin
@@ -29,13 +32,9 @@ import SemiseparableMatrices: VcatAlmostBandedLayout
 
         L = D*(w.*S)[:,1:N]
 
-        A  = apply(*, (L').args..., L.args...)
-        @test A isa MulQuasiMatrix
-
         A  = *((L').args..., L.args...)
-        @test A isa MulQuasiMatrix
+        @test A isa MulMatrix
 
-        @test apply(*,L',L) isa QuasiArrays.ApplyQuasiArray
         Δ = L'L
         @test Δ isa MulMatrix
         @test bandwidths(Δ) == (0,0)
@@ -79,7 +78,7 @@ import SemiseparableMatrices: VcatAlmostBandedLayout
 
         P = Chebyshev()
         D = Derivative(axes(P,1))
-        D2 = D*(D*P) # could be D^2*P in the future
+        D2 = D^2 * P # could be D^2*P in the future
         n = 300
         x = cos.((1:n-2) .* π ./ (n-1)) # interior Chebyshev points
         C = [P[-1,1:n]';
@@ -115,7 +114,7 @@ import SemiseparableMatrices: VcatAlmostBandedLayout
         P = Legendre()[2x.-1,:]
         w = JacobiWeight(1.0,1.0)
         wS = (w .* Jacobi(1.0,1.0))[2x.-1,:]
-        @test MemoryLayout(typeof(wS)) isa MappedBasisLayout
+        @test MemoryLayout(wS) isa MappedBasisLayout
         f = wS*[[1,2,3]; zeros(∞)]
         g = (w .* Jacobi(1.0,1.0))*[[1,2,3]; zeros(∞)]
         @test f[0.1] ≈ g[2*0.1-1]
