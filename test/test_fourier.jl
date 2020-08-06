@@ -1,7 +1,8 @@
-using OrthogonalPolynomialsQuasi, InfiniteArrays
+using OrthogonalPolynomialsQuasi, QuasiArrays, InfiniteArrays
 using BlockBandedMatrices, BlockArrays, LazyArrays, Test, FillArrays, InfiniteLinearAlgebra, ArrayLayouts, LazyBandedMatrices
 import BlockBandedMatrices: _BlockBandedMatrix
 import OrthogonalPolynomialsQuasi: Inclusion
+import QuasiArrays: MulQuasiArray
 
 @testset "Fourier" begin
     @testset "Evaluation" begin
@@ -42,9 +43,11 @@ import OrthogonalPolynomialsQuasi: Inclusion
         F = Fourier()
         θ = axes(F,1)
         c,s = cos.(θ),sin.(θ)
+        @test c .* F isa MulQuasiArray
         X,Y = F \ (c .* F),F \ (s .* F)
         N = 10
-        XY = ApplyMatrix(*,X,Y)
+        XY = X*Y
+        @test XY isa MulMatrix
         @test MemoryLayout(XY) isa LazyBandedMatrices.ApplyBlockBandedLayout{typeof(*)}
         @test MemoryLayout(view(XY,Block.(1:N),Block.(1:N))) isa LazyBandedMatrices.ApplyBlockBandedLayout{typeof(*)}
         @test XY[Block.(1:N),Block.(1:N)] isa BlockSkylineMatrix
