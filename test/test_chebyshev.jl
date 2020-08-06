@@ -1,5 +1,8 @@
-using OrthogonalPolynomialsQuasi, QuasiArrays, BandedMatrices, LazyArrays, FastTransforms, Test
-import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, paddeddata
+using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, FastTransforms, ArrayLayouts, Test
+import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, paddeddata, jacobimatrix
+import LazyArrays: ApplyStyle
+import ContinuumArrays: SimplifyStyle
+import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
 
 @testset "Chebyshev" begin

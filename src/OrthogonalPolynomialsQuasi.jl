@@ -30,7 +30,7 @@ import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurr
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 import BandedMatrices: bandwidths
 
-export OrthogonalPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
+export OrthogonalPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
             ∞, Derivative, ..

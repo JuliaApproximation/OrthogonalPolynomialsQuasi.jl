@@ -1,5 +1,6 @@
-using OrthogonalPolynomialsQuasi, LazyArrays, Test
+using OrthogonalPolynomialsQuasi, LazyArrays, QuasiArrays, Test
 import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix
+import QuasiArrays: MulQuasiArray
 
 @testset "Legendre" begin
     @testset "basics" begin
@@ -31,7 +32,7 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix
         @test_broken P̄\P̃ === P̃\P̄ === Eye(∞)
 
         D = Derivative(axes(P,1))
-        @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Fill}
+        @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Ones}
     end
 
     @testset "test on functions" begin
@@ -51,12 +52,14 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix
         P = Legendre()
         x = axes(P,1)
 
+        @test (x .* P) isa MulQuasiArray
+
         J = P \ (x .* P)
         @test (P \ (   (1 .+ x) .* P))[1:10,1:10] ≈ (I + J)[1:10,1:10]
 
         x = Inclusion(0..1)
         Q = P[2x.-1,:]
-        x .* Q
+        @test x .* Q isa MulQuasiArray
     end
 
     @testset "sum" begin

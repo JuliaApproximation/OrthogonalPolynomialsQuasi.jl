@@ -109,14 +109,14 @@ end
 # Conversion
 #####
 
-@simplify function \(U::ChebyshevU, C::ChebyshevT)
+function \(U::ChebyshevU, C::ChebyshevT)
     T = promote_type(eltype(U), eltype(C))
     _BandedMatrix(Vcat(-Ones{T}(1,∞)/2,
                         Zeros{T}(1,∞),
                         Hcat(Ones{T}(1,1),Ones{T}(1,∞)/2)), ∞, 0,2)
 end
 
-@simplify function \(w_A::WeightedChebyshevT, w_B::WeightedChebyshevU)
+function \(w_A::WeightedChebyshevT, w_B::WeightedChebyshevU)
     wA,A = w_A.args
     wB,B = w_B.args
     T = promote_type(eltype(w_A), eltype(w_B))
@@ -130,34 +130,34 @@ end
 
 # (18.7.3)
 
-@simplify function \(A::ChebyshevT, B::Jacobi)
+function \(A::ChebyshevT, B::Jacobi)
     J = Jacobi(A)
     Diagonal(J[1,:]) * (J \ B)
 end
 
-@simplify function \(A::Jacobi, B::ChebyshevT)
+function \(A::Jacobi, B::ChebyshevT)
     J = Jacobi(B)
     (A \ J) * Diagonal(inv.(J[1,:]))
 end
 
-@simplify function \(A::Chebyshev, B::Jacobi)
+function \(A::Chebyshev, B::Jacobi)
     J = Jacobi(A)
     Diagonal(A[1,:] .\ J[1,:]) * (J \ B)
 end
 
-@simplify function \(A::Jacobi, B::Chebyshev)
+function \(A::Jacobi, B::Chebyshev)
     J = Jacobi(B)
     (A \ J) * Diagonal(J[1,:] .\ B[1,:])
 end
 
-@simplify function \(A::Jacobi, B::ChebyshevU)
+function \(A::Jacobi, B::ChebyshevU)
     T = promote_type(eltype(A), eltype(B))
     (A.a == A.b == one(T)/2) || throw(ArgumentError())
     Diagonal(B[1,:] ./ A[1,:])
 end
 
 # TODO: Toeplitz dot Hankel will be faster to generate
-@simplify function \(A::ChebyshevT, B::Legendre)
+function \(A::ChebyshevT, B::Legendre)
     T = promote_type(eltype(A), eltype(B))
    UpperTriangular( BroadcastMatrix{T}((k,j) -> begin
             (iseven(k) == iseven(j) && j ≥ k) || return zero(T)
@@ -167,19 +167,19 @@ end
 end
 
 
-@simplify function \(A::Jacobi, B::WeightedBasis{<:Any,<:JacobiWeight,<:Chebyshev})
+function \(A::Jacobi, B::WeightedBasis{<:Any,<:JacobiWeight,<:Chebyshev})
     w, T = B.args
     J = Jacobi(T)
     wJ = w .* J
     (A \ wJ) * (J \ T)
 end
 
-@simplify function \(A::Chebyshev, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi})
+function \(A::Chebyshev, B::WeightedBasis{<:Any,<:JacobiWeight,<:Jacobi})
     J = Jacobi(A)
     (A \ J) * (J \ B)
 end
 
-@simplify function \(A::Chebyshev, B::WeightedBasis{<:Any,<:JacobiWeight,<:Chebyshev})
+function \(A::Chebyshev, B::WeightedBasis{<:Any,<:JacobiWeight,<:Chebyshev})
     J = Jacobi(A)
     (A \ J) * (J \ B)
 end

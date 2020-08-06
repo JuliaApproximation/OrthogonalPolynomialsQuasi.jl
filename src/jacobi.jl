@@ -131,10 +131,10 @@ end
 # Conversion
 ##########
 
-@simplify \(A::Jacobi, B::Legendre) = A\Jacobi(B)
-@simplify \(A::Legendre, B::Jacobi) = Jacobi(A)\B
+\(A::Jacobi, B::Legendre) = A\Jacobi(B)
+\(A::Legendre, B::Jacobi) = Jacobi(A)\B
 
-@simplify function \(A::Jacobi, B::Jacobi) 
+function \(A::Jacobi, B::Jacobi) 
     T = promote_type(eltype(A), eltype(B))
     a,b = B.a,B.b
     if A.a == a && A.b == b
@@ -162,17 +162,17 @@ end
     end
 end
 
-@simplify function \(A::Jacobi, w_B::WeightedJacobi) 
+function \(A::Jacobi, w_B::WeightedJacobi) 
     a,b = A.a,A.b
     (JacobiWeight(zero(a),zero(b)) .* A) \ w_B
 end
 
-@simplify function \(w_A::WeightedJacobi, B::Jacobi) 
+function \(w_A::WeightedJacobi, B::Jacobi) 
     a,b = B.a,B.b
     w_A \ (JacobiWeight(zero(a),zero(b)) .* B)
 end
 
-@simplify function \(w_A::WeightedJacobi, w_B::WeightedJacobi) 
+function \(w_A::WeightedJacobi, w_B::WeightedJacobi) 
     wA,A = w_A.args
     wB,B = w_B.args
 
@@ -232,17 +232,17 @@ end
 end
 
 
-@simplify function \(L::Legendre, WS::WeightedBasis{Bool,JacobiWeight{Bool},Jacobi{Bool}})
+function \(L::Legendre, WS::WeightedBasis{Bool,JacobiWeight{Bool},Jacobi{Bool}})
     w,S = WS.args
     if w.b && w.a
         @assert S.b && S.a
         _BandedMatrix(Vcat(((2:2:∞)./(3:2:∞))', Zeros(1,∞), (-(2:2:∞)./(3:2:∞))'), ∞, 2,0)
     elseif w.b && !w.a
         @assert S.b && !S.a
-        _BandedMatrix(Ones{eltype(M)}(2,∞), ∞, 1,0)
+        _BandedMatrix(Ones{eltype(L)}(2,∞), ∞, 1,0)
     elseif !w.b && w.a
         @assert !S.b && S.a
-        _BandedMatrix(Vcat(Ones{eltype(M)}(1,∞),-Ones{eltype(M)}(1,∞)), ∞, 1,0)
+        _BandedMatrix(Vcat(Ones{eltype(L)}(1,∞),-Ones{eltype(L)}(1,∞)), ∞, 1,0)
     else
         error("Not implemented")
     end
@@ -262,7 +262,7 @@ end
 # Splines
 ###
 
-@simplify function \(A::Legendre, B::HeavisideSpline)
+function \(A::Legendre, B::HeavisideSpline)
     @assert B.points == -1:2:1
     Vcat(1, Zeros(∞,1))
 end
