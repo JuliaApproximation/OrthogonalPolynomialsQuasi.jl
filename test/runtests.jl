@@ -2,7 +2,7 @@ using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays
         LazyArrays, BandedMatrices, LinearAlgebra, FastTransforms, IntervalSets,
         InfiniteLinearAlgebra, Test
 using ForwardDiff, SemiseparableMatrices, SpecialFunctions, LazyBandedMatrices
-import ContinuumArrays: SimplifyStyle, BasisLayout, MappedBasisLayout
+import ContinuumArrays: BasisLayout, MappedBasisLayout
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞, ChebyshevInterval, Clenshaw, bands, forwardrecurrence!
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout

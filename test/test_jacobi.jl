@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, Test
+using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, Test
 import OrthogonalPolynomialsQuasi: recurrencecoefficients
 
 @testset "Jacobi" begin

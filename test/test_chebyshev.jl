@@ -1,7 +1,6 @@
 using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, FastTransforms, ArrayLayouts, Test
 import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, paddeddata, jacobimatrix
 import LazyArrays: ApplyStyle
-import ContinuumArrays: SimplifyStyle
 import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
 
@@ -116,7 +115,6 @@ import Base: OneTo
         @test T\T === pinv(T)*T === Eye(∞)
         @test U\U === pinv(U)*U === Eye(∞)
 
-        @test ApplyStyle(*,typeof(D),typeof(T)) == SimplifyStyle()
         @test D*T isa MulQuasiMatrix
         D₀ = U\(D*T)
         @test D₀ isa BandedMatrix
