@@ -170,7 +170,7 @@ function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusi
     ProjectionFactorization(factorize(parent(L)[:,Base.OneTo(maximum(jr))]), jr)
 end
 
-
+include("normalized.jl")
 include("hermite.jl")
 include("jacobi.jl")
 include("chebyshev.jl")
