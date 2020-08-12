@@ -29,7 +29,7 @@ FillArrays = "0.8.10, 0.9"
 InfiniteArrays = "0.7.2"
 InfiniteLinearAlgebra = "0.3.4"
 IntervalSets = "0.3.1, 0.4, 0.5"
-LazyArrays = "0.16.12"
+LazyArrays = "0.16.12, 0.17"
 QuasiArrays = "0.2.1"
 julia = "1.3"
 
