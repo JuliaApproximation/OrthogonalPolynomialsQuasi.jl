@@ -5,14 +5,14 @@ mutable struct NormalizationConstant{T, DL, DU} <: LazyVector{T}
     data::Vector{T}
     datasize::Tuple{Int}
 
-    NormalizationConstant{T, DL, DU}(dl::DL, du::DU) where {T,DL,DU} = new{T, DL, DU}(dl, du, [one(T)], (1,))
+    NormalizationConstant{T, DL, DU}(μ::T, dl::DL, du::DU) where {T,DL,DU} = new{T, DL, DU}(dl, du, [μ], (1,))
 end
 
-NormalizationConstant(dl::AbstractVector{T}, du::AbstractVector{T}) where T = NormalizationConstant{T,typeof(dl),typeof(du)}(dl, du)
+NormalizationConstant(μ::T, dl::AbstractVector{T}, du::AbstractVector{T}) where T = NormalizationConstant{T,typeof(dl),typeof(du)}(μ, dl, du)
 
 function NormalizationConstant(P::OrthogonalPolynomial)
     dl, _, du = bands(jacobimatrix(P))
-    NormalizationConstant(dl, du)
+    NormalizationConstant(inv(sqrt(sum(weight(P)))), dl, du)
 end
 
 size(K::NormalizationConstant) = (∞,)
@@ -36,6 +36,8 @@ end
 
 Normalized(P::OrthogonalPolynomial{T}) where T = Normalized(P, NormalizationConstant(P))
 axes(Q::Normalized) = axes(Q.P)
+
+_p0(Q::Normalized) = Q.scaling[1]
 
 function recurrencecoefficients(Q::Normalized)
     A,B,C = recurrencecoefficients(Q.P)

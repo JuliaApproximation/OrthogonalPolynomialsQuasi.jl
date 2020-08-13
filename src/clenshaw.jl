@@ -8,10 +8,13 @@ Base.@propagate_inbounds _forwardrecurrence_next(n, A::Vcat{<:Any,1,<:Tuple{<:Nu
 Base.@propagate_inbounds _clenshaw_next(n, A::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, B::Zeros, C::Ones, x, c, bn1, bn2) = 
     _clenshaw_next(n, A.args[2], B, C, x, c, bn1, bn2)
 
-function initiateforwardrecurrence(N, A, B, C, x)
+# Assume 1 normalization
+_p0(A) = one(eltype(A))
+
+function initiateforwardrecurrence(N, A, B, C, x, μ)
     T = promote_type(eltype(A), eltype(B), eltype(C), typeof(x))
-    p0 = one(T)
-    p1 = convert(T, A[1]x + B[1])
+    p0 = convert(T, μ)
+    p1 = convert(T, muladd(A[1],x,B[1])*p0)
     @inbounds for n = 2:N
         p1,p0 = _forwardrecurrence_next(n, A, B, C, x, p0, p1),p1
     end
@@ -28,7 +31,7 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial
     P = parent(V)
     x,n = parentindices(V)
     A,B,C = recurrencecoefficients(P)
-    forwardrecurrence!(dest, A, B, C, x)
+    forwardrecurrence!(dest, A, B, C, x, _p0(P))
 end
 
 function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial,<:Tuple{<:AbstractVector,<:UnitRange}})
@@ -39,7 +42,7 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial
     shift = first(jr)
     Ã,B̃,C̃ = A[shift:∞],B[shift:∞],C[shift:∞]
     for (k,x) = enumerate(xr)
-        p0, p1 = initiateforwardrecurrence(shift, A, B, C, x)
+        p0, p1 = initiateforwardrecurrence(shift, A, B, C, x, _p0(P))
         _forwardrecurrence!(view(dest,k,:), Ã, B̃, C̃, x, p0, p1)
     end
     dest
@@ -52,7 +55,7 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial
     A,B,C = recurrencecoefficients(P)
     shift = first(jr)
     Ã,B̃,C̃ = A[shift:∞],B[shift:∞],C[shift:∞]
-    p0, p1 = initiateforwardrecurrence(shift, A, B, C, x)
+    p0, p1 = initiateforwardrecurrence(shift, A, B, C, x, _p0(P))
     _forwardrecurrence!(dest, Ã, B̃, C̃, x, p0, p1)
     dest
 end

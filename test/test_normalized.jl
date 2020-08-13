@@ -13,10 +13,10 @@ import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients
     end
 
     M = P'P
-    @test Q[0.1,1] == 1
-    @test Q[0.1,2] ≈ sqrt(2/M[2,2]) * P[0.1,2]
-    @test inv(sqrt(2)) * Q[0.1,Base.OneTo(10)] ≈ inv(sqrt(2)) * Q[0.1,1:10] ≈ sqrt.(inv(M)[1:10,1:10]) * P[0.1,Base.OneTo(10)]
-    @test (Q'Q)[1:10,1:10] ≈ Matrix(2I, 10, 10)
+    @test Q[0.1,1] == 1/sqrt(2)
+    @test Q[0.1,2] ≈ sqrt(1/M[2,2]) * P[0.1,2]
+    @test Q[0.1,Base.OneTo(10)] ≈ Q[0.1,1:10] ≈ sqrt.(inv(M)[1:10,1:10]) * P[0.1,Base.OneTo(10)]
+    @test (Q'Q)[1:10,1:10] ≈ I
 
     D = Derivative(axes(Q,1))
     f = Q*[1:5; zeros(∞)]

@@ -1,5 +1,7 @@
 abstract type AbstractJacobiWeight{T} <: Weight{T} end
 
+axes(::AbstractJacobiWeight{T}) where T = (Inclusion(ChebyshevInterval{T}()),)
+
 struct JacobiWeight{T} <: AbstractJacobiWeight{T}
     b::T
     a::T
@@ -10,10 +12,18 @@ JacobiWeight(b::T, a::V) where {T,V} = JacobiWeight{promote_type(T,V)}(b,a)
 
 ==(A::JacobiWeight, B::JacobiWeight) = A.b == B.b && A.a == B.a
 
-axes(::AbstractJacobiWeight{T}) where T = (Inclusion(ChebyshevInterval{T}()),)
 function getindex(w::JacobiWeight, x::Number)
     x ∈ axes(w,1) || throw(BoundsError())
     (1-x)^w.a * (1+x)^w.b
+end
+
+
+struct LegendreWeight{T} <: AbstractJacobiWeight{T} end
+LegendreWeight() = LegendreWeight{Float64}()
+
+function getindex(w::LegendreWeight{T}, x::Number) where T
+    x ∈ axes(w,1) || throw(BoundsError())
+    one(T)
 end
 
 
@@ -25,6 +35,9 @@ Legendre() = Legendre{Float64}()
 
 ==(::Legendre, ::Legendre) = true
 
+weight(::Legendre{T}) where T = LegendreWeight{T}()
+sum(::LegendreWeight{T}) where T = 2one(T)
+
 struct Jacobi{T} <: AbstractJacobi{T}
     b::T
     a::T
@@ -34,6 +47,8 @@ end
 Jacobi(b::T, a::V) where {T,V} = Jacobi{promote_type(T,V)}(b,a)
 
 Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
+
+weight(P::Jacobi) = JacobiWeight(P.b, P.a)
 
 const WeightedJacobi{T} = WeightedBasis{T,<:JacobiWeight,<:Jacobi}
 
