@@ -20,6 +20,7 @@ size(K::NormalizationConstant) = (∞,)
 getindex(K::NormalizationConstant, k) = LazyArrays.cache_getindex(K, k)
 getindex(K::NormalizationConstant, k::AbstractVector) = LazyArrays.cache_getindex(K, k)
 getindex(K::NormalizationConstant, k::InfUnitRange) = layout_getindex(K, k)
+getindex(K::SubArray{<:Any,1,<:NormalizationConstant}, k::InfUnitRange) = layout_getindex(K, k)
 
 resizedata!(B::NormalizationConstant, mn...) = resizedata!(MemoryLayout(typeof(B.data)), UnknownLayout(), B, mn...)
 function LazyArrays.cache_filldata!(K::NormalizationConstant, inds)
@@ -41,6 +42,9 @@ function recurrencecoefficients(Q::Normalized)
     h = Q.scaling
     h[2:∞] ./ h .* A, h[2:∞] ./ h .* B, Vcat(zero(eltype(Q)), h[3:∞] ./ h .* C[2:∞])
 end
+
+MemoryLayout(::Type{<:Normalized}) = ApplyLayout{typeof(*)}()
+arguments(::ApplyLayout{typeof(*)}, Q::Normalized) = Q.P, Diagonal(inv.(Q.scaling))
 
 
 # p_{n+1} = (A_n * x + B_n) * p_n - C_n * p_{n-1}

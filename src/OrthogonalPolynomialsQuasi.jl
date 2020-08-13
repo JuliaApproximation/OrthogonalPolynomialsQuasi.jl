@@ -9,7 +9,7 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 to_indices, _maybetail, tail
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, 
-                sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector
+                sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout
 import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!
 import LinearAlgebra: pinv, factorize, qr
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
