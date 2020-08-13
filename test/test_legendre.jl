@@ -68,9 +68,4 @@ import QuasiArrays: MulQuasiArray
         w = P * (P \ exp.(x))
         @test sum(w) ≈ ℯ - inv(ℯ)
     end
-
-    @testset "Normalized" begin
-        P = Legendre()
-        qr(P)
-    end
 end

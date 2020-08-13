@@ -1,14 +1,21 @@
-using OrthogonalPolynomialsQuasi
+using OrthogonalPolynomialsQuasi, FillArrays
 import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients, Normalized
 
 
 @testset "Normalized" begin
     P = Legendre()
     Q = Normalized(P)
-    M = P'P
 
-    @test sqrt(2) * Q[0.1,Base.OneTo(10)] ≈ sqrt(2) * Q[0.1,1:10] ≈ sqrt.(M[1:10,1:10])* P[0.1,Base.OneTo(10)]
-    @test sqrt(2) * Q[0.1,1:10] ≈ sqrt.(M[1:10,1:10])* P[0.1,Base.OneTo(10)]
+    @testset "recurrencecoefficients" begin
+        A,B,C = recurrencecoefficients(Q)
+        @test A[3:∞][1:10] == A[3:12]
+        @test B[3:∞] ≡ Zeros(∞)
+    end
+
+    M = P'P
+    @test Q[0.1,1] == 1
+    @test Q[0.1,2] ≈ sqrt(2/M[2,2]) * P[0.1,2]
+    @test inv(sqrt(2)) * Q[0.1,Base.OneTo(10)] ≈ inv(sqrt(2)) * Q[0.1,1:10] ≈ sqrt.(inv(M)[1:10,1:10]) * P[0.1,Base.OneTo(10)]
     @test (Q'Q)[1:10,1:10] ≈ Matrix(2I, 10, 10)
 
     D = Derivative(axes(Q,1))
