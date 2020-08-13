@@ -9,7 +9,7 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 to_indices, _maybetail, tail
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, 
-                sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!
+                sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector
 import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!
 import LinearAlgebra: pinv, factorize, qr
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
@@ -21,7 +21,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle,
                     _getindex, layout_getindex, _factorize
 
-import InfiniteArrays: OneToInf, InfAxes
+import InfiniteArrays: OneToInf, InfAxes, InfUnitRange
 import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion
 import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, 
