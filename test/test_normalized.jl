@@ -25,9 +25,10 @@ import ContinuumArrays: BasisLayout
 
     @testset "Expansion" begin
         f = Q*[1:5; zeros(∞)]
-        @test f[0.1] ≈ Q[0.1,1:5]'*(1:5)
+        @test f[0.1] ≈ Q[0.1,1:5]'*(1:5) ≈ f[[0.1]][1]
+        x = axes(f,1)
         w = Q * (Q \ (1 .- x.^2));
-        @test w[0.1] ≈ (1-0.1^2)
+        @test w[0.1] ≈ (1-0.1^2) ≈ w[[0.1]][1]
     end
 
     @testset "Derivatives" begin

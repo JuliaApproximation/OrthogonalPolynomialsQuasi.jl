@@ -79,7 +79,7 @@ getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
 function getindex(f::Expansion{<:Any,<:OrthogonalPolynomial}, x::Number)
     P,c = arguments(f)
-    clenshaw(paddeddata(c), recurrencecoefficients(P)..., x)
+    _p0(P)*clenshaw(paddeddata(c), recurrencecoefficients(P)..., x)
 end
 
 getindex(f::Expansion{T,<:OrthogonalPolynomial}, x::AbstractVector{<:Number}) where T = 
