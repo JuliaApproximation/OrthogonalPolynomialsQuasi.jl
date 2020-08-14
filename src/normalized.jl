@@ -16,6 +16,7 @@ function NormalizationConstant(P::OrthogonalPolynomial)
 end
 
 size(K::NormalizationConstant) = (∞,)
+
 # Behaves like a CachedVector
 getindex(K::NormalizationConstant, k) = LazyArrays.cache_getindex(K, k)
 getindex(K::NormalizationConstant, k::AbstractVector) = LazyArrays.cache_getindex(K, k)
@@ -36,8 +37,13 @@ end
 
 Normalized(P::OrthogonalPolynomial{T}) where T = Normalized(P, NormalizationConstant(P))
 axes(Q::Normalized) = axes(Q.P)
+==(A::Normalized, B::Normalized) = A.P == B.P
 
 _p0(Q::Normalized) = Q.scaling[1]
+
+# p_{n+1} = (A_n * x + B_n) * p_n - C_n * p_{n-1}
+# q_{n+1}/h[n+1] = (A_n * x + B_n) * q_n/h[n] - C_n * p_{n-1}/h[n-1]
+# q_{n+1} = (h[n+1]/h[n] * A_n * x + h[n+1]/h[n] * B_n) * q_n - h[n+1]/h[n-1] * C_n * p_{n-1}
 
 function recurrencecoefficients(Q::Normalized)
     A,B,C = recurrencecoefficients(Q.P)
@@ -45,13 +51,31 @@ function recurrencecoefficients(Q::Normalized)
     h[2:∞] ./ h .* A, h[2:∞] ./ h .* B, Vcat(zero(eltype(Q)), h[3:∞] ./ h .* C[2:∞])
 end
 
-MemoryLayout(::Type{<:Normalized}) = ApplyLayout{typeof(*)}()
-arguments(::ApplyLayout{typeof(*)}, Q::Normalized) = Q.P, Diagonal(Q.scaling)
+# x * p[n] = c[n-1] * p[n-1] + a[n] * p[n] + b[n] * p[n+1]
+# x * q[n]/h[n] = c[n-1] * q[n-1]/h[n-1] + a[n] * q[n]/h[n] + b[n] * q[n+1]/h[n+1]
+# x * q[n+1] = c[n-1] * h[n]/h[n-1] * q[n-1] + a[n] * q[n] + b[n] * h[n]/h[n+1] * q[n+1]
 
-
-# p_{n+1} = (A_n * x + B_n) * p_n - C_n * p_{n-1}
 # q_{n+1}/h[n+1] = (A_n * x + B_n) * q_n/h[n] - C_n * p_{n-1}/h[n-1]
 # q_{n+1} = (h[n+1]/h[n] * A_n * x + h[n+1]/h[n] * B_n) * q_n - h[n+1]/h[n-1] * C_n * p_{n-1}
+function jacobimatrix(Q::Normalized)
+    _,a,b = bands(jacobimatrix(Q.P))
+    h = Q.scaling
+    Symmetric(_BandedMatrix(Vcat(a', (b .* h ./ h[2:end])'), ∞, 1, 0), :L)
+end
+
+# Sometimes we want to expand out, sometimes we don't
+
+QuasiArrays.ApplyQuasiArray(Q::Normalized) = ApplyQuasiArray(*, arguments(ApplyLayout{typeof(*)}(), Q)...)
+
+ArrayLayouts.mul(Q::Normalized, C::AbstractArray) = ApplyQuasiArray(*, Q, C)
+ArrayLayouts.ldiv(Q::Normalized, C::AbstractQuasiArray) = Q.scaling .\ (Q.P \ C)
+arguments(::ApplyLayout{typeof(*)}, Q::Normalized) = Q.P, Diagonal(Q.scaling)
+LazyArrays._mul_arguments(Q::Normalized) = arguments(ApplyLayout{typeof(*)}(), Q)
+LazyArrays._mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{typeof(*)}(), Q)
+
+
+
+
 
 
 
