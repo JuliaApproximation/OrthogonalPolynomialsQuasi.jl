@@ -20,6 +20,7 @@ import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients
 
     D = Derivative(axes(Q,1))
     f = Q*[1:5; zeros(∞)]
+    @test f[0.1] ≈ Q[0.1,1:5]'*(1:5)
     h = 0.000001
     @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=1E-4
 end

@@ -89,7 +89,7 @@ function copyto!(dest::AbstractVector{T}, v::SubArray{<:Any,1,<:Expansion{<:Any,
     f = parent(v)
     (x,) = parentindices(v)
     P,c = arguments(f)
-    clenshaw!(paddeddata(c), recurrencecoefficients(P)..., x, Ones{T}(length(x)), dest)
+    clenshaw!(paddeddata(c), recurrencecoefficients(P)..., x, Fill(_p0(P), length(x)), dest)
 end
 
 ###
