@@ -257,7 +257,8 @@ function materialize!(M::MatMulVecAdd{<:ClenshawLayout,<:PaddedLayout,<:PaddedLa
     y
 end
 
-function \(A::OrthogonalPolynomial, B::BroadcastQuasiMatrix{<:Any, typeof(*), <:Tuple{<:Expansion{<:Any,<:OrthogonalPolynomial}, <:OrthogonalPolynomial}})
-    a,P = arguments(B)
-    (A \ P) * Clenshaw(a, P)
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:OrthogonalPolynomial}, P::OrthogonalPolynomial)
+    axes(a,1) == axes(P,1) || throw(DimensionMismatch())
+    P * Clenshaw(a, P)
 end
+
