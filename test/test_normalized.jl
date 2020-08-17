@@ -31,6 +31,11 @@ import ContinuumArrays: BasisLayout
         @test w[0.1] ≈ (1-0.1^2) ≈ w[[0.1]][1]
     end
 
+    @testset "Conversion" begin
+        @test ((P \ Q) * (Q \ P))[1:10,1:10] ≈ (Q \Q)[1:10,1:10] ≈ I
+        @test (Jacobi(1,1) \ Q)[1:10,1:10] ≈ ((Jacobi(1,1) \ P) * (P \ Q))[1:10,1:10]
+    end
+
     @testset "Derivatives" begin
         D = Derivative(axes(Q,1))
         f = Q*[1:5; zeros(∞)]

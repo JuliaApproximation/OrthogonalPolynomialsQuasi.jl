@@ -84,9 +84,13 @@ QuasiArrays.ApplyQuasiArray(Q::Normalized) = ApplyQuasiArray(*, arguments(ApplyL
 ArrayLayouts.mul(Q::Normalized, C::AbstractArray) = ApplyQuasiArray(*, Q, C)
 transform_ldiv(Q::Normalized, C::AbstractQuasiArray) = Q.scaling .\ (Q.P \ C)
 arguments(::ApplyLayout{typeof(*)}, Q::Normalized) = Q.P, Diagonal(Q.scaling)
-LazyArrays._mul_arguments(Q::Normalized) = arguments(ApplyLayout{typeof(*)}(), Q)
-LazyArrays._mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{typeof(*)}(), Q)
+_mul_arguments(Q::Normalized) = arguments(ApplyLayout{typeof(*)}(), Q)
+_mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{typeof(*)}(), Q)
+\(Q::Normalized, P::Normalized) = copy(Ldiv{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}(Q,P))
+\(P::OrthogonalPolynomial, Q::Normalized) = copy(Ldiv{typeof(MemoryLayout(P)),ApplyLayout{typeof(*)}}(P,Q))
+\(Q::Normalized, P::OrthogonalPolynomial) = copy(Ldiv{ApplyLayout{typeof(*)},typeof(MemoryLayout(P))}(Q,P))
 
+    
 
 
 
