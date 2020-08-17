@@ -36,6 +36,20 @@ struct Normalized{T, OPs<:OrthogonalPolynomial{T}, NL} <: OrthogonalPolynomial{T
 end
 
 Normalized(P::OrthogonalPolynomial{T}) where T = Normalized(P, NormalizationConstant(P))
+
+struct QuasiQR{T, QQ, RR} <: Factorization{T}
+    Q::QQ
+    R::RR
+end
+
+QuasiQR(Q::AbstractQuasiMatrix{T}, R::AbstractMatrix{V}) where {T,V} = 
+    QuasiQR{promote_type(T,V),typeof(Q),typeof(R)}(Q, R)
+
+Base.iterate(S::QuasiQR) = (S.Q, Val(:R))
+Base.iterate(S::QuasiQR, ::Val{:R}) = (S.R, Val(:done))
+Base.iterate(S::QuasiQR, ::Val{:done}) = nothing
+
+
 axes(Q::Normalized) = axes(Q.P)
 ==(A::Normalized, B::Normalized) = A.P == B.P
 

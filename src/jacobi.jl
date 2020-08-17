@@ -38,6 +38,11 @@ Legendre() = Legendre{Float64}()
 weight(::Legendre{T}) where T = LegendreWeight{T}()
 sum(::LegendreWeight{T}) where T = 2one(T)
 
+function qr(P::Legendre)
+    Q = Normalized(P)
+    QuasiQR(Q, Diagonal(Q.scaling))
+end
+
 struct Jacobi{T} <: AbstractJacobi{T}
     b::T
     a::T
