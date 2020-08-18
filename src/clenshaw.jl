@@ -216,7 +216,14 @@ size(M::Clenshaw) = size(M.X)
 axes(M::Clenshaw) = axes(M.X)
 bandwidths(M::Clenshaw) = (length(M.c)-1,length(M.c)-1)
 
-function getindex(M::Clenshaw, kr::AbstractUnitRange, jr::AbstractUnitRange)
+struct ClenshawLayout <: AbstractBandedLayout end
+MemoryLayout(::Type{<:Clenshaw}) = ClenshawLayout()
+sublayout(::ClenshawLayout, ::Type{<:NTuple{2,AbstractUnitRange{Int}}}) = ClenshawLayout()
+sub_materialize(::ClenshawLayout, V) = BandedMatrix(V)
+
+function _BandedMatrix(::ClenshawLayout, V::SubArray{<:Any,2})
+    M = parent(V)
+    kr,jr = parentindices(M)
     b = bandwidth(M,1)
     jkr=max(1,min(jr[1],kr[1])-b÷2):max(jr[end],kr[end])+b÷2
     # relationship between jkr and kr, jr
@@ -235,10 +242,7 @@ end
 
 getindex(M::Clenshaw, k::Int, j::Int) = M[k:k,j][1]
 
-struct ClenshawLayout <: AbstractBandedLayout end
-MemoryLayout(::Type{<:Clenshaw}) = ClenshawLayout()
-# sublayout(::ClenshawLayout, ::Type{NTuple{2,OneTo{Int}}}) = ClenshawLayout()
-# sub_materialize(::ClenshawLayout, V) = BandedMatrix(V)
+
 
 function materialize!(M::MatMulVecAdd{<:ClenshawLayout,<:PaddedLayout,<:PaddedLayout})
     α,A,x,β,y = M.α,M.A,M.B,M.β,M.C
