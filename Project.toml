@@ -22,7 +22,7 @@ QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 SemiseparableMatrices = "f8ebbe35-cbfb-4060-bf7f-b10e4670cf57"
 
 [compat]
-ArrayLayouts = "0.4"
+ArrayLayouts = "0.4.3"
 BandedMatrices = "0.15.11"
 BlockArrays = "0.12.8"
 BlockBandedMatrices = "0.9"
@@ -35,7 +35,7 @@ InfiniteLinearAlgebra = "0.4"
 IntervalSets = "0.3.1, 0.4, 0.5"
 LazyArrays = "0.17"
 QuasiArrays = "0.3"
-julia = "1.4"
+julia = "1.5"
 
 [extras]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
