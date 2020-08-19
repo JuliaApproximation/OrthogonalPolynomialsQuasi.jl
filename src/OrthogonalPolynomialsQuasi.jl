@@ -10,7 +10,7 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, 
                 sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
-                _mul_arguments
+                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix
 import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize
 import LinearAlgebra: pinv, factorize, qr
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
@@ -31,7 +31,7 @@ import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurr
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 import BandedMatrices: bandwidths
 
-export OrthogonalPolynomial, Normalized, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
+export OrthogonalPolynomial, Normalized, LanczosPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
             ∞, Derivative, ..
@@ -127,6 +127,13 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Ort
     C*jacobimatrix(C)
 end
 
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::BroadcastQuasiVector, C::OrthogonalPolynomial)
+    axes(a,1) == axes(C,1) || throw(DimensionMismatch())
+    # re-expand in OP basis
+    broadcast(*, C * (C \ a), C)
+end
+
+
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AbstractAffineQuasiVector, C::OrthogonalPolynomial)
     x = axes(C,1)
     axes(y,1) == x || throw(DimensionMismatch())
@@ -172,6 +179,7 @@ function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusi
 end
 
 include("normalized.jl")
+include("lanczos.jl")
 include("hermite.jl")
 include("jacobi.jl")
 include("chebyshev.jl")

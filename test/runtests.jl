@@ -18,6 +18,7 @@ include("test_jacobi.jl")
 include("test_fourier.jl")
 include("test_odes.jl")
 include("test_normalized.jl")
+include("test_lanczos.jl")
 
 @testset "Auto-diff" begin
     U = Ultraspherical(1)

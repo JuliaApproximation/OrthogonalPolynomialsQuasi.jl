@@ -94,6 +94,20 @@ function copyto!(dest::AbstractVector{T}, v::SubArray{<:Any,1,<:Expansion{<:Any,
     clenshaw!(paddeddata(c), x, dest)
 end
 
+###
+# Mass matrix
+###
+
+@simplify function *(Tc::QuasiAdjoint{<:Any,<:ChebyshevT}, wT::WeightedChebyshevT)
+    V = promote_type(eltype(Tc), eltype(wT))
+    Diagonal([convert(V,π); Fill(convert(V,π)/2,∞)])
+end
+
+@simplify function *(Tc::QuasiAdjoint{<:Any,<:ChebyshevU}, wT::WeightedChebyshevU)
+    V = promote_type(eltype(Tc), eltype(wT))
+    Diagonal(Fill(convert(V,π)/2,∞))
+end
+
 ##########
 # Derivatives
 ##########
