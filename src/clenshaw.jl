@@ -223,7 +223,7 @@ sub_materialize(::ClenshawLayout, V) = BandedMatrix(V)
 
 function _BandedMatrix(::ClenshawLayout, V::SubArray{<:Any,2})
     M = parent(V)
-    kr,jr = parentindices(M)
+    kr,jr = parentindices(V)
     b = bandwidth(M,1)
     jkr=max(1,min(jr[1],kr[1])-b÷2):max(jr[end],kr[end])+b÷2
     # relationship between jkr and kr, jr

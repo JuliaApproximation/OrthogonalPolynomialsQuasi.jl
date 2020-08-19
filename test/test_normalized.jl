@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays
+using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, ArrayLayouts, Test
 import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients, Normalized, Clenshaw
 import ContinuumArrays: BasisLayout
 
@@ -7,8 +7,11 @@ import ContinuumArrays: BasisLayout
     P = Legendre()
     Q = Normalized(P)
 
-    @test MemoryLayout(Q) isa BasisLayout
-
+    @testset "Basic" begin
+        @test MemoryLayout(Q) isa BasisLayout
+        @test @inferred(Q\Q) ≡ Eye(∞)
+    end
+    
     @testset "recurrencecoefficients" begin
         A,B,C = recurrencecoefficients(Q)
         @test A[3:∞][1:10] == A[3:12]

@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, BandedMatrices, Test
+using OrthogonalPolynomialsQuasi, BandedMatrices, LazyArrays, Test
 
 @testset "Ultraspherical" begin
     @testset "Transforms" begin
@@ -49,7 +49,6 @@ using OrthogonalPolynomialsQuasi, BandedMatrices, Test
                 D₀ = U\(D*T)
                 D₁ = C\(D*U)
                 @test D₁ isa BandedMatrix
-                @test apply(*,D₁,D₀)[1:10,1:10] == diagm(2 => 4:2:18)
                 @test (D₁*D₀)[1:10,1:10] == diagm(2 => 4:2:18)
                 @test D₁*D₀ isa MulMatrix
                 @test bandwidths(D₁*D₀) == (-2,2)

@@ -86,7 +86,11 @@ transform_ldiv(Q::Normalized, C::AbstractQuasiArray) = Q.scaling .\ (Q.P \ C)
 arguments(::ApplyLayout{typeof(*)}, Q::Normalized) = Q.P, Diagonal(Q.scaling)
 _mul_arguments(Q::Normalized) = arguments(ApplyLayout{typeof(*)}(), Q)
 _mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{typeof(*)}(), Q)
-\(Q::Normalized, P::Normalized) = copy(Ldiv{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}(Q,P))
+
+# table stable identity if A.P == B.P
+@inline _normalized_ldiv(An, C, Bn) = An \ (C * Bn)
+@inline _normalized_ldiv(An, C::Eye{T}, Bn) where T = FillArrays.SquareEye{promote_type(eltype(An),T,eltype(Bn))}(∞)
+\(A::Normalized, B::Normalized) = _normalized_ldiv(Diagonal(A.scaling), A.P \ B.P, Diagonal(B.scaling))
 \(P::OrthogonalPolynomial, Q::Normalized) = copy(Ldiv{typeof(MemoryLayout(P)),ApplyLayout{typeof(*)}}(P,Q))
 \(Q::Normalized, P::OrthogonalPolynomial) = copy(Ldiv{ApplyLayout{typeof(*)},typeof(MemoryLayout(P))}(Q,P))
 
