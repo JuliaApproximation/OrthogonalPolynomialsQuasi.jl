@@ -1,3 +1,5 @@
+using OrthogonalPolynomialsQuasi, Test
+
 @testset "Lanczos" begin
     @testset "Legendre" begin
         P = Legendre();
