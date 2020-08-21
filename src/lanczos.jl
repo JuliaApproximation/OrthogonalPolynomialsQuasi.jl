@@ -29,7 +29,7 @@ mutable struct LanczosData{T,XX,WW}
     W::WW
     γ::PaddedVector{T}
     β::PaddedVector{T}
-    R::PaddedMatrix{T}
+    R::UpperTriangular{T,PaddedMatrix{T}}
     ncols::Int
 
     function LanczosData{T,XX,WW}(X, W, γ, β, R) where {T,XX,WW}
@@ -42,7 +42,7 @@ mutable struct LanczosData{T,XX,WW}
 end
 
 LanczosData(X::XX, W::WW, γ::AbstractVector{T}, β, R) where {T,XX,WW} = LanczosData{T,XX,WW}(X, W, γ, β, R)
-LanczosData(X::AbstractMatrix, W::AbstractMatrix) = LanczosData(X, W, zeros(∞), zeros(∞), zeros(∞,∞))
+LanczosData(X::AbstractMatrix, W::AbstractMatrix) = LanczosData(X, W, zeros(∞), zeros(∞), UpperTriangular(zeros(∞,∞)))
 
 function LanczosData(w::AbstractQuasiVector, Q::AbstractQuasiMatrix)
     x = axes(Q,1)
