@@ -1,4 +1,5 @@
-using OrthogonalPolynomialsQuasi, Test
+using OrthogonalPolynomialsQuasi, BandedMatrices, Test
+import OrthogonalPolynomialsQuasi: recurrencecoefficients
 
 @testset "Lanczos" begin
     @testset "Legendre" begin

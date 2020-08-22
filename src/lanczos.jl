@@ -10,10 +10,10 @@ function lanczos!(Ns, X::AbstractMatrix{T}, W::AbstractMatrix{T}, γ::AbstractVe
         p1 = view(R,:,n-1);
         muladd!(one(T), X, p1, zero(T), v); # TODO: `mul!(v, X, p1)`
         β[n-1] = dot(v,W,p1)
-        BLAS.axpy!(-β[n-1],p1,v);
+        axpy!(-β[n-1],p1,v);
         if n > 2
             p0 = view(R,:,n-2)
-            BLAS.axpy!(-γ[n-1],p0,v)    
+            axpy!(-γ[n-1],p0,v)    
         end
         γ[n] = sqrt(dot(v,W,v));
         lmul!(inv(γ[n]), v)
