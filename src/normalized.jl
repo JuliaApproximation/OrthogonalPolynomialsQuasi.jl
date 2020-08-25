@@ -38,6 +38,7 @@ end
 
 normalizationconstant(P) = NormalizationConstant(P)
 Normalized(P::OrthogonalPolynomial{T}) where T = Normalized(P, normalizationconstant(P))
+Normalized(Q::Normalized) = Q
 
 struct QuasiQR{T, QQ, RR} <: Factorization{T}
     Q::QQ

@@ -6,7 +6,7 @@ using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, Bloc
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
-                to_indices, _maybetail, tail
+                to_indices, _maybetail, tail, getproperty
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, 
                 sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
@@ -133,7 +133,8 @@ singularities(S::WeightedOrthogonalPolynomial) = singularities(S.args[1])
 singularities(f::AbstractQuasiVector) = singularities(basis(f))
 
 
-weighted(P::OrthogonalPolynomial) = orthogonalityweight(P) .* P
+_weighted(w, P) = w .* P
+weighted(P::OrthogonalPolynomial) = _weighted(orthogonalityweight(P), P)
 
 OrthogonalPolynomial(w::Weight) =error("Override for $(typeof(w))")
 
