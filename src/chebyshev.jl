@@ -36,6 +36,8 @@ const WeightedChebyshevU = WeightedChebyshev{2}
 ==(a::Chebyshev, b::Chebyshev) = false
 ==(::Chebyshev, ::Jacobi) = false
 ==(::Jacobi, ::Chebyshev) = false
+==(::Chebyshev, ::Legendre) = false
+==(::Legendre, ::Chebyshev) = false
 
 
 function getindex(w::ChebyshevTWeight, x::Number)
@@ -169,6 +171,7 @@ function \(A::Jacobi, B::ChebyshevU)
     (A.a == A.b == one(T)/2) || throw(ArgumentError())
     Diagonal(B[1,:] ./ A[1,:])
 end
+
 
 # TODO: Toeplitz dot Hankel will be faster to generate
 function \(A::ChebyshevT, B::Legendre)

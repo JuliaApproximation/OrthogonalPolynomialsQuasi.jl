@@ -178,6 +178,13 @@ function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusi
     ProjectionFactorization(factorize(parent(L)[:,Base.OneTo(maximum(jr))]), jr)
 end
 
+function \(A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, B::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial})
+    axes(A,1) == axes(B,1) || throw(DimensionMismatch())
+    _,jA = parentindices(A)
+    _,jB = parentindices(B)
+    (parent(A) \ parent(B))[jA, jB]
+end
+
 include("normalized.jl")
 include("lanczos.jl")
 include("hermite.jl")

@@ -23,6 +23,7 @@ getindex(K::NormalizationConstant, k::AbstractVector) = LazyArrays.cache_getinde
 getindex(K::NormalizationConstant, k::InfUnitRange) = layout_getindex(K, k)
 getindex(K::SubArray{<:Any,1,<:NormalizationConstant}, k::InfUnitRange) = layout_getindex(K, k)
 
+paddeddata(A::NormalizationConstant) = view(A.data,OneTo(A.datasize[1]))
 resizedata!(B::NormalizationConstant, mn...) = resizedata!(MemoryLayout(typeof(B.data)), UnknownLayout(), B, mn...)
 function LazyArrays.cache_filldata!(K::NormalizationConstant, inds)
     @inbounds for k in inds

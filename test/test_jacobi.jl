@@ -158,6 +158,21 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         f = Jacobi(1.0,1.0)*[[1,2,3]; zeros(∞)]
         g = Ultraspherical(3/2)*(Ultraspherical(3/2)\f)
         @test f[0.1] ≈ g[0.1]
+
+        @testset "Chebyshev-Legendre" begin
+            T = Chebyshev()
+            P = Legendre()
+            @test T[:,Base.OneTo(5)] \ P[:,Base.OneTo(5)] == (T\P)[1:5,1:5]
+
+            x = axes(P,1)
+            u = P * (P \ exp.(x))
+            @test u[0.1] ≈ exp(0.1)
+
+            P = Legendre{BigFloat}()
+            x = axes(P,1)
+            u = P * (P \ exp.(x))
+            @test u[BigFloat(1)/10] ≈ exp(BigFloat(1)/10)
+        end
     end
 
     @testset "hcat" begin

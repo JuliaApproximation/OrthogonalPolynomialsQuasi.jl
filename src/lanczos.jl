@@ -1,7 +1,8 @@
 # We roughly follow DLMF notation
-# P[x,n] = k[n] * x^(n-1) 
+# Q[x,n] = k[n] * x^(n-1) 
 # Note that we have
-# Q[x,n] = (1/γ[n] - β[n-1]/γ[n]) * x * P[x,n-1] - γ[n-1]/γ[n] * P[x,n]
+# Q[x,n] = (1/γ[n] - β[n-1]/γ[n]) * x * Q[x,n-1] - γ[n-1]/γ[n] * Q[x,n]
+# 
 # 
 
 function lanczos!(Ns, X::AbstractMatrix{T}, W::AbstractMatrix{T}, γ::AbstractVector{T}, β::AbstractVector{T}, R::AbstractMatrix{T}) where T
@@ -42,12 +43,12 @@ mutable struct LanczosData{T,XX,WW}
 end
 
 LanczosData(X::XX, W::WW, γ::AbstractVector{T}, β, R) where {T,XX,WW} = LanczosData{T,XX,WW}(X, W, γ, β, R)
-LanczosData(X::AbstractMatrix, W::AbstractMatrix) = LanczosData(X, W, zeros(∞), zeros(∞), UpperTriangular(zeros(∞,∞)))
+LanczosData(X::AbstractMatrix{T}, W::AbstractMatrix{T}) where T = LanczosData(X, W, zeros(T,∞), zeros(T,∞), UpperTriangular(zeros(T,∞,∞)))
 
-function LanczosData(w::AbstractQuasiVector, Q::AbstractQuasiMatrix)
-    x = axes(Q,1)
-    X = Q \ (x .* Q)
-    W = Q \ (w .* Q)
+function LanczosData(w::AbstractQuasiVector, P::AbstractQuasiMatrix)
+    x = axes(P,1)
+    X = P \ (x .* P)
+    W = P \ (w .* P)
     LanczosData(X, W)
 end
 
@@ -78,6 +79,30 @@ end
 #     data::LanczosData{T,XX,WW}
 # end
 
+struct LanczosJacobiBand{T,XX,WW} <: LazyVector{T}
+    data::LanczosData{T,XX,WW}
+    diag::Symbol
+end
+
+size(P::LanczosJacobiBand) = (∞,)
+resizedata!(A::LanczosJacobiBand, n) = resizedata!(A.data, n)
+
+
+# γ[n+1]*Q[x,n+1] + β[n]*Q[x,n] + γ[n-1]*Q[x,n-1] = x  * Q[x,n]
+function _lanczos_getindex(C::LanczosJacobiBand, I)
+    resizedata!(C, maximum(I)+1)
+    if C.diag == :du
+        C.data.γ.data[I .+ 1]
+    else # :d
+        C.data.β.data[I]
+    end
+end
+
+getindex(A::LanczosJacobiBand, I::Integer) = _lanczos_getindex(A, I)
+getindex(A::LanczosJacobiBand, I::AbstractVector) = _lanczos_getindex(A, I)
+getindex(K::LanczosJacobiBand, k::InfUnitRange) = view(K, k)
+getindex(K::SubArray{<:Any,1,<:LanczosJacobiBand}, k::InfUnitRange) = view(K, k)
+
 
 struct LanczosRecurrence{ABC,T,XX,WW} <: LazyVector{T}
     data::LanczosData{T,XX,WW}
@@ -88,6 +113,11 @@ LanczosRecurrence{ABC}(data::LanczosData{T,XX,WW}) where {ABC,T,XX,WW} = Lanczos
 size(P::LanczosRecurrence) = (∞,)
 
 resizedata!(A::LanczosRecurrence, n) = resizedata!(A.data, n)
+
+
+
+# Q[x,n] = (x/γ[n] - β[n-1]/γ[n])  * Q[x,n-1] - γ[n-1]/γ[n] * Q[x,n]
+
 
 function _lanczos_getindex(A::LanczosRecurrence{:A}, I) 
     resizedata!(A, maximum(I)+1)
@@ -116,6 +146,10 @@ struct LanczosPolynomial{T,XX,WW,Weight,Basis} <: OrthogonalPolynomial{T}
     data::LanczosData{T,XX,WW}
 end
 
+==(A::LanczosPolynomial, B::LanczosPolynomial) = A.w == B.w
+==(::LanczosPolynomial, ::OrthogonalPolynomial) = false # TODO: fix
+==(::OrthogonalPolynomial, ::LanczosPolynomial) = false # TODO: fix
+
 
 function LanczosPolynomial(w::AbstractQuasiVector)
     P = qr(basis(w)).Q
@@ -127,12 +161,17 @@ axes(Q::LanczosPolynomial) = (axes(Q.w,1),OneToInf())
 _p0(Q::LanczosPolynomial) = inv(Q.data.γ[1])*_p0(Q.P)
 
 recurrencecoefficients(Q::LanczosPolynomial) = LanczosRecurrence{:A}(Q.data),LanczosRecurrence{:B}(Q.data),LanczosRecurrence{:C}(Q.data)
+jacobimatrix(Q::LanczosPolynomial) = SymTridiagonal(LanczosJacobiBand(Q.data, :d), LanczosJacobiBand(Q.data, :du))
 
 # Sometimes we want to expand out, sometimes we don't
 
 QuasiArrays.ApplyQuasiArray(Q::LanczosPolynomial) = ApplyQuasiArray(*, arguments(ApplyLayout{typeof(*)}(), Q)...)
 
 
+function \(A::LanczosPolynomial{T}, B::LanczosPolynomial{V}) where {T,V}
+    A == B && return Eye{promote_type(T,V)}(∞)
+    error("Not implemented")
+end
 \(A::OrthogonalPolynomial, Q::LanczosPolynomial) = (A \ Q.P) * LanczosConversion(Q.data)
 
 ArrayLayouts.mul(Q::LanczosPolynomial, C::AbstractArray) = ApplyQuasiArray(*, Q, C)
