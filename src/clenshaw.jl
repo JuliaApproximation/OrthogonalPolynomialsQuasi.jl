@@ -242,6 +242,7 @@ end
 
 getindex(M::Clenshaw, k::Int, j::Int) = M[k:k,j][1]
 
+transposelayout(M::ClenshawLayout) = ClenshawLayout()
 
 
 function materialize!(M::MatMulVecAdd{<:ClenshawLayout,<:PaddedLayout,<:PaddedLayout})
@@ -264,5 +265,12 @@ end
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:OrthogonalPolynomial}, P::OrthogonalPolynomial)
     axes(a,1) == axes(P,1) || throw(DimensionMismatch())
     P * Clenshaw(a, P)
+end
+
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<:WeightedOrthogonalPolynomial}, P::OrthogonalPolynomial)
+    axes(a,1) == axes(P,1) || throw(DimensionMismatch())
+    wQ,c = arguments(a)
+    w,Q = arguments(wQ)
+    (w .* P) * Clenshaw(Q * c, P)
 end
 

@@ -9,6 +9,10 @@ struct ChebyshevWeight{kind,T} <: AbstractJacobiWeight{T} end
 ChebyshevWeight{kind}() where kind = ChebyshevWeight{kind,Float64}()
 ChebyshevWeight() = ChebyshevWeight{1,Float64}()
 
+getproperty(w::ChebyshevWeight{1,T}, ::Symbol) where T = -one(T)/2
+getproperty(w::ChebyshevWeight{2,T}, ::Symbol) where T = one(T)/2
+
+
 """
 Chebyshev{kind,T}()
 
@@ -16,7 +20,6 @@ is a quasi-matrix representing Chebyshev polynomials of the specified kind (1, 2
 on -1..1.
 """
 struct Chebyshev{kind,T} <: AbstractJacobi{T} end
-Chebyshev() = Chebyshev{1,Float64}()
 Chebyshev{kind}() where kind = Chebyshev{kind,Float64}()
 
 
@@ -32,6 +35,10 @@ const ChebyshevU = Chebyshev{2}
 const WeightedChebyshevT = WeightedChebyshev{1}
 const WeightedChebyshevU = WeightedChebyshev{2}
 
+# conveniences...perhaps too convenient
+Chebyshev() = Chebyshev{1}()
+WeightedChebyshev() = WeightedChebyshevT()
+
 ==(a::Chebyshev{kind}, b::Chebyshev{kind}) where kind = true
 ==(a::Chebyshev, b::Chebyshev) = false
 ==(::Chebyshev, ::Jacobi) = false
@@ -39,6 +46,8 @@ const WeightedChebyshevU = WeightedChebyshev{2}
 ==(::Chebyshev, ::Legendre) = false
 ==(::Legendre, ::Chebyshev) = false
 
+OrthogonalPolynomial(w::ChebyshevWeight{kind,T}) where {kind,T} = Chebyshev{kind,T}()
+orthogonalityweight(P::Chebyshev{kind,T}) where {kind,T} = ChebyshevWeight{kind,T}()
 
 function getindex(w::ChebyshevTWeight, x::Number)
     x ∈ axes(w,1) || throw(BoundsError())
@@ -50,6 +59,10 @@ function getindex(w::ChebyshevUWeight, x::Number)
     sqrt(1-x^2)
 end
 
+sum(::ChebyshevWeight{1,T}) where T = convert(T,π)
+sum(::ChebyshevWeight{2,T}) where T = convert(T,π)/2
+
+normalizationconstant(::ChebyshevT{T}) where T = Vcat(sqrt(inv(convert(T,π))), Fill(sqrt(2/convert(T,π)),∞))
 
 
 

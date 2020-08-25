@@ -101,9 +101,12 @@ import Base: OneTo
     end
 
     @testset "weighted" begin
+        T = ChebyshevT()
         wT = WeightedChebyshevT()
         x = axes(wT,1)
         @test (x .* wT).args[2] isa BandedMatrix
+
+        a = wT * [1; 2; 3; zeros(∞)];
     end
 
     @testset "operators" begin
@@ -196,6 +199,9 @@ import Base: OneTo
         a = U * [[0.25; 0.5; 0.1]; Zeros(∞)];
         M = Clenshaw(a, U)
 
+        @test colsupport(M,4:10) == rowsupport(M,4:10) == 2:12
+        @test colsupport(M',4:10) == rowsupport(M',4:10) == 2:12
+
         A,B,C = recurrencecoefficients(U)
         c = paddeddata(a.args[2])
         m = 10
@@ -214,5 +220,12 @@ import Base: OneTo
 
         f = U \ exp.(x)
         @test M*f ≈ U \ (x -> (3/20 + x + (2/5) * x^2)*exp(x)).(x)
+
+        @testset "weighted" begin
+            T = ChebyshevT()
+            wT = WeightedChebyshevT()
+            a = wT * [1; 2; 3; zeros(∞)];
+            @test (a .* T)[0.1,1:10] ≈ a[0.1] * T[0.1,1:10]
+        end
     end
 end

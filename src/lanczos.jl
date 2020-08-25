@@ -47,8 +47,9 @@ LanczosData(X::AbstractMatrix{T}, W::AbstractMatrix{T}) where T = LanczosData(X,
 
 function LanczosData(w::AbstractQuasiVector, P::AbstractQuasiMatrix)
     x = axes(P,1)
+    wP = weighted(P)
     X = P \ (x .* P)
-    W = P \ (w .* P)
+    W = wP \ (w .* P)
     LanczosData(X, W)
 end
 
@@ -151,10 +152,19 @@ end
 ==(::OrthogonalPolynomial, ::LanczosPolynomial) = false # TODO: fix
 
 
+normalize(Q::LanczosPolynomial) = Q
+normalize(Q::OrthogonalPolynomial) = Normalized(Q)
+
+OrthogonalPolynomial(w::AbstractQuasiVector) = LanczosPolynomial(w)
+orthonormalpolynomial(w::AbstractQuasiVector) = normalize(OrthogonalPolynomial(w))
+
 function LanczosPolynomial(w::AbstractQuasiVector)
-    P = qr(basis(w)).Q
+    P = orthonormalpolynomial(singularities(w))
     LanczosPolynomial(w, P, LanczosData(w, P))
 end
+
+
+orthogonalityweight(Q::LanczosPolynomial) = Q.w
 
 axes(Q::LanczosPolynomial) = (axes(Q.w,1),OneToInf())
 

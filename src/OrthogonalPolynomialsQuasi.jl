@@ -11,8 +11,8 @@ import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, 
                 sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
                 _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!
-import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!
-import LinearAlgebra: pinv, factorize, qr
+import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, transposelayout
+import LinearAlgebra: pinv, factorize, qr, adjoint, transpose
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
 import FillArrays: AbstractFill, getindex_value
 
@@ -31,7 +31,7 @@ import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurr
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 import BandedMatrices: bandwidths
 
-export OrthogonalPolynomial, Normalized, LanczosPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
+export OrthogonalPolynomial, Normalized, orthonormalpolynomial, LanczosPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
             ∞, Derivative, ..
@@ -120,6 +120,23 @@ Note that `X` is the transpose of the usual definition of the Jacobi matrix.
 """
 jacobimatrix(S) = error("Override for $(typeof(S))")
 
+const WeightedOrthogonalPolynomial{T, A<:AbstractQuasiVector, B<:OrthogonalPolynomial} = WeightedBasis{T, A, B}
+
+"""
+    singularities(f)
+
+gives the singularity structure of an expansion, e.g., 
+`JacobiWeight`.
+"""
+singularities(w::Weight) = w
+singularities(S::WeightedOrthogonalPolynomial) = singularities(S.args[1])
+singularities(f::AbstractQuasiVector) = singularities(basis(f))
+
+
+weighted(P::OrthogonalPolynomial) = orthogonalityweight(P) .* P
+
+OrthogonalPolynomial(w::Weight) =error("Override for $(typeof(w))")
+
 @simplify *(B::Identity, C::OrthogonalPolynomial) = C*jacobimatrix(C)
 
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::OrthogonalPolynomial)
@@ -140,7 +157,7 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AbstractAffineQua
     broadcast(+, y.A * (x.*C), y.b.*C)
 end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::WeightedBasis{<:Any,<:Any,<:OrthogonalPolynomial})
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::WeightedOrthogonalPolynomial)
     x == axes(C,1) || throw(DimensionMismatch())
     w,P = C.args
     P2, J = (x .* P).args
@@ -183,6 +200,13 @@ function \(A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, B::SubQuasiArray{<:
     _,jA = parentindices(A)
     _,jB = parentindices(B)
     (parent(A) \ parent(B))[jA, jB]
+end
+
+function \(wA::WeightedOrthogonalPolynomial, wB::WeightedOrthogonalPolynomial)
+    w_A,A = arguments(wA)
+    w_B,B = arguments(wB)
+    w_A == w_B || error("Not implemented")
+    A\B
 end
 
 include("normalized.jl")

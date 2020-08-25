@@ -12,7 +12,7 @@ NormalizationConstant(μ::T, dl::AbstractVector{T}, du::AbstractVector{T}) where
 
 function NormalizationConstant(P::OrthogonalPolynomial)
     dl, _, du = bands(jacobimatrix(P))
-    NormalizationConstant(inv(sqrt(sum(weight(P)))), dl, du)
+    NormalizationConstant(inv(sqrt(sum(orthogonalityweight(P)))), dl, du)
 end
 
 size(K::NormalizationConstant) = (∞,)
@@ -36,7 +36,8 @@ struct Normalized{T, OPs<:OrthogonalPolynomial{T}, NL} <: OrthogonalPolynomial{T
     scaling::NL # Q = P * Diagonal(scaling)
 end
 
-Normalized(P::OrthogonalPolynomial{T}) where T = Normalized(P, NormalizationConstant(P))
+normalizationconstant(P) = NormalizationConstant(P)
+Normalized(P::OrthogonalPolynomial{T}) where T = Normalized(P, normalizationconstant(P))
 
 struct QuasiQR{T, QQ, RR} <: Factorization{T}
     Q::QQ
@@ -77,6 +78,8 @@ function jacobimatrix(Q::Normalized)
     h = Q.scaling
     Symmetric(_BandedMatrix(Vcat(a', (b .* h ./ h[2:end])'), ∞, 1, 0), :L)
 end
+
+orthogonalityweight(Q::Normalized) = orthogonalityweight(Q.P)
 
 # Sometimes we want to expand out, sometimes we don't
 

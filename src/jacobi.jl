@@ -2,6 +2,8 @@ abstract type AbstractJacobiWeight{T} <: Weight{T} end
 
 axes(::AbstractJacobiWeight{T}) where T = (Inclusion(ChebyshevInterval{T}()),)
 
+==(w::AbstractJacobiWeight, v::AbstractJacobiWeight) = w.a == v.a && w.b == v.b
+
 struct JacobiWeight{T} <: AbstractJacobiWeight{T}
     b::T
     a::T
@@ -26,7 +28,7 @@ function getindex(w::LegendreWeight{T}, x::Number) where T
     one(T)
 end
 
-
+sum(::LegendreWeight{T}) where T = 2one(T)
 
 abstract type AbstractJacobi{T} <: OrthogonalPolynomial{T} end
 
@@ -35,8 +37,8 @@ Legendre() = Legendre{Float64}()
 
 ==(::Legendre, ::Legendre) = true
 
-weight(::Legendre{T}) where T = LegendreWeight{T}()
-sum(::LegendreWeight{T}) where T = 2one(T)
+OrthogonalPolynomial(w::LegendreWeight{T}) where {T} = Legendre{T}()
+orthogonalityweight(::Legendre{T}) where T = LegendreWeight{T}()
 
 function qr(P::Legendre)
     Q = Normalized(P)
@@ -53,7 +55,8 @@ Jacobi(b::T, a::V) where {T,V} = Jacobi{promote_type(T,V)}(b,a)
 
 Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
 
-weight(P::Jacobi) = JacobiWeight(P.b, P.a)
+OrthogonalPolynomial(w::JacobiWeight) = Jacobi(P.b, P.a)
+orthogonalityweight(P::Jacobi) = JacobiWeight(P.b, P.a)
 
 const WeightedJacobi{T} = WeightedBasis{T,<:JacobiWeight,<:Jacobi}
 

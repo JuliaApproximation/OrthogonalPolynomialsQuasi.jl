@@ -44,6 +44,16 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         @test Q[0.1,2] ≈ 2*0.1 * sqrt(15)/sqrt(16)
     end
 
+    @testset "Singularity" begin
+        T = Chebyshev(); wT = WeightedChebyshev()
+        x = axes(T,1)
+        @testset "Recover ChebyshevT" begin
+            w = wT * [1; zeros(∞)]
+            Q = LanczosPolynomial(w)
+            @test Q[0.1,1:10] ≈ Normalized(T)[0.1,1:10]
+        end
+    end
+
     @testset "BigFloat" begin
         P = Legendre{BigFloat}()
         x = axes(P,1)
