@@ -173,6 +173,16 @@ _p0(Q::LanczosPolynomial) = inv(Q.data.γ[1])*_p0(Q.P)
 recurrencecoefficients(Q::LanczosPolynomial) = LanczosRecurrence{:A}(Q.data),LanczosRecurrence{:B}(Q.data),LanczosRecurrence{:C}(Q.data)
 jacobimatrix(Q::LanczosPolynomial) = SymTridiagonal(LanczosJacobiBand(Q.data, :d), LanczosJacobiBand(Q.data, :du))
 
+Base.summary(io::IO, Q::LanczosPolynomial{T}) where T = print(io, "LanczosPolynomial{$T} with weight with singularities $(singularities(Q.w))")
+Base.show(io::IO, Q::LanczosPolynomial{T}) where T = summary(io, Q)
+
+Base.array_summary(io::IO, C::SymTridiagonal{T,<:LanczosJacobiBand}, inds::Tuple{Vararg{OneToInf{Int}}}) where T =
+    print(io, Base.dims2string(length.(inds)), " SymTridiagonal{$T} Jacobi operator from Lanczos")
+
+Base.array_summary(io::IO, C::LanczosConversion{T}, inds::Tuple{Vararg{OneToInf{Int}}}) where T =
+    print(io, Base.dims2string(length.(inds)), " LanczosConversion{$T}")
+
+
 # Sometimes we want to expand out, sometimes we don't
 
 QuasiArrays.ApplyQuasiArray(Q::LanczosPolynomial) = ApplyQuasiArray(*, arguments(ApplyLayout{typeof(*)}(), Q)...)
@@ -183,6 +193,7 @@ function \(A::LanczosPolynomial{T}, B::LanczosPolynomial{V}) where {T,V}
     error("Not implemented")
 end
 \(A::OrthogonalPolynomial, Q::LanczosPolynomial) = (A \ Q.P) * LanczosConversion(Q.data)
+\(A::Normalized, Q::LanczosPolynomial) = (A \ Q.P) * LanczosConversion(Q.data)
 
 ArrayLayouts.mul(Q::LanczosPolynomial, C::AbstractArray) = ApplyQuasiArray(*, Q, C)
 transform_ldiv(Q::LanczosPolynomial, C::AbstractQuasiArray) = LanczosConversion(Q.data) \ (Q.P \ C)

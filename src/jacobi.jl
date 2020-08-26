@@ -35,6 +35,7 @@ _weighted(::LegendreWeight, P) = P
 abstract type AbstractJacobi{T} <: OrthogonalPolynomial{T} end
 
 singularities(::AbstractJacobi{T}) where T = LegendreWeight{T}()
+singularities(::Inclusion{T,<:ChebyshevInterval}) where T = LegendreWeight{T}()
 
 struct Legendre{T} <: AbstractJacobi{T} end
 Legendre() = Legendre{Float64}()

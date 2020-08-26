@@ -1,5 +1,6 @@
-using OrthogonalPolynomialsQuasi, BandedMatrices, Test
+using OrthogonalPolynomialsQuasi, BandedMatrices, ForwardDiff, Test
 import OrthogonalPolynomialsQuasi: recurrencecoefficients
+import ForwardDiff: derivative
 
 @testset "Lanczos" begin
     @testset "Legendre" begin
@@ -44,6 +45,13 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         @test Q[0.1,2] ≈ 2*0.1 * sqrt(15)/sqrt(16)
     end
 
+    @testset "broadcast" begin
+        x = Inclusion(ChebyshevInterval())
+        Q = LanczosPolynomial(exp.(x))
+        # Emperical
+        @test Q[0.1,2] ≈ 0.4312732517146977
+    end
+
     @testset "Singularity" begin
         T = Chebyshev(); wT = WeightedChebyshev()
         x = axes(T,1)
@@ -64,5 +72,13 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         X = Q \ (x .* Q)
         # empirical test
         @test X[5,5] ≈ -0.001489975039238321407179828331585356464766466154894764141171294038822525312179884
+    end
+
+    @testset "autodiff" begin
+        w = function(a::T) where T
+            P = Legendre{T}()
+            x = axes(P,1)
+            w = P \ exp.(a .* x)
+        end
     end
 end

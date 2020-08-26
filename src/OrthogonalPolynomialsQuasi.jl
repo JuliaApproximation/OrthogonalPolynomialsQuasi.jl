@@ -106,6 +106,8 @@ end
 
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
 
+# OPs are immutable
+copy(a::OrthogonalPolynomial) = a
 
 """
     jacobimatrix(S)
