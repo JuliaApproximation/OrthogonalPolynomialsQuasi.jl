@@ -8,9 +8,18 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
                 to_indices, _maybetail, tail
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
+<<<<<<< Updated upstream
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize
 import LinearAlgebra: pinv, factorize
 import BandedMatrices: AbstractBandedLayout, _BandedMatrix
+=======
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, 
+                sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
+                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!, AbstractLazyLayout
+import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, transposelayout, triangulardata
+import LinearAlgebra: pinv, factorize, qr, adjoint, transpose
+import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
+>>>>>>> Stashed changes
 import FillArrays: AbstractFill, getindex_value
 
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
