@@ -201,14 +201,15 @@ struct Clenshaw{T, Coefs<:AbstractVector, AA<:AbstractVector, BB<:AbstractVector
     B::BB
     C::CC
     X::Jac
+    p0::T
 end
 
-Clenshaw(c::AbstractVector{T}, A::AbstractVector, B::AbstractVector, C::AbstractVector, X::AbstractMatrix{T}) where T = 
-    Clenshaw{T,typeof(c),typeof(A),typeof(B),typeof(C),typeof(X)}(c, A, B, C, X)
+Clenshaw(c::AbstractVector{T}, A::AbstractVector, B::AbstractVector, C::AbstractVector, X::AbstractMatrix{T}, p0::T) where T = 
+    Clenshaw{T,typeof(c),typeof(A),typeof(B),typeof(C),typeof(X)}(c, A, B, C, X, p0)
 
 function Clenshaw(a::AbstractQuasiVector, X::AbstractQuasiMatrix)
     P,c = arguments(a)
-    Clenshaw(paddeddata(c), recurrencecoefficients(P)..., jacobimatrix(X))
+    Clenshaw(paddeddata(c), recurrencecoefficients(P)..., jacobimatrix(X), _p0(P))
 end
 
 copy(M::Clenshaw) = M
@@ -231,7 +232,7 @@ function _BandedMatrix(::ClenshawLayout, V::SubArray{<:Any,2})
     jkr=max(1,min(jr[1],kr[1])-b÷2):max(jr[end],kr[end])+b÷2
     # relationship between jkr and kr, jr
     kr2,jr2 = kr.-jkr[1].+1,jr.-jkr[1].+1
-    clenshaw(M.c, M.A, M.B, M.C, M.X[jkr, jkr])[kr2,jr2]
+    lmul!(M.p0, clenshaw(M.c, M.A, M.B, M.C, M.X[jkr, jkr])[kr2,jr2])
 end
 
 function getindex(M::Clenshaw{T}, kr::AbstractUnitRange, j::Integer) where T
@@ -240,7 +241,7 @@ function getindex(M::Clenshaw{T}, kr::AbstractUnitRange, j::Integer) where T
     # relationship between jkr and kr, jr
     kr2,j2 = kr.-jkr[1].+1,j-jkr[1]+1
     f = [Zeros{T}(j2-1); one(T); Zeros{T}(length(jkr)-j2)]
-    clenshaw(M.c, M.A, M.B, M.C, M.X[jkr, jkr], f)[kr2]
+    lmul!(M.p0, clenshaw(M.c, M.A, M.B, M.C, M.X[jkr, jkr], f)[kr2])
 end
 
 getindex(M::Clenshaw, k::Int, j::Int) = M[k:k,j][1]
@@ -252,12 +253,12 @@ function materialize!(M::MatMulVecAdd{<:ClenshawLayout,<:PaddedLayout,<:PaddedLa
     α,A,x,β,y = M.α,M.A,M.B,M.β,M.C
     length(y) == size(A,1) || throw(DimensionMismatch("Dimensions must match"))
     length(x) == size(A,2) || throw(DimensionMismatch("Dimensions must match"))
-    x̃ = paddeddata(x)
+    x̃ = paddeddata(x);
     m = length(x̃)
     b = bandwidth(A,1)
-    jkr=1:m+b÷2
-    p = [x̃; zeros(eltype(x̃),length(jkr)-m)]
-    Ax = clenshaw(A.c, A.A, A.B, A.C, A.X[jkr, jkr], p)
+    jkr=1:m+b
+    p = [x̃; zeros(eltype(x̃),length(jkr)-m)];
+    Ax = lmul!(A.p0, clenshaw(A.c, A.A, A.B, A.C, A.X[jkr, jkr], p))
     _fill_lmul!(β,y)
     resizedata!(y, last(jkr))
     v = view(paddeddata(y),jkr)

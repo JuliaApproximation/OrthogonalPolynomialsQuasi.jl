@@ -6,7 +6,7 @@ using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, Bloc
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
-                to_indices, _maybetail, tail, getproperty
+                to_indices, _maybetail, tail, getproperty, inv
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout,
                 sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
@@ -24,7 +24,8 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 
 import InfiniteArrays: OneToInf, InfAxes, InfUnitRange
 import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
-    inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion
+    inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion,
+    AffineQuasiVector
 import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!,
                         _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
@@ -133,6 +134,13 @@ gives the singularity structure of an expansion, e.g.,
 singularities(w::Weight) = w
 singularities(S::WeightedOrthogonalPolynomial) = singularities(S.args[1])
 singularities(f::AbstractQuasiVector) = singularities(basis(f))
+singularities(a::BroadcastQuasiVector) = singularitiesbroadcast(a.f, map(singularities, a.args)...)
+
+struct NoSingularities end
+
+singularities(::Number) = NoSingularities()
+singularities(r::Base.RefValue) = r[] # pass through
+
 
 
 _weighted(w, P) = w .* P
@@ -154,10 +162,10 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::BroadcastQuasiVec
 end
 
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AbstractAffineQuasiVector, C::OrthogonalPolynomial)
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::AbstractAffineQuasiVector, C::OrthogonalPolynomial)
     x = axes(C,1)
-    axes(y,1) == x || throw(DimensionMismatch())
-    broadcast(+, y.A * (x.*C), y.b.*C)
+    axes(a,1) == x || throw(DimensionMismatch())
+    broadcast(*, C * (C \ a), C)
 end
 
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::WeightedOrthogonalPolynomial)

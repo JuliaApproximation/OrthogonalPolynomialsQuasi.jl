@@ -73,7 +73,7 @@ colsupport(L::LanczosConversion, j) = 1:maximum(j)
 rowsupport(L::LanczosConversion, j) = minimum(j):∞
 
 function _lanczosconversion_getindex(R, k, j)
-    resizedata!(R.data, min(maximum(k), maximum(j)))
+    resizedata!(R.data, max(maximum(k), maximum(j)))
     R.data.R[k,j]
 end
 

@@ -34,6 +34,40 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         @test X[1:10,1:10] ≈ X̃[1:10,1:10]
     end
 
+    @testset "other weight" begin
+        P = Legendre()
+        x = axes(P,1)
+
+        Q = LanczosPolynomial(exp.(x))
+        @test Q[0.1,5] ≈ 0.48479905558644537 # emperical
+
+        Q = LanczosPolynomial(  1 ./ (2 .+ x));
+        R = P \ Q
+        @test norm(R[1,3:10]) ≤ 1E-14
+
+        Q = LanczosPolynomial(  1 ./ (2 .+ x).^2);
+        R = P \ Q
+        @test norm(R[1,4:10]) ≤ 1E-14
+
+        # polys
+        Q = LanczosPolynomial( 2 .+ x);
+        R = P \ Q;
+        Ri = inv(R)
+
+        w = P * (P \ (1 .+ x))
+        Q = LanczosPolynomial(w)
+        P \ Q
+
+        Jacobi(1,0) \ Legendre()
+
+        Q = LanczosPolynomial((x -> 1+x).(x));
+        R = P \ Q;
+
+        Q = LanczosPolynomial( 1 .+ x.^2);
+        R = P \ Q;
+        @test norm(inv(R[1:10,1:10])[1,4:10]) ≤ 1E-14
+    end
+
     @testset "Expansion" begin
         P = Legendre();
         w = P * [1; zeros(∞)];
@@ -44,6 +78,8 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         @test (Q * (Q \ (1 .- x.^2)))[0.1] ≈ (1-0.1^2)
         Q \ P
     end
+
+    
 
     @testset "Jacobi via Lanczos" begin
         P = Legendre(); x = axes(P,1)

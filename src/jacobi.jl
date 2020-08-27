@@ -32,6 +32,17 @@ sum(::LegendreWeight{T}) where T = 2one(T)
 
 _weighted(::LegendreWeight, P) = P
 
+# support auto-basis determination
+
+singularities(::AffineQuasiVector{T,T,Inclusion{T,ChebyshevInterval{T}}}) where T = LegendreWeight{T}()
+singularitiesbroadcast(_, L::LegendreWeight) = L # Assume we stay smooth
+singularitiesbroadcast(::typeof(exp), L::LegendreWeight) = L
+singularitiesbroadcast(::typeof(Base.literal_pow), ::typeof(^), L::LegendreWeight, ::Val) = L
+singularitiesbroadcast(::typeof(+), ::LegendreWeight{T}, ::LegendreWeight{V}) where {T,V} = LegendreWeight{promote_type(T,V)}()
+singularitiesbroadcast(::typeof(+), L::LegendreWeight, ::NoSingularities) = L
+singularitiesbroadcast(::typeof(+), ::NoSingularities, L::LegendreWeight) = L
+singularitiesbroadcast(::typeof(/), ::NoSingularities, L::LegendreWeight) = L # can't find roots
+
 abstract type AbstractJacobi{T} <: OrthogonalPolynomial{T} end
 
 singularities(::AbstractJacobi{T}) where T = LegendreWeight{T}()
