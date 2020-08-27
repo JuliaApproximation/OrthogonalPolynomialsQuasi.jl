@@ -64,6 +64,13 @@ function jacobimatrix(P::Ultraspherical{T}) where T
                         ((one(T):∞) ./ (2 .*((zero(T):∞) .+ λ)))'), ∞, 1, 1)
 end
 
+# These return vectors A[k], B[k], C[k] are from DLMF. Cause of MikaelSlevinsky we need an extra entry in C ... for now.
+function recurrencecoefficients(C::Ultraspherical)
+    λ = C.λ
+    n = 0:∞
+    (2(n .+ λ) ./ (n .+ 1), Zeros{typeof(λ)}(∞), (n .+ (2λ-1)) ./ (n .+ 1))
+end
+
 
 ##########
 # Derivatives
@@ -110,29 +117,29 @@ end
 # Conversion
 ##########
 
-@simplify \(A::Ultraspherical, B::Legendre) = A\Ultraspherical(B)
-@simplify \(A::Legendre, B::Ultraspherical) = Ultraspherical(A)\B
+\(A::Ultraspherical, B::Legendre) = A\Ultraspherical(B)
+\(A::Legendre, B::Ultraspherical) = Ultraspherical(A)\B
 
-@simplify function \(A::Ultraspherical, B::Jacobi)
+function \(A::Ultraspherical, B::Jacobi)
     Ã = Jacobi(A)
     Diagonal(Ã[1,:]./A[1,:]) * (Ã\B)
 end
-@simplify function \(A::Jacobi, B::Ultraspherical)
+function \(A::Jacobi, B::Ultraspherical)
     B̃ = Jacobi(B)
     (A\B̃)*Diagonal(B[1,:]./B̃[1,:])
 end
 
-@simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevT)
+function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevT)
     T = promote_type(eltype(U), eltype(C))
     (U\Ultraspherical{T}(1)) * (ChebyshevU{T}()\C)
 end
 
-@simplify function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevU)
+function \(U::Ultraspherical{<:Any,<:Integer}, C::ChebyshevU)
     T = promote_type(eltype(U), eltype(C))
     U\Ultraspherical(C)
 end
 
-@simplify function \(C2::Ultraspherical{<:Any,<:Integer}, C1::Ultraspherical{<:Any,<:Integer})
+function \(C2::Ultraspherical{<:Any,<:Integer}, C1::Ultraspherical{<:Any,<:Integer})
     λ = C1.λ
     T = promote_type(eltype(C2), eltype(C1))
     if C2.λ == λ+1
@@ -146,7 +153,7 @@ end
     end
 end
 
-@simplify function \(C2::Ultraspherical, C1::Ultraspherical)
+function \(C2::Ultraspherical, C1::Ultraspherical)
     λ = C1.λ
     T = promote_type(eltype(C2), eltype(C1))
     if C2.λ == λ+1
@@ -158,7 +165,7 @@ end
     end
 end
 
-@simplify function \(w_A::WeightedUltraspherical, w_B::WeightedUltraspherical)
+function \(w_A::WeightedUltraspherical, w_B::WeightedUltraspherical)
     wA,A = w_A.args
     wB,B = w_B.args
 
@@ -176,7 +183,7 @@ end
 
 \(A::Legendre, wB::WeightedUltraspherical) = Ultraspherical(A) \ wB
 
-@simplify function \(A::Ultraspherical, w_B::WeightedUltraspherical) 
+function \(A::Ultraspherical, w_B::WeightedUltraspherical) 
     (UltrasphericalWeight(zero(A.λ)) .* A) \ w_B
 end
 

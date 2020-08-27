@@ -1,3 +1,6 @@
+using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, Test
+import OrthogonalPolynomialsQuasi: recurrencecoefficients
+
 @testset "Jacobi" begin
     @testset "basis" begin
         b,a = 0.1,0.2
@@ -87,7 +90,6 @@
         w̄ = JacobiWeight(true,false)
         @test (P \ (w̃ .* Jacobi(true,false)))[1:10,1:10] == diagm(0 => ones(10), -1 => ones(9))
 
-
         w = JacobiWeight(true,true)
         A,B = (P'P),P\(w.*S)
 
@@ -99,7 +101,7 @@
         @test M̃ isa BandedMatrix
         @test bandwidths(M̃) == (2,0)
 
-        @test A*B isa BroadcastArray
+        @test A*B isa MulMatrix
         @test bandwidths(A*B) == bandwidths(B)
 
         A,B,C = (P\(w.*S))',(P'P),P\(w.*S)
@@ -123,6 +125,15 @@
         U = ChebyshevU()
         JT = Jacobi(T)
         JU = Jacobi(U)
+        
+        @testset "recurrence degenerecies" begin
+            A,B,C = recurrencecoefficients(JT)
+            @test A[1] == 0.5
+            @test B[1] == 0.0
+        end
+
+        @test JT[0.1,1:4] ≈ [1.0,0.05,-0.3675,-0.0925]
+
         @test ((T \ JT) * (JT \ T))[1:10,1:10] ≈ Eye(10)
         @test ((U \ JU) * (JU \ U))[1:10,1:10] ≈ Eye(10)
 
@@ -147,6 +158,21 @@
         f = Jacobi(1.0,1.0)*[[1,2,3]; zeros(∞)]
         g = Ultraspherical(3/2)*(Ultraspherical(3/2)\f)
         @test f[0.1] ≈ g[0.1]
+
+        @testset "Chebyshev-Legendre" begin
+            T = Chebyshev()
+            P = Legendre()
+            @test T[:,Base.OneTo(5)] \ P[:,Base.OneTo(5)] == (T\P)[1:5,1:5]
+
+            x = axes(P,1)
+            u = P * (P \ exp.(x))
+            @test u[0.1] ≈ exp(0.1)
+
+            P = Legendre{BigFloat}()
+            x = axes(P,1)
+            u = P * (P \ exp.(x))
+            @test u[BigFloat(1)/10] ≈ exp(BigFloat(1)/10)
+        end
     end
 
     @testset "hcat" begin

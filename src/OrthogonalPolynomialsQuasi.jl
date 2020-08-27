@@ -1,16 +1,19 @@
 module OrthogonalPolynomialsQuasi
 using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, BlockArrays,
-    IntervalSets, DomainSets,
+    IntervalSets, DomainSets, ArrayLayouts,
     InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra, FastTransforms
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
-                to_indices, _maybetail, tail
+                to_indices, _maybetail, tail, getproperty
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, LdivApplyStyle, sub_materialize
-import LinearAlgebra: pinv, factorize
-import BandedMatrices: AbstractBandedLayout, _BandedMatrix
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, 
+                sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
+                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!
+import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, transposelayout
+import LinearAlgebra: pinv, factorize, qr, adjoint, transpose
+import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
 import FillArrays: AbstractFill, getindex_value
 
 import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclusion, SubQuasiArray,
@@ -19,17 +22,20 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle,
                     _getindex, layout_getindex, _factorize
 
-import InfiniteArrays: OneToInf, InfAxes
-import ContinuumArrays: Basis, Weight, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
-    inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes
-import FastTransforms: Λ
+import InfiniteArrays: OneToInf, InfAxes, InfUnitRange
+import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
+    inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion
+import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, 
+                        _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
+import BandedMatrices: bandwidths
 
-export Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, Ultraspherical, Fourier,
+export OrthogonalPolynomial, Normalized, orthonormalpolynomial, LanczosPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
-            ∞, Derivative
+            ∞, Derivative, ..
+
 
 # ambiguity error
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
@@ -56,6 +62,20 @@ transform_ldiv(A, f, ::Tuple{<:Any,OneToInf})  = adaptivetransform_ldiv(A, f)
 transform_ldiv(A, f, ::Tuple{<:Any,IdentityUnitRange{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
 transform_ldiv(A, f, ::Tuple{<:Any,Slice{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
 
+function chop!(c::AbstractVector, tol::Real)
+    @assert tol >= 0
+
+    for k=length(c):-1:1
+        if abs(c[k]) > tol
+            resize!(c,k)
+            return c
+        end
+    end
+    resize!(c,0)
+    c
+end
+
+
 function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
     T = promote_type(U,V)
 
@@ -63,7 +83,7 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
     fr = f[r]
     maxabsfr = norm(fr,Inf)
 
-    tol = eps(T)
+    tol = 20eps(T)
 
     for n = 2 .^ (4:∞)
         An = A[:,OneTo(n)]
@@ -73,12 +93,12 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
             return zeros(T,∞)
         end
 
-        un = ApplyQuasiArray(*, An, cfs)
+        un = A * [cfs; Zeros{T}(∞)]
         # we allow for transformed coefficients being a different size
         ##TODO: how to do scaling for unnormalized bases like Jacobi?
-        if maximum(abs,@views(cfs[n-8:end])) < 10tol*maxabsc &&
+        if maximum(abs,@views(cfs[n-2:end])) < 10tol*maxabsc &&
                 all(norm.(un[r] - fr, 1) .< tol * n * maxabsfr*1000)
-            return [cfs; zeros(T,∞)]
+            return [chop!(cfs, tol); zeros(T,∞)]
         end
     end
     error("Have not converged")
@@ -86,6 +106,8 @@ end
 
 abstract type OrthogonalPolynomial{T} <: Basis{T} end
 
+# OPs are immutable
+copy(a::OrthogonalPolynomial) = a
 
 """
     jacobimatrix(S)
@@ -100,6 +122,24 @@ Note that `X` is the transpose of the usual definition of the Jacobi matrix.
 """
 jacobimatrix(S) = error("Override for $(typeof(S))")
 
+const WeightedOrthogonalPolynomial{T, A<:AbstractQuasiVector, B<:OrthogonalPolynomial} = WeightedBasis{T, A, B}
+
+"""
+    singularities(f)
+
+gives the singularity structure of an expansion, e.g., 
+`JacobiWeight`.
+"""
+singularities(w::Weight) = w
+singularities(S::WeightedOrthogonalPolynomial) = singularities(S.args[1])
+singularities(f::AbstractQuasiVector) = singularities(basis(f))
+
+
+_weighted(w, P) = w .* P
+weighted(P::OrthogonalPolynomial) = _weighted(orthogonalityweight(P), P)
+
+OrthogonalPolynomial(w::Weight) =error("Override for $(typeof(w))")
+
 @simplify *(B::Identity, C::OrthogonalPolynomial) = C*jacobimatrix(C)
 
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::OrthogonalPolynomial)
@@ -107,13 +147,20 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Ort
     C*jacobimatrix(C)
 end
 
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::BroadcastQuasiVector, C::OrthogonalPolynomial)
+    axes(a,1) == axes(C,1) || throw(DimensionMismatch())
+    # re-expand in OP basis
+    broadcast(*, C * (C \ a), C)
+end
+
+
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AbstractAffineQuasiVector, C::OrthogonalPolynomial)
     x = axes(C,1)
     axes(y,1) == x || throw(DimensionMismatch())
     broadcast(+, y.A * (x.*C), y.b.*C)
 end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::WeightedBasis{<:Any,<:Any,<:OrthogonalPolynomial})
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::WeightedOrthogonalPolynomial)
     x == axes(C,1) || throw(DimensionMismatch())
     w,P = C.args
     P2, J = (x .* P).args
@@ -132,117 +179,18 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Sub
     P[kr, :] * view(X,:,jr)
 end
 
-function forwardrecurrence!(v::AbstractVector, b::AbstractVector, a::AbstractVector, c::AbstractVector, x, shift=0)
-    isempty(v) && return v
-    p0 = one(x) # assume OPs are normalized to one for now
-    p1 = (x-a[1])/c[1]
-    @inbounds for n = 1:shift
-        p1,p0 = muladd(x-a[n-1],v[n-1],-b[n-1]*v[n-2])/c[n-1],p1
-    end
-    v[1] = p0
-    length(v) == 1 && return v
-    v[2] = p1
-    @inbounds for n = 3:length(v)
-        p1,p0 = muladd(x-a[n-1],v[n-1],-b[n-1]*v[n-2])/c[n-1],p1
-        v[n] = p1
-    end
-    v
-end
-
-function forwardrecurrence!(v::AbstractVector, b::AbstractVector, ::Zeros{<:Any,1}, c::AbstractVector, x, shift=0)
-    isempty(v) && return v
-    p0 = one(x) # assume OPs are normalized to one for now
-    p1 = x/c[1]
-    @inbounds for n = 1:shift
-        p1,p0 = muladd(x,p1,-b[n-1]*p0)/c[n-1],p1
-    end
-    v[1] = p0
-    length(v) == 1 && return v
-    v[2] = p1
-    @inbounds for n = 3:length(v)
-        p1,p0 = muladd(x,p1,-b[n-1]*p0)/c[n-1],p1
-        v[n] = p1
-    end
-    v
-end
-
-# special case for Chebyshev
-function forwardrecurrence!(v::AbstractVector, b_v::AbstractFill, ::Zeros{<:Any,1}, c::Vcat{<:Any,1,<:Tuple{<:Number,<:AbstractFill}}, x, shift=0)
-    isempty(v) && return v
-    c0,c∞_v = c.args
-    b = getindex_value(b_v)
-    c∞ = getindex_value(c∞_v)
-    mbc  = -b/c∞
-    xc = x/c∞
-    p0 = one(x) # assume OPs are normalized to one for now
-    p1 = x/c0
-    for n = 1:shift
-        p1,p0 = muladd(xc,p1,mbc*p0),p1
-    end
-    v[1] = p0
-    length(v) == 1 && return v
-    v[2] = p1
-    @inbounds for n = 3:length(v)
-        p1,p0 = muladd(xc,p1,mbc*p0),p1
-        v[n] = p1
-    end
-    v
-end
-
 _vec(a) = vec(a)
 _vec(a::InfiniteArrays.ReshapedArray) = _vec(parent(a))
 _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
-bands(J) = _vec.(J.data.args)
+bands(J::AbstractBandedMatrix) = _vec.(bandeddata(J).args)
+bands(J::Tridiagonal) = J.du, J.d, J.dl
 
-function getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T
-    J = jacobimatrix(P)
-    b,a,c = bands(J)
-    forwardrecurrence!(similar(n,T),b,a,c,x)
-end
-
-getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::AbstractUnitRange{Int}) where T =
-    copyto!(Matrix{T}(undef,length(x),length(n)), view(P, x, n))
-
-
-function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial,<:Tuple{<:AbstractVector,<:UnitRange}})
-    checkbounds(dest, axes(V)...)
-    P = parent(V)
-    xr,jr = parentindices(V)
-    J = jacobimatrix(P)
-    b,a,c = bands(J)
-    shift = first(jr)-1
-    for (k,x) = enumerate(xr)
-        forwardrecurrence!(view(dest,k,:), b, a, c, x, shift)
-    end
-    dest
-end
-
-function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial,<:Tuple{<:Number,<:UnitRange}})
-    checkbounds(dest, axes(V)...)
-    P = parent(V)
-    x,jr = parentindices(V)
-    J = jacobimatrix(P)
-    b,a,c = bands(J)
-    shift = first(jr)-1
-    forwardrecurrence!(dest, b, a, c, x, shift)
-    dest
-end
-
-getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = layout_getindex(P, x, n)
-getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = layout_getindex(P, x, n)
-
-getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) =
-    P[x,OneTo(maximum(n))][n]
-
-getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer}) =
-    P[x,OneTo(maximum(n))][:,n]
-
-getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
+include("clenshaw.jl")
 
 
 function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T
     p = grid(L)
-    TransformFactorization(p, nothing, factorize(L[p,:]))
+    TransformFactorization(p, nothing, qr(L[p,:])) # Use QR so type-stable
 end
 
 function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T
@@ -250,6 +198,22 @@ function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusi
     ProjectionFactorization(factorize(parent(L)[:,Base.OneTo(maximum(jr))]), jr)
 end
 
+function \(A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, B::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial})
+    axes(A,1) == axes(B,1) || throw(DimensionMismatch())
+    _,jA = parentindices(A)
+    _,jB = parentindices(B)
+    (parent(A) \ parent(B))[jA, jB]
+end
+
+function \(wA::WeightedOrthogonalPolynomial, wB::WeightedOrthogonalPolynomial)
+    w_A,A = arguments(wA)
+    w_B,B = arguments(wB)
+    w_A == w_B || error("Not implemented")
+    A\B
+end
+
+include("normalized.jl")
+include("lanczos.jl")
 include("hermite.jl")
 include("jacobi.jl")
 include("chebyshev.jl")
