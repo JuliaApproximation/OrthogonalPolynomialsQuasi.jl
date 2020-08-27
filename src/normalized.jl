@@ -45,7 +45,7 @@ struct QuasiQR{T, QQ, RR} <: Factorization{T}
     R::RR
 end
 
-QuasiQR(Q::AbstractQuasiMatrix{T}, R::AbstractMatrix{V}) where {T,V} = 
+QuasiQR(Q::AbstractQuasiMatrix{T}, R::AbstractMatrix{V}) where {T,V} =
     QuasiQR{promote_type(T,V),typeof(Q),typeof(R)}(Q, R)
 
 Base.iterate(S::QuasiQR) = (S.Q, Val(:R))
@@ -103,7 +103,7 @@ _mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{type
 \(P::OrthogonalPolynomial, Q::Normalized) = copy(Ldiv{typeof(MemoryLayout(P)),ApplyLayout{typeof(*)}}(P,Q))
 \(Q::Normalized, P::OrthogonalPolynomial) = copy(Ldiv{ApplyLayout{typeof(*)},typeof(MemoryLayout(P))}(Q,P))
 
-    
+
 
 
 
@@ -123,5 +123,3 @@ _mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{type
 #     T[J[k,k] for k=1:n],
 #     T[J[k,k+1]*d[k+1]/d[k] for k=1:n-1])
 # end
-
-

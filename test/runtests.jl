@@ -2,13 +2,14 @@ using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays
         LazyArrays, BandedMatrices, LinearAlgebra, FastTransforms, IntervalSets,
         InfiniteLinearAlgebra, Test
 using ForwardDiff, SemiseparableMatrices, SpecialFunctions, LazyBandedMatrices
-import ContinuumArrays: SimplifyStyle, BasisLayout, MappedBasisLayout
-import OrthogonalPolynomialsQuasi: jacobimatrix, ∞, ChebyshevInterval
+import ContinuumArrays: BasisLayout, MappedBasisLayout
+import OrthogonalPolynomialsQuasi: jacobimatrix, ∞, ChebyshevInterval, Clenshaw, bands, forwardrecurrence!
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout
 import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
 import InfiniteLinearAlgebra: KronTrav, Block
+import FastTransforms: clenshaw!
 
 include("test_chebyshev.jl")
 include("test_legendre.jl")
@@ -16,6 +17,8 @@ include("test_ultraspherical.jl")
 include("test_jacobi.jl")
 include("test_fourier.jl")
 include("test_odes.jl")
+include("test_normalized.jl")
+include("test_lanczos.jl")
 
 @testset "Auto-diff" begin
     U = Ultraspherical(1)

@@ -1,9 +1,9 @@
 # We roughly follow DLMF notation
-# Q[x,n] = k[n] * x^(n-1) 
+# Q[x,n] = k[n] * x^(n-1)
 # Note that we have
 # Q[x,n] = (1/γ[n] - β[n-1]/γ[n]) * x * Q[x,n-1] - γ[n-1]/γ[n] * Q[x,n]
-# 
-# 
+#
+#
 
 function lanczos!(Ns, X::AbstractMatrix{T}, W::AbstractMatrix{T}, γ::AbstractVector{T}, β::AbstractVector{T}, R::AbstractMatrix{T}) where T
     for n = Ns
@@ -14,7 +14,7 @@ function lanczos!(Ns, X::AbstractMatrix{T}, W::AbstractMatrix{T}, γ::AbstractVe
         axpy!(-β[n-1],p1,v);
         if n > 2
             p0 = view(R,:,n-2)
-            axpy!(-γ[n-1],p0,v)    
+            axpy!(-γ[n-1],p0,v)
         end
         γ[n] = sqrt(dot(v,W,v));
         lmul!(inv(γ[n]), v)
@@ -142,12 +142,12 @@ resizedata!(A::LanczosRecurrence, n) = resizedata!(A.data, n)
 # Q[x,n] = (x/γ[n] - β[n-1]/γ[n])  * Q[x,n-1] - γ[n-1]/γ[n] * Q[x,n]
 
 
-function _lanczos_getindex(A::LanczosRecurrence{:A}, I) 
+function _lanczos_getindex(A::LanczosRecurrence{:A}, I)
     resizedata!(A, maximum(I)+1)
     inv.(A.data.γ.data[I .+ 1])
 end
 
-function _lanczos_getindex(B::LanczosRecurrence{:B}, I) 
+function _lanczos_getindex(B::LanczosRecurrence{:B}, I)
     resizedata!(B, maximum(I)+1)
     B.data.β.data[I] ./ B.data.γ.data[I .+ 1]
 end

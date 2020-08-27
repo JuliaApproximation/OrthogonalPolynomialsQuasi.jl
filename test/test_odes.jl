@@ -1,3 +1,11 @@
+using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, BandedMatrices, 
+        SemiseparableMatrices, LazyArrays, ArrayLayouts, Test
+
+import QuasiArrays: MulQuasiMatrix
+import ContinuumArrays: MappedBasisLayout
+
+import SemiseparableMatrices: VcatAlmostBandedLayout
+
 @testset "ODEs" begin
     @testset "p-FEM" begin
         S = Jacobi(true,true)
@@ -24,13 +32,9 @@
 
         L = D*(w.*S)[:,1:N]
 
-        A  = apply(*, (L').args..., L.args...)
-        @test A isa MulQuasiMatrix
-
         A  = *((L').args..., L.args...)
-        @test A isa MulQuasiMatrix
+        @test A isa MulMatrix
 
-        @test apply(*,L',L) isa QuasiArrays.ApplyQuasiArray
         Δ = L'L
         @test Δ isa MulMatrix
         @test bandwidths(Δ) == (0,0)
@@ -74,7 +78,7 @@
 
         P = Chebyshev()
         D = Derivative(axes(P,1))
-        D2 = D*(D*P) # could be D^2*P in the future
+        D2 = D^2 * P # could be D^2*P in the future
         n = 300
         x = cos.((1:n-2) .* π ./ (n-1)) # interior Chebyshev points
         C = [P[-1,1:n]';
@@ -110,7 +114,7 @@
         P = Legendre()[2x.-1,:]
         w = JacobiWeight(1.0,1.0)
         wS = (w .* Jacobi(1.0,1.0))[2x.-1,:]
-        @test MemoryLayout(typeof(wS)) isa MappedBasisLayout
+        @test MemoryLayout(wS) isa MappedBasisLayout
         f = wS*[[1,2,3]; zeros(∞)]
         g = (w .* Jacobi(1.0,1.0))*[[1,2,3]; zeros(∞)]
         @test f[0.1] ≈ g[2*0.1-1]
@@ -139,7 +143,7 @@
     end
 
     @testset "Ultraspherical spectral method" begin
-        T = Chebyshev()
+        T = ChebyshevT()
         U = ChebyshevU()
         x = axes(T,1)
         D = Derivative(x)
@@ -147,7 +151,7 @@
         @test copyto!(BandedMatrix{Float64}(undef, (10,10), (0,2)), view(A,1:10,1:10)) == A[1:10,1:10]
         L = Vcat(T[1:1,:], A)
         @test L[1:10,1:10] isa AlmostBandedMatrix
-        @test MemoryLayout(typeof(L)) isa VcatAlmostBandedLayout
+        @test MemoryLayout(L) isa VcatAlmostBandedLayout
         u = L \ [ℯ; zeros(∞)]
         @test T[0.1,:]'u ≈ (T*u)[0.1] ≈ exp(0.1)
 
