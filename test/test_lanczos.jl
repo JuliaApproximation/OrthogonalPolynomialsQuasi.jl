@@ -1,5 +1,5 @@
-using OrthogonalPolynomialsQuasi, BandedMatrices, Test
-import OrthogonalPolynomialsQuasi: recurrencecoefficients
+using OrthogonalPolynomialsQuasi, BandedMatrices, ArrayLayouts, Test
+import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
 
 @testset "Lanczos" begin
     @testset "Legendre" begin
@@ -35,11 +35,24 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
     end
 
     @testset "other weight" begin
-        P = Legendre()
+        P = Normalized(Legendre())
         x = axes(P,1)
 
         Q = LanczosPolynomial(exp.(x))
-        @test Q[0.1,5] ≈ 0.48479905558644537 # emperical
+        R = P \ Q
+        @test MemoryLayout(R[:,2]) isa PaddedLayout
+
+        A,B,C = recurrencecoefficients(Q)
+        @test A[1] ≈ 1.903680130866564 # emperical from Mathematica
+        @test B[1] ≈ -0.5959190532652192
+        @test A[2] ≈ 1.9150612001588696
+        @test B[2] ≈ 0.0845629033308663
+        @test C[2] ≈ 1.005978456731134
+
+        @test Q[0.1,1] ≈ (Q * [1; zeros(∞)])[0.1] ≈ P[0.1,:]'*R[:,1] ≈ 0.6522722316024658
+        @test Q[0.1,2] ≈ (Q * [0; 1; zeros(∞)])[0.1] ≈ P[0.1,:]'*R[:,2] ≈ -0.26452968200597243
+        @test Q[0.1,3] ≈ (Q * [zeros(2); 1; zeros(∞)])[0.1] ≈ P[0.1,:]'*R[:,3] ≈ -0.7292002638736375
+        @test Q[0.1,5] ≈ 0.7576999562707534 # emperical
 
         Q = LanczosPolynomial(  1 ./ (2 .+ x));
         R = P \ Q
@@ -52,34 +65,27 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         # polys
         Q = LanczosPolynomial( 2 .+ x);
         R = P \ Q;
-        Ri = inv(R)
+        @test norm(inv(R)[1,3:10]) ≤ 1E-14
 
         w = P * (P \ (1 .+ x))
         Q = LanczosPolynomial(w)
-        P \ Q
-
-        Jacobi(1,0) \ Legendre()
-
-        Q = LanczosPolynomial((x -> 1+x).(x));
-        R = P \ Q;
+        @test Q[0.1,5] ≈ Normalized(Jacobi(1,0))[0.1,5] ≈ 0.742799258138176
 
         Q = LanczosPolynomial( 1 .+ x.^2);
         R = P \ Q;
-        @test norm(inv(R[1:10,1:10])[1,4:10]) ≤ 1E-14
+        @test norm(inv(R)[1,4:10]) ≤ 1E-14
     end
 
     @testset "Expansion" begin
         P = Legendre();
+        x = axes(P,1)
         w = P * [1; zeros(∞)];
         Q = LanczosPolynomial(w);
         R = Normalized(P) \ Q
         @test R * [1; 2; 3; zeros(∞)] ≈ [R[1:3,1:3] * [1,2,3]; zeros(∞)]
         @test R \ [1; 2; 3; zeros(∞)] ≈ [1; 2; 3; zeros(∞)]
         @test (Q * (Q \ (1 .- x.^2)))[0.1] ≈ (1-0.1^2)
-        Q \ P
     end
-
-    
 
     @testset "Jacobi via Lanczos" begin
         P = Legendre(); x = axes(P,1)
@@ -89,13 +95,6 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
 
         @test @inferred(Q[0.1,1]) ≈ sqrt(3)/sqrt(4)
         @test Q[0.1,2] ≈ 2*0.1 * sqrt(15)/sqrt(16)
-    end
-
-    @testset "broadcast" begin
-        x = Inclusion(ChebyshevInterval())
-        Q = LanczosPolynomial(exp.(x))
-        # Emperical
-        @test Q[0.1,2] ≈ 0.4312732517146977
     end
 
     @testset "Singularity" begin
@@ -115,8 +114,17 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         W = P \ (w .* P)
         v = [[1,2,3]; zeros(BigFloat,∞)];
         Q = LanczosPolynomial(w)
+
+        x̃ = BigFloat(1)/10
+        @test Q[x̃,1] ≈ 0.652272231602465791008015756161075576539994569266308567422055126278763683344388252
+        @test Q[x̃,2] ≈ -0.26452968200597244253463861322599173806126678155361307561211048667577270734771616
+        @test Q[x̃,3] ≈ -0.72920026387366053084159259908849371062183891778315602761397748592062615496583854
+
         X = Q \ (x .* Q)
         # empirical test
         @test X[5,5] ≈ -0.001489975039238321407179828331585356464766466154894764141171294038822525312179884
+
+        @test (Q*[1; 2; 3; zeros(BigFloat,∞)])[0.1] ≈ -2.0643879240304606865860392675563890314480557471903856666440983048346601962485597
+        @test 0.1*(Q*[1; 2; 3; zeros(BigFloat,∞)])[0.1] ≈ (Q * (X * [1; 2; 3; zeros(BigFloat,∞)]))[0.1]
     end
 end

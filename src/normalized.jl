@@ -81,6 +81,7 @@ function jacobimatrix(Q::Normalized)
 end
 
 orthogonalityweight(Q::Normalized) = orthogonalityweight(Q.P)
+singularities(Q::Normalized) = singularities(Q.P)
 
 # Sometimes we want to expand out, sometimes we don't
 

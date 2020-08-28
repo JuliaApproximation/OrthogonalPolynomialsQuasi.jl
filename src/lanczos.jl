@@ -10,8 +10,8 @@ function lanczos!(Ns, X::AbstractMatrix{T}, W::AbstractMatrix{T}, γ::AbstractVe
         v = view(R,:,n);
         p1 = view(R,:,n-1);
         muladd!(one(T), X, p1, zero(T), v); # TODO: `mul!(v, X, p1)`
-        β[n-1] = dot(v,W,p1)
-        axpy!(-β[n-1],p1,v);
+        β[n-1] = -dot(v,W,p1)
+        axpy!(β[n-1],p1,v);
         if n > 2
             p0 = view(R,:,n-2)
             axpy!(-γ[n-1],p0,v)
@@ -77,7 +77,7 @@ function _lanczosconversion_getindex(R, k, j)
     R.data.R[k,j]
 end
 
-getindex(R::LanczosConversion, k, j) = _lanczosconversion_getindex(R, k, j)
+getindex(R::LanczosConversion, k::Integer, j::Integer) = _lanczosconversion_getindex(R, k, j)
 getindex(R::LanczosConversion, k::AbstractUnitRange, j::AbstractUnitRange) = _lanczosconversion_getindex(R, k, j)
 
 inv(R::LanczosConversion) = ApplyArray(inv, R)
@@ -96,7 +96,15 @@ end
 
 MemoryLayout(::Type{<:LanczosConversion}) = LanczosConversionLayout()
 triangulardata(R::LanczosConversion) = R
+sublayout(::LanczosConversionLayout, ::Type{<:Tuple{KR,Integer}}) where KR = 
+    sublayout(PaddedLayout{UnknownLayout}(), Tuple{KR})
 
+function sub_paddeddata(::LanczosConversionLayout, S::SubArray{<:Any,1,<:AbstractMatrix})
+    P = parent(S)
+    (kr,j) = parentindices(S)
+    resizedata!(P.data, j)
+    paddeddata(view(P.data.R, kr, j))
+end
 
 # struct LanczosJacobiMatrix{T,XX,WW} <: AbstractBandedMatrix{T}
 #     data::LanczosData{T,XX,WW}
@@ -117,7 +125,7 @@ function _lanczos_getindex(C::LanczosJacobiBand, I)
     if C.diag == :du
         C.data.γ.data[I .+ 1]
     else # :d
-        C.data.β.data[I]
+        -C.data.β.data[I]
     end
 end
 

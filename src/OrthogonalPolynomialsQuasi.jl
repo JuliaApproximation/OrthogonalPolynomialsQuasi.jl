@@ -1,6 +1,6 @@
 module OrthogonalPolynomialsQuasi
 using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, BlockArrays,
-    IntervalSets, DomainSets, ArrayLayouts,
+    IntervalSets, DomainSets, ArrayLayouts, HypergeometricFunctions,
     InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra, FastTransforms
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
@@ -9,7 +9,7 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 to_indices, _maybetail, tail, getproperty, inv
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout,
-                sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
+                sub_materialize, arguments, sub_paddeddata, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
                 _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!, AbstractLazyLayout
 import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, transposelayout, triangulardata
 import LinearAlgebra: pinv, factorize, qr, adjoint, transpose

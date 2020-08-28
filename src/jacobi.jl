@@ -19,6 +19,11 @@ function getindex(w::JacobiWeight, x::Number)
     (1-x)^w.a * (1+x)^w.b
 end
 
+function sum(P::JacobiWeight)
+    b,a = P.b,P.a
+    _₂F₁(1, -a, 2+b, -1)/(1+b) + _₂F₁(1, -b, 2+a, -1)/(1+a)
+end
+
 
 struct LegendreWeight{T} <: AbstractJacobiWeight{T} end
 LegendreWeight() = LegendreWeight{Float64}()
@@ -67,7 +72,7 @@ struct Jacobi{T} <: AbstractJacobi{T}
     Jacobi{T}(b, a) where T = new{T}(convert(T,b), convert(T,a))
 end
 
-Jacobi(b::T, a::V) where {T,V} = Jacobi{promote_type(T,V)}(b,a)
+Jacobi(b::T, a::V) where {T,V} = Jacobi{float(promote_type(T,V))}(b,a)
 
 Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
 
