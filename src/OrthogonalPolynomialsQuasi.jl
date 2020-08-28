@@ -1,17 +1,17 @@
 module OrthogonalPolynomialsQuasi
 using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, BlockArrays,
-    IntervalSets, DomainSets, ArrayLayouts,
+    IntervalSets, DomainSets, ArrayLayouts, HypergeometricFunctions,
     InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra, FastTransforms
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
-                to_indices, _maybetail, tail, getproperty
+                to_indices, _maybetail, tail, getproperty, inv
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
-import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout, 
-                sub_materialize, arguments, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
-                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!
-import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, transposelayout
+import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout,
+                sub_materialize, arguments, sub_paddeddata, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
+                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!, AbstractLazyLayout
+import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, transposelayout, triangulardata
 import LinearAlgebra: pinv, factorize, qr, adjoint, transpose
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
 import FillArrays: AbstractFill, getindex_value
@@ -24,8 +24,9 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 
 import InfiniteArrays: OneToInf, InfAxes, InfUnitRange
 import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
-    inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion
-import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!, 
+    inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion,
+    AffineQuasiVector
+import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!,
                         _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
 import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
@@ -127,12 +128,19 @@ const WeightedOrthogonalPolynomial{T, A<:AbstractQuasiVector, B<:OrthogonalPolyn
 """
     singularities(f)
 
-gives the singularity structure of an expansion, e.g., 
+gives the singularity structure of an expansion, e.g.,
 `JacobiWeight`.
 """
 singularities(w::Weight) = w
 singularities(S::WeightedOrthogonalPolynomial) = singularities(S.args[1])
 singularities(f::AbstractQuasiVector) = singularities(basis(f))
+singularities(a::BroadcastQuasiVector) = singularitiesbroadcast(a.f, map(singularities, a.args)...)
+
+struct NoSingularities end
+
+singularities(::Number) = NoSingularities()
+singularities(r::Base.RefValue) = r[] # pass through
+
 
 
 _weighted(w, P) = w .* P
@@ -154,10 +162,10 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::BroadcastQuasiVec
 end
 
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), y::AbstractAffineQuasiVector, C::OrthogonalPolynomial)
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::AbstractAffineQuasiVector, C::OrthogonalPolynomial)
     x = axes(C,1)
-    axes(y,1) == x || throw(DimensionMismatch())
-    broadcast(+, y.A * (x.*C), y.b.*C)
+    axes(a,1) == x || throw(DimensionMismatch())
+    broadcast(*, C * (C \ a), C)
 end
 
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::WeightedOrthogonalPolynomial)

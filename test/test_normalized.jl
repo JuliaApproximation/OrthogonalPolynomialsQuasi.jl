@@ -1,5 +1,5 @@
 using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, ArrayLayouts, Test
-import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients, Normalized, Clenshaw
+import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients, Normalized, Clenshaw, PaddedLayout
 import ContinuumArrays: BasisLayout
 
 
@@ -12,7 +12,7 @@ import ContinuumArrays: BasisLayout
             @test MemoryLayout(Q) isa BasisLayout
             @test @inferred(Q\Q) ≡ Eye(∞)
         end
-        
+
         @testset "recurrencecoefficients" begin
             A,B,C = recurrencecoefficients(Q)
             @test A[3:∞][1:10] == A[3:12]
@@ -31,6 +31,7 @@ import ContinuumArrays: BasisLayout
             f = Q*[1:5; zeros(∞)]
             @test f[0.1] ≈ Q[0.1,1:5]'*(1:5) ≈ f[[0.1]][1]
             x = axes(f,1)
+            @test MemoryLayout(Q \ (1 .- x.^2)) isa PaddedLayout
             w = Q * (Q \ (1 .- x.^2));
             @test w[0.1] ≈ (1-0.1^2) ≈ w[[0.1]][1]
         end
@@ -70,7 +71,7 @@ import ContinuumArrays: BasisLayout
             @test MemoryLayout(Q) isa BasisLayout
             @test @inferred(Q\Q) ≡ Eye(∞)
         end
-        
+
         @testset "recurrencecoefficients" begin
             A,B,C = recurrencecoefficients(Q)
             @test A[1] ≈ sqrt(2)
