@@ -135,6 +135,7 @@ singularities(w::Weight) = w
 singularities(S::WeightedOrthogonalPolynomial) = singularities(S.args[1])
 singularities(f::AbstractQuasiVector) = singularities(basis(f))
 singularities(a::BroadcastQuasiVector) = singularitiesbroadcast(a.f, map(singularities, a.args)...)
+singularities(S::SubQuasiArray) = singularities(parent(S))[parentindices(S)...]
 
 struct NoSingularities end
 

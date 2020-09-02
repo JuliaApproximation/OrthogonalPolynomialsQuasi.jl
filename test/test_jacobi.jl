@@ -39,6 +39,25 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         (D*(JacobiWeight(b,a) .* f))
     end
 
+    @testset "expansions" begin
+        P = Jacobi(0.,1/2)
+        x = axes(P,1)
+        @test (P * (P \ exp.(x)))[0.1] ≈ exp(0.1)
+
+        wP = WeightedJacobi(0.,1/2)
+        f = @.(sqrt(1 - x) * exp(x))
+        @test wP[0.1,1:100]'*(wP[:,1:100] \ f) ≈ sqrt(1-0.1) * exp(0.1)
+        @test (wP * (wP \ f))[0.1] ≈ sqrt(1-0.1) * exp(0.1)
+
+        P̃ = P[affine(Inclusion(0..1), x), :]
+        x̃ = axes(P̃, 1)
+        @test (P̃ * (P̃ \ exp.(x̃)))[0.1] ≈ exp(0.1)
+        wP̃ = wP[affine(Inclusion(0..1), x), :]
+        f̃ = @.(sqrt(1 - x̃) * exp(x̃))
+        @test wP̃[0.1,1:100]'*(wP̃[:,1:100] \ f̃) ≈ sqrt(1-0.1) * exp(0.1)
+        @test (wP̃ * (wP̃ \ f̃))[0.1] ≈ sqrt(1-0.1) * exp(0.1)
+    end
+
     @testset "trivial weight" begin
         S = JacobiWeight(0.0,0.0) .* Jacobi(0.0,0.0)
         @test S == S

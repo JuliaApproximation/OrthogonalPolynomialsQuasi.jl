@@ -43,15 +43,28 @@ singularities(::AffineQuasiVector{T,T,Inclusion{T,ChebyshevInterval{T}}}) where 
 singularitiesbroadcast(_, L::LegendreWeight) = L # Assume we stay smooth
 singularitiesbroadcast(::typeof(exp), L::LegendreWeight) = L
 singularitiesbroadcast(::typeof(Base.literal_pow), ::typeof(^), L::LegendreWeight, ::Val) = L
-singularitiesbroadcast(::typeof(+), ::LegendreWeight{T}, ::LegendreWeight{V}) where {T,V} = LegendreWeight{promote_type(T,V)}()
-singularitiesbroadcast(::typeof(+), L::LegendreWeight, ::NoSingularities) = L
-singularitiesbroadcast(::typeof(+), ::NoSingularities, L::LegendreWeight) = L
+for op in (:+, :-)
+    @eval begin
+        singularitiesbroadcast(::typeof($op), ::LegendreWeight{T}, ::LegendreWeight{V}) where {T,V} = LegendreWeight{promote_type(T,V)}()
+        singularitiesbroadcast(::typeof($op), L::LegendreWeight, ::NoSingularities) = L
+        singularitiesbroadcast(::typeof($op), ::NoSingularities, L::LegendreWeight) = L
+    end
+end
 singularitiesbroadcast(::typeof(/), ::NoSingularities, L::LegendreWeight) = L # can't find roots
+
+_parent(::NoSingularities) = NoSingularities()
+_parent(a) = parent(a)
+_parentindices(a::NoSingularities, b...) = _parentindices(b...)
+_parentindices(a, b...) = parentindices(a)
+singularitiesbroadcast(F::Function, G::Function, V::SubQuasiArray, K) = singularitiesbroadcast(F, G, parent(V), K)[parentindices(V)...]
+singularitiesbroadcast(F, V::Union{NoSingularities,SubQuasiArray}...) = singularitiesbroadcast(F, map(_parent,V)...)[_parentindices(V...)...]
+
 
 abstract type AbstractJacobi{T} <: OrthogonalPolynomial{T} end
 
 singularities(::AbstractJacobi{T}) where T = LegendreWeight{T}()
 singularities(::Inclusion{T,<:ChebyshevInterval}) where T = LegendreWeight{T}()
+singularities(d::Inclusion{T,<:Interval}) where T = LegendreWeight{T}()[affine(d,ChebyshevInterval{T}())]
 
 struct Legendre{T} <: AbstractJacobi{T} end
 Legendre() = Legendre{Float64}()
