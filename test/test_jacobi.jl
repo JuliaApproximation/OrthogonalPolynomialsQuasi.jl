@@ -212,6 +212,7 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         P = Jacobi(0.1,0.2)
         x = axes(P,1)
         a = P * (P \ exp.(x))
+        @test a[0.1] ≈ exp(0.1)
         M = P \ (a .* P);
         u = [randn(1000); zeros(∞)];
         @test (P * (M*u))[0.1] ≈ (P*u)[0.1]*exp(0.1)
