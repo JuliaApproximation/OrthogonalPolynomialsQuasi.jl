@@ -48,8 +48,8 @@ LanczosData(X::AbstractMatrix{T}, W::AbstractMatrix{T}) where T = LanczosData(X,
 function LanczosData(w::AbstractQuasiVector, P::AbstractQuasiMatrix)
     x = axes(P,1)
     wP = weighted(P)
-    X = P \ (x .* P)
-    W = wP \ (w .* P)
+    X = jacobimatrix(P)
+    W = Clenshaw(P * (wP \ w), P)
     LanczosData(X, W)
 end
 
@@ -183,16 +183,21 @@ end
 
 
 normalize(Q::LanczosPolynomial) = Q
-normalize(Q::OrthogonalPolynomial) = Normalized(Q)
+normalize(Q::AbstractQuasiMatrix) = Normalized(Q)
 
 OrthogonalPolynomial(w::AbstractQuasiVector) = LanczosPolynomial(w)
-orthonormalpolynomial(w::AbstractQuasiVector) = normalize(OrthogonalPolynomial(w))
+orthogonalpolynomial(w::AbstractQuasiVector) = OrthogonalPolynomial(w)
+orthogonalpolynomial(w::SubQuasiArray) = orthogonalpolynomial(parent(w))[parentindices(w)[1],:]
+orthonormalpolynomial(w::AbstractQuasiVector) = normalize(orthogonalpolynomial(w))
 
-function LanczosPolynomial(w::AbstractQuasiVector)
-    P = orthonormalpolynomial(singularities(w))
-    LanczosPolynomial(w, P, LanczosData(w, P))
+function LanczosPolynomial(w_in::AbstractQuasiVector, P::AbstractQuasiMatrix)
+    Q = normalize(P)
+    wQ = weighted(Q)
+    w = wQ * (wQ \ w_in) # expand weight in basis
+    LanczosPolynomial(w, Q, LanczosData(w, Q))
 end
 
+LanczosPolynomial(w::AbstractQuasiVector) = LanczosPolynomial(w, orthonormalpolynomial(singularities(w)))
 
 orthogonalityweight(Q::LanczosPolynomial) = Q.w
 

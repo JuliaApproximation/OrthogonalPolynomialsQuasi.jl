@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, Test
+using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, Test
 import OrthogonalPolynomialsQuasi: recurrencecoefficients
 
 @testset "Jacobi" begin
@@ -206,5 +206,14 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         D = Derivative(axes(P,1))
         # applied(*,D,P) |> typeof
         # MemoryLayout(typeof(D))
+    end
+
+    @testset "Jacobi Clenshaw" begin
+        P = Jacobi(0.1,0.2)
+        x = axes(P,1)
+        a = P * (P \ exp.(x))
+        M = P \ (a .* P);
+        u = [randn(1000); zeros(∞)];
+        @test (P * (M*u))[0.1] ≈ (P*u)[0.1]*exp(0.1)
     end
 end

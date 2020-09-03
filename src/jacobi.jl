@@ -60,6 +60,9 @@ singularitiesbroadcast(F::Function, G::Function, V::SubQuasiArray, K) = singular
 singularitiesbroadcast(F, V::Union{NoSingularities,SubQuasiArray}...) = singularitiesbroadcast(F, map(_parent,V)...)[_parentindices(V...)...]
 
 
+singularitiesbroadcast(::typeof(*), ::LegendreWeight, b::JacobiWeight) = b
+singularitiesbroadcast(::typeof(*), a::JacobiWeight, ::LegendreWeight) = a
+
 abstract type AbstractJacobi{T} <: OrthogonalPolynomial{T} end
 
 singularities(::AbstractJacobi{T}) where T = LegendreWeight{T}()
@@ -68,6 +71,9 @@ singularities(d::Inclusion{T,<:Interval}) where T = LegendreWeight{T}()[affine(d
 
 struct Legendre{T} <: AbstractJacobi{T} end
 Legendre() = Legendre{Float64}()
+
+legendre() = Legendre()
+legendre(d::AbstractInterval{T}) where T = Legendre{float(T)}()[affine(d,ChebyshevInterval{T}()), :]
 
 ==(::Legendre, ::Legendre) = true
 
@@ -86,6 +92,9 @@ struct Jacobi{T} <: AbstractJacobi{T}
 end
 
 Jacobi(b::T, a::V) where {T,V} = Jacobi{float(promote_type(T,V))}(b,a)
+
+jacobi(b, a) = Jacobi(b, a)
+jacobi(b, a, d::AbstractInterval{T}) where T = Jacobi(b,a)[affine(d,ChebyshevInterval{T}()), :]
 
 Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
 
@@ -334,3 +343,4 @@ function _sum(P::Legendre{T}, dims) where T
 end
 
 _sum(p::SubQuasiArray{T,1,Legendre{T},<:Tuple{Inclusion,Int}}, ::Colon) where T = parentindices(p)[2] == 1 ? convert(T, 2) : zero(T)
+

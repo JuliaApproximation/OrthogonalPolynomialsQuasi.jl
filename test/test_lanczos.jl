@@ -100,11 +100,10 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
     @testset "Singularity" begin
         T = Chebyshev(); wT = WeightedChebyshev()
         x = axes(T,1)
-        @testset "Recover ChebyshevT" begin
-            w = wT * [1; zeros(∞)]
-            Q = LanczosPolynomial(w)
-            @test Q[0.1,1:10] ≈ Normalized(T)[0.1,1:10]
-        end
+        
+        w = wT * [1; zeros(∞)]
+        Q = LanczosPolynomial(w)
+        @test Q[0.1,1:10] ≈ Normalized(T)[0.1,1:10]
     end
 
     @testset "BigFloat" begin
@@ -126,5 +125,12 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
 
         @test (Q*[1; 2; 3; zeros(BigFloat,∞)])[0.1] ≈ -2.0643879240304606865860392675563890314480557471903856666440983048346601962485597
         @test 0.1*(Q*[1; 2; 3; zeros(BigFloat,∞)])[0.1] ≈ (Q * (X * [1; 2; 3; zeros(BigFloat,∞)]))[0.1]
+    end
+
+    @testset "Mapped" begin
+        x = Inclusion(0..1)
+        w = @. sqrt(1 - x^2)
+        Q = LanczosPolynomial(w, jacobi(0,1/2,0..1))
+        
     end
 end

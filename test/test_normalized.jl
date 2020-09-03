@@ -1,5 +1,5 @@
 using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, ArrayLayouts, Test
-import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients, Normalized, Clenshaw, PaddedLayout
+import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients, Normalized, Clenshaw, PaddedLayout, weighted
 import ContinuumArrays: BasisLayout
 
 
@@ -120,5 +120,34 @@ import ContinuumArrays: BasisLayout
             W̃ = Q\  (w .* Q)
             @test W[1:10,1:10] ≈ W[1:10,1:10]' ≈ W̃[1:10,1:10]
         end
+    end
+
+    @testset "Jacobi" begin
+        P = Normalized(Jacobi(0,1/2))
+        # Emperical from Mathematica
+        @test P[0.1,1:4] ≈ [0.728237657560985,0.41715052371131806,-0.6523500049588019,-0.5607891513201705]
+    end
+
+    @testset "Mapped" begin
+        P = legendre(0..1)
+        x = axes(P,1)
+        Q = Normalized(P)
+
+        # Emperical from Mathematica
+        @test Q[0.1,1:4] ≈ [1,-1.3856406460551018,1.028591269649903,-0.21166010488516684]
+
+        u = Q[:,1:20] * (Q[:,1:20] \ exp.(x))
+        @test u[0.1] ≈ exp(0.1)
+        u = Q * (Q \ exp.(x))
+        @test u[0.1] ≈ exp(0.1)
+
+        Q = Normalized(jacobi(0,1/2,0..1))
+        wQ = weighted(Q)
+        x = axes(Q,1)
+        @test wQ[0.1,1:10] ≈ Q[0.1,1:10] * sqrt(1-(2*0.1-1))
+        u = wQ[:,1:20] * (wQ[:,1:20] \  @.(sqrt(1-x^2)))
+        @test u[0.1] ≈ sqrt(1-0.1^2)
+        u = wQ * (wQ \ @.(sqrt(1-x^2)))
+        @test u[0.1] ≈ sqrt(1-0.1^2)
     end
 end

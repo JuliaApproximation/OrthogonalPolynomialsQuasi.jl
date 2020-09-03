@@ -109,16 +109,29 @@ Base.@propagate_inbounds function _clenshaw_next!(n, A::AbstractVector, ::Zeros,
     bn2
 end
 
+Base.@propagate_inbounds function _clenshaw_next!(n, A::AbstractVector, B::AbstractVector, C::AbstractVector, x::AbstractMatrix, c, bn1::AbstractMatrix{T}, bn2::AbstractMatrix{T}) where T
+    bn2 .= B[n] .* bn1 .- C[n+1] .* bn2
+    muladd!(A[n], x, bn1, one(T), bn2)
+    view(bn2,band(0)) .+= c[n]
+    bn2
+end
+
 # Operator * f Clenshaw
-Base.@propagate_inbounds function _clenshaw_next!(n, A::AbstractFill, ::Zeros, C::Ones, x::AbstractMatrix, c, f::AbstractVector, bn1::AbstractVector{T}, bn2::AbstractVector{T}) where T
-    muladd!(getindex_value(A), x, bn1, -one(T), bn2)
+Base.@propagate_inbounds function _clenshaw_next!(n, A::AbstractFill, ::Zeros, C::Ones, X::AbstractMatrix, c, f::AbstractVector, bn1::AbstractVector{T}, bn2::AbstractVector{T}) where T
+    muladd!(getindex_value(A), X, bn1, -one(T), bn2)
     bn2 .+= c[n] .* f
     bn2
 end
 
-Base.@propagate_inbounds function _clenshaw_next!(n, A, ::Zeros, C, x::AbstractMatrix, c, f::AbstractVector, bn1::AbstractVector{T}, bn2::AbstractVector{T}) where T
-    muladd!(A[n], x, bn1, -C[n+1], bn2)
+Base.@propagate_inbounds function _clenshaw_next!(n, A, ::Zeros, C, X::AbstractMatrix, c, f::AbstractVector, bn1::AbstractVector{T}, bn2::AbstractVector{T}) where T
+    muladd!(A[n], X, bn1, -C[n+1], bn2)
     bn2 .+= c[n] .* f
+    bn2
+end
+
+Base.@propagate_inbounds function _clenshaw_next!(n, A, B, C, X::AbstractMatrix, c, f::AbstractVector, bn1::AbstractVector{T}, bn2::AbstractVector{T}) where T
+    bn2 .= B[n] .* bn1 .- C[n+1] .* bn2 .+ c[n] .* f
+    muladd!(A[n], X, bn1, one(T), bn2)
     bn2
 end
 
@@ -129,9 +142,22 @@ Base.@propagate_inbounds function _clenshaw_first!(A, ::Zeros, C, X, c, bn1, bn2
     bn2
 end
 
+Base.@propagate_inbounds function _clenshaw_first!(A, B, C, X, c, bn1, bn2) 
+    bn2 .= B[1] .* bn1 .- C[2] .* bn2
+    muladd!(A[1], X, bn1, one(eltype(bn2)), bn2)
+    view(bn2,band(0)) .+= c[1]
+    bn2
+end
+
 Base.@propagate_inbounds function _clenshaw_first!(A, ::Zeros, C, X, c, f::AbstractVector, bn1, bn2) 
     muladd!(A[1], X, bn1, -C[2], bn2)
     bn2 .+= c[1] .* f
+    bn2
+end
+
+Base.@propagate_inbounds function _clenshaw_first!(A, B, C, X, c, f::AbstractVector, bn1, bn2) 
+    bn2 .= B[1] .* bn1 .- C[2] .* bn2 .+ c[1] .* f
+    muladd!(A[1], X, bn1, one(eltype(bn2)), bn2)
     bn2
 end
 

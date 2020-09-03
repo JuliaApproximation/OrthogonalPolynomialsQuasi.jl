@@ -21,7 +21,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
 
 [compat]
-ArrayLayouts = "0.4.5"
+ArrayLayouts = "0.4.6"
 BandedMatrices = "0.15.11"
 BlockArrays = "0.12.8"
 BlockBandedMatrices = "0.9"
@@ -33,7 +33,7 @@ HypergeometricFunctions = "0.3.2"
 InfiniteArrays = "0.8"
 InfiniteLinearAlgebra = "0.4.1"
 IntervalSets = "0.3.1, 0.4, 0.5"
-LazyArrays = "0.17.6"
+LazyArrays = "0.17.8"
 QuasiArrays = "0.3.2"
 julia = "1.5"
 

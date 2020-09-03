@@ -6,11 +6,11 @@ using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, Bloc
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
                 first, last, Slice, size, length, axes, IdentityUnitRange, sum, _sum,
-                to_indices, _maybetail, tail, getproperty, inv
+                to_indices, _maybetail, tail, getproperty, inv, show
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout,
-                sub_materialize, arguments, sub_paddeddata, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout,
-                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!, AbstractLazyLayout
+                sub_materialize, arguments, sub_paddeddata, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout, call,
+                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!, AbstractLazyLayout, BroadcastLayout
 import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, transposelayout, triangulardata
 import LinearAlgebra: pinv, factorize, qr, adjoint, transpose
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
@@ -25,7 +25,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf, InfAxes, InfUnitRange
 import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion,
-    AffineQuasiVector
+    AffineQuasiVector, AffineMap, WeightLayout
 import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!,
                         _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
@@ -35,7 +35,7 @@ import BandedMatrices: bandwidths
 export OrthogonalPolynomial, Normalized, orthonormalpolynomial, LanczosPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
-            ∞, Derivative, ..
+            ∞, Derivative, .., Inclusion, chebyshevt, chebyshevu, legendre, jacobi
 
 
 # ambiguity error
@@ -131,11 +131,13 @@ const WeightedOrthogonalPolynomial{T, A<:AbstractQuasiVector, B<:OrthogonalPolyn
 gives the singularity structure of an expansion, e.g.,
 `JacobiWeight`.
 """
-singularities(w::Weight) = w
+_singularities(::WeightLayout, w) = w
+_singularities(lay::BroadcastLayout, a) = singularitiesbroadcast(call(a), map(singularities, arguments(lay, a))...)
+singularities(w) = _singularities(MemoryLayout(w), w)
+singularities(f::Expansion) = singularities(basis(f))
 singularities(S::WeightedOrthogonalPolynomial) = singularities(S.args[1])
-singularities(f::AbstractQuasiVector) = singularities(basis(f))
-singularities(a::BroadcastQuasiVector) = singularitiesbroadcast(a.f, map(singularities, a.args)...)
-singularities(S::SubQuasiArray) = singularities(parent(S))[parentindices(S)...]
+
+singularities(S::SubQuasiArray) = singularities(parent(S))[parentindices(S)[1]]
 
 struct NoSingularities end
 
@@ -144,8 +146,11 @@ singularities(r::Base.RefValue) = r[] # pass through
 
 
 
+orthogonalityweight(P::SubQuasiArray{<:Any,2,<:Any,<:Tuple{AbstractAffineQuasiVector,Slice}}) =
+    orthogonalityweight(parent(P))[parentindices(P)[1]]
+
 _weighted(w, P) = w .* P
-weighted(P::OrthogonalPolynomial) = _weighted(orthogonalityweight(P), P)
+weighted(P::AbstractQuasiMatrix) = _weighted(orthogonalityweight(P), P)
 
 OrthogonalPolynomial(w::Weight) =error("Override for $(typeof(w))")
 
@@ -177,6 +182,10 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Wei
     (w .* P) * J
 end
 
+##
+# Multiplication for mapped and subviews x .* view(P,...)
+##
+
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::SubQuasiArray{<:Any,2,<:Any,<:Tuple{<:AbstractAffineQuasiVector,<:Any}})
     T = promote_type(eltype(x), eltype(C))
     x == axes(C,1) || throw(DimensionMismatch())
@@ -188,11 +197,36 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Sub
     P[kr, :] * view(X,:,jr)
 end
 
+function jacobimatrix(C::SubQuasiArray{T,2,<:Any,<:Tuple{AbstractAffineQuasiVector,Slice}}) where T
+    P = parent(C)
+    kr,jr = parentindices(C)
+    Y = jacobimatrix(P)
+    kr.A \ (Y - kr.b * Eye{T}(size(Y,1)))
+end
+
+function recurrencecoefficients(C::SubQuasiArray{T,2,<:Any,<:Tuple{AbstractAffineQuasiVector,Slice}}) where T
+    P = parent(C)
+    kr,jr = parentindices(C)
+    A,B,C = recurrencecoefficients(P)
+    A * kr.A, A*kr.b + B, C
+end
+
+
 _vec(a) = vec(a)
 _vec(a::InfiniteArrays.ReshapedArray) = _vec(parent(a))
 _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
 bands(J::AbstractBandedMatrix) = _vec.(bandeddata(J).args)
 bands(J::Tridiagonal) = J.du, J.d, J.dl
+bands(D::Diagonal{T}) where T = Zeros{T}(∞), D.diag, Zeros{T}(∞)
+function bands(B::BroadcastArray{<:Any,2,<:Any,<:NTuple{2,AbstractMatrix}})
+    ((au,ad,al),(bu,bd,bl)) = map(bands, B.args)
+    (B.f(au,bu), B.f(ad,bd), B.f(al,bl))
+end
+function bands(B::BroadcastArray{<:Any,2,<:Any,<:Tuple{Number,AbstractMatrix}})
+    a = B.args[1]
+    (bu,bd,bl) = bands(B.args[2])
+    (B.f(a,bu), B.f(a,bd), B.f(a,bl))
+end
 
 include("clenshaw.jl")
 
