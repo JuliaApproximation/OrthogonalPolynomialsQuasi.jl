@@ -3,7 +3,7 @@ using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, BandedMatrices,
 
 import QuasiArrays: MulQuasiMatrix
 import ContinuumArrays: MappedBasisLayout
-
+import LazyArrays: arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout
 
 @testset "ODEs" begin
@@ -126,7 +126,8 @@ import SemiseparableMatrices: VcatAlmostBandedLayout
         DwS = apply(*,D,wS)
         A,B = P,arguments(DwS)[1];
         @test (A.parent\B.parent) == Eye(∞)
-        @test (P \ (DwS))[1:10,1:10] == diagm(-1 => -4:-4:-36)
+        @test (A \ B)[1:10,1:10] == diagm(-1 => ones(9))
+        @test (P \ DwS)[1:10,1:10] == diagm(-1 => -4:-4:-36)
     end
 
     @testset "Beam" begin

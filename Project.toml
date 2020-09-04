@@ -19,6 +19,7 @@ IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
+SemiseparableMatrices = "f8ebbe35-cbfb-4060-bf7f-b10e4670cf57"
 
 [compat]
 ArrayLayouts = "0.4.6"
@@ -33,7 +34,7 @@ HypergeometricFunctions = "0.3.2"
 InfiniteArrays = "0.8"
 InfiniteLinearAlgebra = "0.4.1"
 IntervalSets = "0.3.1, 0.4, 0.5"
-LazyArrays = "0.17.8"
+LazyArrays = "0.18"
 QuasiArrays = "0.3.2"
 julia = "1.5"
 
