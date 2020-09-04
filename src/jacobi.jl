@@ -170,9 +170,9 @@ end
 function jacobimatrix(J::Jacobi)
     b,a = J.b,J.a
     n = 0:∞
-    B = Vcat(2 / (a+b+2),  @. 2*(n+2)*(n+a+b+2) / ((2n+a+b+3)*(2n+a+b+4)))
-    A = Vcat((b-a) / (a+b+2), (b^2-a^2) ./ ((2n.+a.+b.+2).*(2n.+a.+b.+4)))
-    C = @. 2*(n+a)*(n+b) / ((2n+a+b)*(2n+a+b+1))
+    B = Vcat(2 / (a+b+2),  2 .* (n .+ 2) .* (n .+ (a+b+2)) ./ ((2n .+ (a+b+3)) .* (2n .+ (a+b+4))))
+    A = Vcat((b-a) / (a+b+2), (b^2-a^2) ./ ((2n .+ (a+b+2)) .* (2n .+ (a+b+4))))
+    C = 2 .* (n .+ a) .* (n .+ b) ./ ((2n .+ (a+b)) .* (2n .+ (a+b+1)))
 
     _BandedMatrix(Vcat(C',A',B'), ∞, 1,1)
 end

@@ -127,10 +127,25 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
         @test 0.1*(Q*[1; 2; 3; zeros(BigFloat,∞)])[0.1] ≈ (Q * (X * [1; 2; 3; zeros(BigFloat,∞)]))[0.1]
     end
 
+    @testset "Mixed Jacobi" begin
+        P = Jacobi(0,1/2)
+        x = axes(P,1)
+        
+        w = @. sqrt(1-x)
+        Q = LanczosPolynomial(w, P)
+        @test Q[0.1,1:10] ≈ Normalized(P)[0.1,1:10]
+
+        w = @. exp(x) * sqrt(1-x)
+        Q = LanczosPolynomial(w, P)
+        # emperical from Julia
+        @test Q[0.1,10] ≈ 0.5947384257847858
+    end
+
     @testset "Mapped" begin
         x = Inclusion(0..1)
         w = @. sqrt(1 - x^2)
         Q = LanczosPolynomial(w, jacobi(0,1/2,0..1))
-        
+        # emperical from Julia
+        @test Q[0.1,10] ≈ -0.936819626414421
     end
 end
