@@ -2,7 +2,7 @@ using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, BandedMatrices,
         SemiseparableMatrices, LazyArrays, ArrayLayouts, Test
 
 import QuasiArrays: MulQuasiMatrix
-import ContinuumArrays: MappedBasisLayout
+import ContinuumArrays: MappedBasisLayout, MappedWeightedBasisLayout
 import LazyArrays: arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout
 
