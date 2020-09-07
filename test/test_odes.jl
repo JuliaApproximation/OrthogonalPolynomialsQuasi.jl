@@ -114,7 +114,7 @@ import SemiseparableMatrices: VcatAlmostBandedLayout
         P = Legendre()[2x.-1,:]
         w = JacobiWeight(1.0,1.0)
         wS = (w .* Jacobi(1.0,1.0))[2x.-1,:]
-        @test MemoryLayout(wS) isa MappedBasisLayout
+        @test MemoryLayout(wS) isa MappedWeightedBasisLayout
         f = wS*[[1,2,3]; zeros(∞)]
         g = (w .* Jacobi(1.0,1.0))*[[1,2,3]; zeros(∞)]
         @test f[0.1] ≈ g[2*0.1-1]
