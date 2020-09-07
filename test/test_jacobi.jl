@@ -1,5 +1,5 @@
 using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, Test
-import OrthogonalPolynomialsQuasi: recurrencecoefficients
+import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
 
 @testset "Jacobi" begin
     @testset "basis" begin
@@ -9,6 +9,7 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         P = Jacobi(a,b)
         @test P[-0.1,2] ≈ -0.16499999999999998
     end
+
     @testset "operators" begin
         b,a = 0.2,0.1
         S = Jacobi(b,a)
@@ -25,7 +26,16 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         wS = w.*S
         @test wS[0.1,1] ≈ w[0.1]
         @test wS[0.1,1:2] ≈ w[0.1] .* S[0.1,1:2]
+
+        w_A = WeightedJacobi(-1/2,0)
+        w_B =  WeightedJacobi(1/2,0)
+
+        u = w_A * [1 ; 2; zeros(∞)]
+        v = w_B * [1 ; 2; zeros(∞)]
+        @test basis(u + v) == w_A
+        @test (u+v)[0.1] == u[0.1] + v[0.1]
     end
+
     @testset "functions" begin
         b,a = 0.1,0.2
         P = Jacobi(b,a)
@@ -216,5 +226,11 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         M = P \ (a .* P);
         u = [randn(1000); zeros(∞)];
         @test (P * (M*u))[0.1] ≈ (P*u)[0.1]*exp(0.1)
+    end
+
+    @testset "mapped" begin
+        R = jacobi(0,1/2,0..1) \ jacobi(0,-1/2,0..1)
+        R̃ = Jacobi(0,1/2) \ Jacobi(0,-1/2)
+        @test R[1:10,1:10] == R̃[1:10,1:10]
     end
 end

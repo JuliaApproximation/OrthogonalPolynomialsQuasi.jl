@@ -93,6 +93,10 @@ function copy(M::Ldiv{LanczosConversionLayout,<:PaddedLayout})
     M.A.data.R \ M.B
 end
 
+function getindex(L::Ldiv{LanczosConversionLayout,<:AbstractBandedLayout}, ::Colon, j::Integer)
+    m = maximum(colrange(L.B,j))
+    [L.A[1:m,1:m] \ L.B[1:m,j]; Zeros{eltype(L)}(∞)]
+end
 
 MemoryLayout(::Type{<:LanczosConversion}) = LanczosConversionLayout()
 triangulardata(R::LanczosConversion) = R
@@ -225,7 +229,7 @@ QuasiArrays.ApplyQuasiArray(Q::LanczosPolynomial) = ApplyQuasiArray(*, arguments
 
 function \(A::LanczosPolynomial{T}, B::LanczosPolynomial{V}) where {T,V}
     A == B && return Eye{promote_type(T,V)}(∞)
-    error("Not implemented")
+    inv(LanczosConversion(A.data)) * (A.P \ B.P)  * LanczosConversion(B.data)
 end
 \(A::OrthogonalPolynomial, Q::LanczosPolynomial) = (A \ Q.P) * LanczosConversion(Q.data)
 \(A::Normalized, Q::LanczosPolynomial) = (A \ Q.P) * LanczosConversion(Q.data)

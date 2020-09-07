@@ -238,6 +238,15 @@ function \(w_A::WeightedJacobi, B::Jacobi)
     w_A \ (JacobiWeight(zero(a),zero(b)) .* B)
 end
 
+function broadcastbasis(::typeof(+), w_A::WeightedJacobi, w_B::WeightedJacobi)
+    wA,A = w_A.args
+    wB,B = w_B.args
+
+    w = JacobiWeight(min(wA.b,wB.b), min(wA.a,wB.a))
+    P = Jacobi(max(A.b,B.b + w.b - wB.b), max(A.a,B.a + w.a - wB.a))
+    w .* P
+end
+
 function \(w_A::WeightedJacobi, w_B::WeightedJacobi)
     wA,A = w_A.args
     wB,B = w_B.args

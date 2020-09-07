@@ -25,7 +25,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf, InfAxes, InfUnitRange
 import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion,
-    AffineQuasiVector, AffineMap, WeightLayout
+    AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts
 import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!,
                         _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
@@ -131,9 +131,10 @@ const WeightedOrthogonalPolynomial{T, A<:AbstractQuasiVector, B<:OrthogonalPolyn
 gives the singularity structure of an expansion, e.g.,
 `JacobiWeight`.
 """
-_singularities(::WeightLayout, w) = w
-_singularities(lay::BroadcastLayout, a) = singularitiesbroadcast(call(a), map(singularities, arguments(lay, a))...)
-singularities(w) = _singularities(MemoryLayout(w), w)
+singularities(::WeightLayout, w) = w
+singularities(lay::BroadcastLayout, a) = singularitiesbroadcast(call(a), map(singularities, arguments(lay, a))...)
+singularities(::WeightedBasisLayouts, a) = singularities(BroadcastLayout{typeof(*)}(), a)
+singularities(w) = singularities(MemoryLayout(w), w)
 singularities(f::Expansion) = singularities(basis(f))
 singularities(S::WeightedOrthogonalPolynomial) = singularities(S.args[1])
 
