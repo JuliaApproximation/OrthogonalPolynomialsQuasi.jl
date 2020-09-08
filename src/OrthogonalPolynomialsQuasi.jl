@@ -35,7 +35,7 @@ import BandedMatrices: bandwidths
 export OrthogonalPolynomial, Normalized, orthonormalpolynomial, LanczosPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
-            ∞, Derivative, .., Inclusion, chebyshevt, chebyshevu, legendre, jacobi
+            ∞, Derivative, .., Inclusion, chebyshevt, chebyshevu, legendre, jacobi, jacobimatrix
 
 
 # ambiguity error
@@ -162,12 +162,11 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), x::Inclusion, C::Ort
     C*jacobimatrix(C)
 end
 
-function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::BroadcastQuasiVector, C::OrthogonalPolynomial)
-    axes(a,1) == axes(C,1) || throw(DimensionMismatch())
-    # re-expand in OP basis
-    broadcast(*, C * (C \ a), C)
-end
-
+# function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::BroadcastQuasiVector, C::OrthogonalPolynomial)
+#     axes(a,1) == axes(C,1) || throw(DimensionMismatch())
+#     # re-expand in OP basis
+#     broadcast(*, C * (C \ a), C)
+# end
 
 function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::AbstractAffineQuasiVector, C::OrthogonalPolynomial)
     x = axes(C,1)
