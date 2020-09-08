@@ -31,6 +31,11 @@ function LazyArrays.cache_filldata!(K::NormalizationConstant, inds)
     end
 end
 
+
+function Base.array_summary(io::IO, C::NormalizationConstant{T}, inds) where T
+    print(io, "NormalizationConstant{$T}")
+end
+
 struct Normalized{T, OPs<:AbstractQuasiMatrix{T}, NL} <: OrthogonalPolynomial{T}
     P::OPs
     scaling::NL # Q = P * Diagonal(scaling)
