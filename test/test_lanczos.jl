@@ -69,7 +69,7 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
 
         w = P * (P \ (1 .+ x))
         Q = LanczosPolynomial(w)
-        @test Q[0.1,5] ≈ Normalized(Jacobi(1,0))[0.1,5] ≈ 0.742799258138176
+        @test Q[0.1,5] ≈ Normalized(Jacobi(0,1))[0.1,5] ≈ 0.742799258138176
 
         Q = LanczosPolynomial( 1 .+ x.^2);
         R = P \ Q;
@@ -128,7 +128,7 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
     end
 
     @testset "Mixed Jacobi" begin
-        P = Jacobi(0,1/2)
+        P = Jacobi(1/2,0)
         x = axes(P,1)
         
         w = @. sqrt(1-x)
@@ -144,7 +144,7 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
     @testset "Mapped" begin
         x = Inclusion(0..1)
         w = @. sqrt(1 - x^2)
-        Q = LanczosPolynomial(w, jacobi(0,1/2,0..1))
+        Q = LanczosPolynomial(w, jacobi(1/2,0,0..1))
         # emperical from Julia
         @test Q[0.1,10] ≈ -0.936819626414421
     end

@@ -1,7 +1,7 @@
 name = "OrthogonalPolynomialsQuasi"
 uuid = "aa41a628-2c43-45df-899b-83ab96621781"
 authors = ["Sheehan Olver <solver@mac.com>"]
-version = "0.2.1"
+version = "0.3"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"

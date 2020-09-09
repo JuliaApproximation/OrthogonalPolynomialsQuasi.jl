@@ -4,15 +4,15 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
 @testset "Jacobi" begin
     @testset "basis" begin
         b,a = 0.1,0.2
-        P = Jacobi(b,a)
-        @test P[0.1,2] ≈ 0.16499999999999998
         P = Jacobi(a,b)
+        @test P[0.1,2] ≈ 0.16499999999999998
+        P = Jacobi(b,a)
         @test P[-0.1,2] ≈ -0.16499999999999998
     end
 
     @testset "operators" begin
-        b,a = 0.2,0.1
-        S = Jacobi(b,a)
+        a,b = 0.1,0.2
+        S = Jacobi(a,b)
         x = 0.1
         @test S[x,1] === 1.0
         X = jacobimatrix(S)
@@ -21,8 +21,8 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         @test S[x,2] ≈ 0.065
         @test S[x,10] ≈ 0.22071099583604945
 
-        w = JacobiWeight(b,a)
-        @test w[x] ≈ (1+x)^b * (1-x)^a
+        w = JacobiWeight(a,b)
+        @test w[x] ≈ (1-x)^a * (1+x)^b
         wS = w.*S
         @test wS[0.1,1] ≈ w[0.1]
         @test wS[0.1,1:2] ≈ w[0.1] .* S[0.1,1:2]
@@ -38,23 +38,23 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
 
     @testset "functions" begin
         b,a = 0.1,0.2
-        P = Jacobi(b,a)
+        P = Jacobi(a,b)
         D = Derivative(axes(P,1))
 
         f = P*Vcat(randn(10), Zeros(∞))
-        @test (Jacobi(b+1,a) * (Jacobi(b+1,a)\f))[0.1] ≈ f[0.1]
+        @test (Jacobi(a,b+1) * (Jacobi(a,b+1)\f))[0.1] ≈ f[0.1]
         h = 0.0000001
         @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=100h
 
-        (D*(JacobiWeight(b,a) .* f))
+        (D*(JacobiWeight(a,b) .* f))
     end
 
     @testset "expansions" begin
-        P = Jacobi(0.,1/2)
+        P = Jacobi(1/2,0.)
         x = axes(P,1)
         @test (P * (P \ exp.(x)))[0.1] ≈ exp(0.1)
 
-        wP = WeightedJacobi(0.,1/2)
+        wP = WeightedJacobi(1/2,0.)
         f = @.(sqrt(1 - x) * exp(x))
         @test wP[0.1,1:100]'*(wP[:,1:100] \ f) ≈ sqrt(1-0.1) * exp(0.1)
         @test (wP * (wP \ f))[0.1] ≈ sqrt(1-0.1) * exp(0.1)
@@ -101,23 +101,23 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
 
     @testset "Weighted Jacobi integer" begin
         S = Jacobi(true,true)
-        w̃ = JacobiWeight(true,false)
-        A = Jacobi(false,true)\(w̃ .* S)
-        @test A isa BandedMatrix
-        @test size(A) == (∞,∞)
-        @test A[1:10,1:10] ≈ (Jacobi(0.0,1.0) \ (JacobiWeight(1.0,0.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
-
-        w̄ = JacobiWeight(false,true)
-        A = Jacobi(true,false)\(w̄.*S)
+        w̃ = JacobiWeight(false,true)
+        A = Jacobi(true,false)\(w̃ .* S)
         @test A isa BandedMatrix
         @test size(A) == (∞,∞)
         @test A[1:10,1:10] ≈ (Jacobi(1.0,0.0) \ (JacobiWeight(0.0,1.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
 
-        P = Legendre()
-        w̄ = JacobiWeight(false,true)
-        @test_broken P \ (w̃ .* Jacobi(false,true))
         w̄ = JacobiWeight(true,false)
-        @test (P \ (w̃ .* Jacobi(true,false)))[1:10,1:10] == diagm(0 => ones(10), -1 => ones(9))
+        A = Jacobi(false,true)\(w̄.*S)
+        @test A isa BandedMatrix
+        @test size(A) == (∞,∞)
+        @test A[1:10,1:10] ≈ (Jacobi(0.0,1.0) \ (JacobiWeight(1.0,0.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
+
+        P = Legendre()
+        w̄ = JacobiWeight(true,false)
+        @test_broken P \ (w̃ .* Jacobi(true,false))
+        w̄ = JacobiWeight(false,true)
+        @test (P \ (w̃ .* Jacobi(false,true)))[1:10,1:10] == diagm(0 => ones(10), -1 => ones(9))
 
         w = JacobiWeight(true,true)
         A,B = (P'P),P\(w.*S)

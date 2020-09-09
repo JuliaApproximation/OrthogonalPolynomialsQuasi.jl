@@ -123,7 +123,7 @@ import ContinuumArrays: BasisLayout
     end
 
     @testset "Jacobi" begin
-        P = Normalized(Jacobi(0,1/2))
+        P = Normalized(Jacobi(1/2,0))
         # Emperical from Mathematica
         @test P[0.1,1:4] ≈ [0.728237657560985,0.41715052371131806,-0.6523500049588019,-0.5607891513201705]
     end
@@ -141,7 +141,7 @@ import ContinuumArrays: BasisLayout
         u = Q * (Q \ exp.(x))
         @test u[0.1] ≈ exp(0.1)
 
-        Q = Normalized(jacobi(0,1/2,0..1))
+        Q = Normalized(jacobi(1/2,0,0..1))
         wQ = weighted(Q)
         x = axes(Q,1)
         @test wQ[0.1,1:10] ≈ Q[0.1,1:10] * sqrt(1-(2*0.1-1))
