@@ -56,6 +56,7 @@ import Base: OneTo
     @testset "Transform" begin
         @testset "ChebyshevT" begin
             T = Chebyshev()
+            @test T == ChebyshevT() == chebyshevt()
             Tn = @inferred(T[:,OneTo(100)])
             @test grid(Tn) == chebyshevpoints(100, Val(1))
             P = factorize(Tn)
@@ -83,6 +84,8 @@ import Base: OneTo
         end
         @testset "ChebyshevU" begin
             U = ChebyshevU()
+            @test U == chebyshevu()
+            @test U ≠ ChebyshevT()
             x = axes(U,1)
             F = factorize(U[:,Base.OneTo(5)])
             @test @inferred(F \ x) ≈ [0,0.5,0,0,0]
@@ -98,6 +101,11 @@ import Base: OneTo
         T = Chebyshev()[2x .- 1,:]
         @test (T*(T\x))[0.1] ≈ 0.1
         @test (T* (T \ exp.(x)))[0.1] ≈ exp(0.1)
+        @test chebyshevt(0..1) == T
+
+        U = chebyshevu(0..1)
+        @test (U*(U\x))[0.1] ≈ 0.1
+        @test (U* (U \ exp.(x)))[0.1] ≈ exp(0.1)
     end
 
     @testset "weighted" begin

@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, ArrayLayouts, Test
+using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, ArrayLayouts, Base64, Test
 import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients, Normalized, Clenshaw, PaddedLayout, weighted
 import ContinuumArrays: BasisLayout
 
@@ -58,6 +58,11 @@ import ContinuumArrays: BasisLayout
             @test bandwidths(W) == (2,2)
             W̃ = Q' * (w .* Q)
             @test W[1:10,1:10] ≈ W[1:10,1:10]' ≈ W̃[1:10,1:10]
+        end
+
+        @testset "show" begin
+            @test stringmime("text/plain", Normalized(Legendre())) == "Normalized(Legendre{Float64}())"
+            @test summary(Normalized(Legendre()).scaling) == "NormalizationConstant{Float64}"
         end
     end
 
