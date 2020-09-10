@@ -69,7 +69,7 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
 
         w = P * (P \ (1 .+ x))
         Q = LanczosPolynomial(w)
-        @test Q[0.1,5] ≈ Normalized(Jacobi(1,0))[0.1,5] ≈ 0.742799258138176
+        @test Q[0.1,5] ≈ Normalized(Jacobi(0,1))[0.1,5] ≈ 0.742799258138176
 
         Q = LanczosPolynomial( 1 .+ x.^2);
         R = P \ Q;
@@ -100,11 +100,10 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
     @testset "Singularity" begin
         T = Chebyshev(); wT = WeightedChebyshev()
         x = axes(T,1)
-        @testset "Recover ChebyshevT" begin
-            w = wT * [1; zeros(∞)]
-            Q = LanczosPolynomial(w)
-            @test Q[0.1,1:10] ≈ Normalized(T)[0.1,1:10]
-        end
+        
+        w = wT * [1; zeros(∞)]
+        Q = LanczosPolynomial(w)
+        @test Q[0.1,1:10] ≈ Normalized(T)[0.1,1:10]
     end
 
     @testset "BigFloat" begin
@@ -126,5 +125,27 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
 
         @test (Q*[1; 2; 3; zeros(BigFloat,∞)])[0.1] ≈ -2.0643879240304606865860392675563890314480557471903856666440983048346601962485597
         @test 0.1*(Q*[1; 2; 3; zeros(BigFloat,∞)])[0.1] ≈ (Q * (X * [1; 2; 3; zeros(BigFloat,∞)]))[0.1]
+    end
+
+    @testset "Mixed Jacobi" begin
+        P = Jacobi(1/2,0)
+        x = axes(P,1)
+        
+        w = @. sqrt(1-x)
+        Q = LanczosPolynomial(w, P)
+        @test Q[0.1,1:10] ≈ Normalized(P)[0.1,1:10]
+
+        w = @. exp(x) * sqrt(1-x)
+        Q = LanczosPolynomial(w, P)
+        # emperical from Julia
+        @test Q[0.1,10] ≈ 0.5947384257847858
+    end
+
+    @testset "Mapped" begin
+        x = Inclusion(0..1)
+        w = @. sqrt(1 - x^2)
+        Q = LanczosPolynomial(w, jacobi(1/2,0,0..1))
+        # emperical from Julia
+        @test Q[0.1,10] ≈ -0.936819626414421
     end
 end

@@ -10,7 +10,7 @@ end
 
 NormalizationConstant(μ::T, dl::AbstractVector{T}, du::AbstractVector{T}) where T = NormalizationConstant{T,typeof(dl),typeof(du)}(μ, dl, du)
 
-function NormalizationConstant(P::OrthogonalPolynomial)
+function NormalizationConstant(P::AbstractQuasiMatrix)
     dl, _, du = bands(jacobimatrix(P))
     NormalizationConstant(inv(sqrt(sum(orthogonalityweight(P)))), dl, du)
 end
@@ -31,13 +31,14 @@ function LazyArrays.cache_filldata!(K::NormalizationConstant, inds)
     end
 end
 
-struct Normalized{T, OPs<:OrthogonalPolynomial{T}, NL} <: OrthogonalPolynomial{T}
+
+struct Normalized{T, OPs<:AbstractQuasiMatrix{T}, NL} <: OrthogonalPolynomial{T}
     P::OPs
     scaling::NL # Q = P * Diagonal(scaling)
 end
 
 normalizationconstant(P) = NormalizationConstant(P)
-Normalized(P::OrthogonalPolynomial{T}) where T = Normalized(P, normalizationconstant(P))
+Normalized(P::AbstractQuasiMatrix{T}) where T = Normalized(P, normalizationconstant(P))
 Normalized(Q::Normalized) = Q
 
 struct QuasiQR{T, QQ, RR} <: Factorization{T}
@@ -88,11 +89,23 @@ singularities(Q::Normalized) = singularities(Q.P)
 QuasiArrays.ApplyQuasiArray(Q::Normalized) = ApplyQuasiArray(*, arguments(ApplyLayout{typeof(*)}(), Q)...)
 
 ArrayLayouts.mul(Q::Normalized, C::AbstractArray) = ApplyQuasiArray(*, Q, C)
+
+grid(Q::SubQuasiArray{<:Any,2,<:Normalized}) = grid(view(parent(Q).P, parentindices(Q)...))
+
 # transform_ldiv(Q::Normalized, C::AbstractQuasiArray) = Q.scaling .\ (Q.P \ C)
 function transform_ldiv(Q::Normalized, C::AbstractQuasiArray)
     c = paddeddata(Q.P \ C)
     [Q.scaling[axes(c,1)] .\ c; zeros(eltype(c), ∞)]
 end
+
+function transform_ldiv(V::SubQuasiArray{<:Any,2,<:Normalized}, C::AbstractQuasiArray)
+    Q = parent(V)
+    P = Q.P
+    kr, jr = parentindices(V)
+    c = transform_ldiv(view(P, kr, jr), C)
+    Q.scaling[axes(c,1)] .\ c
+end
+
 arguments(::ApplyLayout{typeof(*)}, Q::Normalized) = Q.P, Diagonal(Q.scaling)
 _mul_arguments(Q::Normalized) = arguments(ApplyLayout{typeof(*)}(), Q)
 _mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{typeof(*)}(), Q)
@@ -124,3 +137,11 @@ _mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{type
 #     T[J[k,k] for k=1:n],
 #     T[J[k,k+1]*d[k+1]/d[k] for k=1:n-1])
 # end
+
+
+###
+# show
+###
+Base.array_summary(io::IO, C::NormalizationConstant{T}, inds) where T = print(io, "NormalizationConstant{$T}")
+show(io::IO, Q::Normalized) = print(io, "Normalized($(Q.P))")
+show(io::IO, ::MIME"text/plain", Q::Normalized) = show(io, Q)

@@ -1,7 +1,7 @@
 name = "OrthogonalPolynomialsQuasi"
 uuid = "aa41a628-2c43-45df-899b-83ab96621781"
 authors = ["Sheehan Olver <solver@mac.com>"]
-version = "0.2.1"
+version = "0.3"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -19,26 +19,28 @@ IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 QuasiArrays = "c4ea9172-b204-11e9-377d-29865faadc5c"
+SemiseparableMatrices = "f8ebbe35-cbfb-4060-bf7f-b10e4670cf57"
 
 [compat]
-ArrayLayouts = "0.4.5"
+ArrayLayouts = "0.4.6"
 BandedMatrices = "0.15.11"
 BlockArrays = "0.12.8"
 BlockBandedMatrices = "0.9"
-ContinuumArrays = "0.3"
+ContinuumArrays = "0.3.2"
 DomainSets = "0.4, 0.5"
 FastTransforms = "0.10.1"
 FillArrays = "0.9.5"
 HypergeometricFunctions = "0.3.2"
-InfiniteArrays = "0.8"
+InfiniteArrays = "0.8.2"
 InfiniteLinearAlgebra = "0.4.1"
 IntervalSets = "0.3.1, 0.4, 0.5"
-LazyArrays = "0.17.6"
+LazyArrays = "0.18.1"
 QuasiArrays = "0.3.2"
 julia = "1.5"
 
 [extras]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
+Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LazyBandedMatrices = "d7e5e226-e90b-4449-9968-0f923699bf6f"
 SemiseparableMatrices = "f8ebbe35-cbfb-4060-bf7f-b10e4670cf57"
@@ -46,4 +48,4 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "ForwardDiff", "SemiseparableMatrices", "SpecialFunctions", "LazyBandedMatrices", "ArrayLayouts"]
+test = ["Base64", "Test", "ForwardDiff", "SemiseparableMatrices", "SpecialFunctions", "LazyBandedMatrices", "ArrayLayouts"]

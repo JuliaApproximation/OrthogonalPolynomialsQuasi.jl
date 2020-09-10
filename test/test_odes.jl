@@ -2,8 +2,8 @@ using OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, BandedMatrices,
         SemiseparableMatrices, LazyArrays, ArrayLayouts, Test
 
 import QuasiArrays: MulQuasiMatrix
-import ContinuumArrays: MappedBasisLayout
-
+import ContinuumArrays: MappedBasisLayout, MappedWeightedBasisLayout
+import LazyArrays: arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout
 
 @testset "ODEs" begin
@@ -114,7 +114,7 @@ import SemiseparableMatrices: VcatAlmostBandedLayout
         P = Legendre()[2x.-1,:]
         w = JacobiWeight(1.0,1.0)
         wS = (w .* Jacobi(1.0,1.0))[2x.-1,:]
-        @test MemoryLayout(wS) isa MappedBasisLayout
+        @test MemoryLayout(wS) isa MappedWeightedBasisLayout
         f = wS*[[1,2,3]; zeros(∞)]
         g = (w .* Jacobi(1.0,1.0))*[[1,2,3]; zeros(∞)]
         @test f[0.1] ≈ g[2*0.1-1]
@@ -126,7 +126,8 @@ import SemiseparableMatrices: VcatAlmostBandedLayout
         DwS = apply(*,D,wS)
         A,B = P,arguments(DwS)[1];
         @test (A.parent\B.parent) == Eye(∞)
-        @test (P \ (DwS))[1:10,1:10] == diagm(-1 => -4:-4:-36)
+        @test (A \ B)[1:10,1:10] == diagm(-1 => ones(9))
+        @test (P \ DwS)[1:10,1:10] == diagm(-1 => -4:-4:-36)
     end
 
     @testset "Beam" begin

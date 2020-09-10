@@ -1,42 +1,99 @@
-using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, Test
-import OrthogonalPolynomialsQuasi: recurrencecoefficients
+using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, Test
+import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
 
 @testset "Jacobi" begin
     @testset "basis" begin
         b,a = 0.1,0.2
-        P = Jacobi(b,a)
-        @test P[0.1,2] ≈ 0.16499999999999998
         P = Jacobi(a,b)
+        @test P[0.1,2] ≈ 0.16499999999999998
+        P = Jacobi(b,a)
         @test P[-0.1,2] ≈ -0.16499999999999998
     end
-    @testset "operators" begin
-        b,a = 0.2,0.1
-        S = Jacobi(b,a)
-        x = 0.1
-        @test S[x,1] === 1.0
-        X = jacobimatrix(S)
-        @test X[1,1] ≈ (b^2-a^2)/((a+b)*(a+b+2))
-        @test X[2,1] ≈ 2/(a+b+2)
-        @test S[x,2] ≈ 0.065
-        @test S[x,10] ≈ 0.22071099583604945
 
-        w = JacobiWeight(b,a)
-        @test w[x] ≈ (1+x)^b * (1-x)^a
-        wS = w.*S
-        @test wS[0.1,1] ≈ w[0.1]
-        @test wS[0.1,1:2] ≈ w[0.1] .* S[0.1,1:2]
+    @testset "operators" begin
+        a,b = 0.1,0.2
+        S = Jacobi(a,b)
+
+        @testset "Jacobi" begin
+            x = 0.1
+            @test S[x,1] === 1.0
+            X = jacobimatrix(S)
+            @test X[1,1] ≈ (b^2-a^2)/((a+b)*(a+b+2))
+            @test X[2,1] ≈ 2/(a+b+2)
+            @test S[x,2] ≈ 0.065
+            @test S[x,10] ≈ 0.22071099583604945
+
+            w = JacobiWeight(a,b)
+            @test w[x] ≈ (1-x)^a * (1+x)^b
+            @test OrthogonalPolynomial(w) == S
+            wS = w.*S
+            @test wS == WeightedJacobi(a,b) == WeightedJacobi{Float64}(a,b)
+            @test wS[0.1,1] ≈ w[0.1]
+            @test wS[0.1,1:2] ≈ w[0.1] .* S[0.1,1:2]
+
+            w_A = WeightedJacobi(-1/2,0)
+            w_B =  WeightedJacobi(1/2,0)
+
+            u = w_A * [1 ; 2; zeros(∞)]
+            v = w_B * [1 ; 2; zeros(∞)]
+            @test basis(u + v) == w_A
+            @test (u+v)[0.1] == u[0.1] + v[0.1]
+        end
+
+        @testset "Clenshaw" begin
+            x = axes(S,1)
+            a = S * (S \ exp.(x))
+            A = S \ (a .* S)
+            @test (S * (A * (S \ a)))[0.1] ≈ exp(0.2)
+        end
+
+        @testset "Derivative" begin
+            a,b,c = 0.1,0.2,0.3
+            S = Jacobi(a,b)
+            x = axes(S,1)
+            D = Derivative(x)
+            u = S \ exp.(x)
+            x̃ = 0.1
+            @test ((D*S) * u)[x̃] ≈ exp(x̃)
+            @test (D * (JacobiWeight(0,b) .* S) * u)[x̃] ≈ exp(x̃) * (1+x̃)^(b-1) * (1+b+x̃)
+            @test (D * (JacobiWeight(a,0) .* S) * u)[x̃] ≈ exp(x̃) * (1-x̃)^(a-1) * (1-a-x̃)
+            @test (D * (JacobiWeight(a,b) .* S) * u)[x̃] ≈ -exp(x̃)*(1-x̃)^(-1+a)*(1+x̃)^(-1+b)*(a*(1+x̃)+(-1+x̃)*(1+b+x̃))
+            @test (D * (JacobiWeight(0,c) .* S) * u)[x̃] ≈ exp(x̃) * (1+x̃)^(c-1) * (1+c+x̃)
+            @test (D * (JacobiWeight(c,0) .* S) * u)[x̃] ≈ exp(x̃) * (1-x̃)^(c-1) * (1-c-x̃)
+            @test (D * (JacobiWeight(0,0) .* S) * u)[x̃] ≈ exp(x̃)
+        end
     end
+
     @testset "functions" begin
         b,a = 0.1,0.2
-        P = Jacobi(b,a)
+        P = Jacobi(a,b)
         D = Derivative(axes(P,1))
 
         f = P*Vcat(randn(10), Zeros(∞))
-        @test (Jacobi(b+1,a) * (Jacobi(b+1,a)\f))[0.1] ≈ f[0.1]
+        @test (Jacobi(a,b+1) * (Jacobi(a,b+1)\f))[0.1] ≈ f[0.1]
         h = 0.0000001
         @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=100h
 
-        (D*(JacobiWeight(b,a) .* f))
+        (D*(JacobiWeight(a,b) .* f))
+    end
+
+    @testset "expansions" begin
+        P = Jacobi(1/2,0.)
+        x = axes(P,1)
+        @test (P * (P \ exp.(x)))[0.1] ≈ exp(0.1)
+
+        wP = WeightedJacobi(1/2,0.)
+        f = @.(sqrt(1 - x) * exp(x))
+        @test wP[0.1,1:100]'*(wP[:,1:100] \ f) ≈ sqrt(1-0.1) * exp(0.1)
+        @test (wP * (wP \ f))[0.1] ≈ sqrt(1-0.1) * exp(0.1)
+
+        P̃ = P[affine(Inclusion(0..1), x), :]
+        x̃ = axes(P̃, 1)
+        @test (P̃ * (P̃ \ exp.(x̃)))[0.1] ≈ exp(0.1)
+        wP̃ = wP[affine(Inclusion(0..1), x), :]
+        f̃ = @.(sqrt(1 - x̃) * exp(x̃))
+        @test wP̃[0.1,1:100]'*(wP̃[:,1:100] \ f̃) ≈ sqrt(1-0.1) * exp(0.1)
+        @test (wP̃ * (wP̃ \ f̃))[0.1] ≈ sqrt(1-0.1) * exp(0.1)
     end
 
     @testset "trivial weight" begin
@@ -72,23 +129,23 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
 
     @testset "Weighted Jacobi integer" begin
         S = Jacobi(true,true)
-        w̃ = JacobiWeight(true,false)
-        A = Jacobi(false,true)\(w̃ .* S)
-        @test A isa BandedMatrix
-        @test size(A) == (∞,∞)
-        @test A[1:10,1:10] ≈ (Jacobi(0.0,1.0) \ (JacobiWeight(1.0,0.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
-
-        w̄ = JacobiWeight(false,true)
-        A = Jacobi(true,false)\(w̄.*S)
+        w̃ = JacobiWeight(false,true)
+        A = Jacobi(true,false)\(w̃ .* S)
         @test A isa BandedMatrix
         @test size(A) == (∞,∞)
         @test A[1:10,1:10] ≈ (Jacobi(1.0,0.0) \ (JacobiWeight(0.0,1.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
 
-        P = Legendre()
-        w̄ = JacobiWeight(false,true)
-        @test_broken P \ (w̃ .* Jacobi(false,true))
         w̄ = JacobiWeight(true,false)
-        @test (P \ (w̃ .* Jacobi(true,false)))[1:10,1:10] == diagm(0 => ones(10), -1 => ones(9))
+        A = Jacobi(false,true)\(w̄.*S)
+        @test A isa BandedMatrix
+        @test size(A) == (∞,∞)
+        @test A[1:10,1:10] ≈ (Jacobi(0.0,1.0) \ (JacobiWeight(1.0,0.0) .* Jacobi(1.0,1.0)))[1:10,1:10]
+
+        P = Legendre()
+        w̄ = JacobiWeight(true,false)
+        @test_broken P \ (w̃ .* Jacobi(true,false))
+        w̄ = JacobiWeight(false,true)
+        @test (P \ (w̃ .* Jacobi(false,true)))[1:10,1:10] == diagm(0 => ones(10), -1 => ones(9))
 
         w = JacobiWeight(true,true)
         A,B = (P'P),P\(w.*S)
@@ -187,5 +244,21 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients
         D = Derivative(axes(P,1))
         # applied(*,D,P) |> typeof
         # MemoryLayout(typeof(D))
+    end
+
+    @testset "Jacobi Clenshaw" begin
+        P = Jacobi(0.1,0.2)
+        x = axes(P,1)
+        a = P * (P \ exp.(x))
+        @test a[0.1] ≈ exp(0.1)
+        M = P \ (a .* P);
+        u = [randn(1000); zeros(∞)];
+        @test (P * (M*u))[0.1] ≈ (P*u)[0.1]*exp(0.1)
+    end
+
+    @testset "mapped" begin
+        R = jacobi(0,1/2,0..1) \ jacobi(0,-1/2,0..1)
+        R̃ = Jacobi(0,1/2) \ Jacobi(0,-1/2)
+        @test R[1:10,1:10] == R̃[1:10,1:10]
     end
 end
