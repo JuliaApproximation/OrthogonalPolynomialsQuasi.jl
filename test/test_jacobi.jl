@@ -13,27 +13,55 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
     @testset "operators" begin
         a,b = 0.1,0.2
         S = Jacobi(a,b)
-        x = 0.1
-        @test S[x,1] === 1.0
-        X = jacobimatrix(S)
-        @test X[1,1] ≈ (b^2-a^2)/((a+b)*(a+b+2))
-        @test X[2,1] ≈ 2/(a+b+2)
-        @test S[x,2] ≈ 0.065
-        @test S[x,10] ≈ 0.22071099583604945
 
-        w = JacobiWeight(a,b)
-        @test w[x] ≈ (1-x)^a * (1+x)^b
-        wS = w.*S
-        @test wS[0.1,1] ≈ w[0.1]
-        @test wS[0.1,1:2] ≈ w[0.1] .* S[0.1,1:2]
+        @testset "Jacobi" begin
+            x = 0.1
+            @test S[x,1] === 1.0
+            X = jacobimatrix(S)
+            @test X[1,1] ≈ (b^2-a^2)/((a+b)*(a+b+2))
+            @test X[2,1] ≈ 2/(a+b+2)
+            @test S[x,2] ≈ 0.065
+            @test S[x,10] ≈ 0.22071099583604945
 
-        w_A = WeightedJacobi(-1/2,0)
-        w_B =  WeightedJacobi(1/2,0)
+            w = JacobiWeight(a,b)
+            @test w[x] ≈ (1-x)^a * (1+x)^b
+            @test OrthogonalPolynomial(w) == S
+            wS = w.*S
+            @test wS == WeightedJacobi(a,b) == WeightedJacobi{Float64}(a,b)
+            @test wS[0.1,1] ≈ w[0.1]
+            @test wS[0.1,1:2] ≈ w[0.1] .* S[0.1,1:2]
 
-        u = w_A * [1 ; 2; zeros(∞)]
-        v = w_B * [1 ; 2; zeros(∞)]
-        @test basis(u + v) == w_A
-        @test (u+v)[0.1] == u[0.1] + v[0.1]
+            w_A = WeightedJacobi(-1/2,0)
+            w_B =  WeightedJacobi(1/2,0)
+
+            u = w_A * [1 ; 2; zeros(∞)]
+            v = w_B * [1 ; 2; zeros(∞)]
+            @test basis(u + v) == w_A
+            @test (u+v)[0.1] == u[0.1] + v[0.1]
+        end
+
+        @testset "Clenshaw" begin
+            x = axes(S,1)
+            a = S * (S \ exp.(x))
+            A = S \ (a .* S)
+            @test (S * (A * (S \ a)))[0.1] ≈ exp(0.2)
+        end
+
+        @testset "Derivative" begin
+            a,b,c = 0.1,0.2,0.3
+            S = Jacobi(a,b)
+            x = axes(S,1)
+            D = Derivative(x)
+            u = S \ exp.(x)
+            x̃ = 0.1
+            @test ((D*S) * u)[x̃] ≈ exp(x̃)
+            @test (D * (JacobiWeight(0,b) .* S) * u)[x̃] ≈ exp(x̃) * (1+x̃)^(b-1) * (1+b+x̃)
+            @test (D * (JacobiWeight(a,0) .* S) * u)[x̃] ≈ exp(x̃) * (1-x̃)^(a-1) * (1-a-x̃)
+            @test (D * (JacobiWeight(a,b) .* S) * u)[x̃] ≈ -exp(x̃)*(1-x̃)^(-1+a)*(1+x̃)^(-1+b)*(a*(1+x̃)+(-1+x̃)*(1+b+x̃))
+            @test (D * (JacobiWeight(0,c) .* S) * u)[x̃] ≈ exp(x̃) * (1+x̃)^(c-1) * (1+c+x̃)
+            @test (D * (JacobiWeight(c,0) .* S) * u)[x̃] ≈ exp(x̃) * (1-x̃)^(c-1) * (1-c-x̃)
+            @test (D * (JacobiWeight(0,0) .* S) * u)[x̃] ≈ exp(x̃)
+        end
     end
 
     @testset "functions" begin

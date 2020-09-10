@@ -98,7 +98,7 @@ jacobi(a,b, d::AbstractInterval{T}) where T = Jacobi(a,b)[affine(d,ChebyshevInte
 
 Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
 
-OrthogonalPolynomial(w::JacobiWeight) = Jacobi(P.a, P.b)
+OrthogonalPolynomial(w::JacobiWeight) = Jacobi(w.a, w.b)
 orthogonalityweight(P::Jacobi) = JacobiWeight(P.a, P.b)
 
 const WeightedJacobi{T} = WeightedBasis{T,<:JacobiWeight,<:Jacobi}
@@ -203,7 +203,7 @@ end
 function \(A::Jacobi, B::Jacobi)
     T = promote_type(eltype(A), eltype(B))
     a,b = B.a,B.b
-    if A.a == a && A.b == b
+    if A.a ≈ a && A.b ≈ b
         Eye{T}(∞)
     elseif isone(-a-b) && A.a == a && A.b == b+1
         _BandedMatrix(Vcat((((0:∞) .+ a)./((1:2:∞) .+ (a+b)))',
@@ -290,7 +290,7 @@ end
         A = _BandedMatrix((b:∞)', ∞, 0,0)
         ApplyQuasiMatrix(*, JacobiWeight(w.a,b-1) .* Jacobi(a+1,b-1), A)
     elseif iszero(w.b) && w.a == a #L_6^t
-        A = _BandedMatrix((a:∞)', ∞, 0,0)
+        A = _BandedMatrix(-(a:∞)', ∞, 0,0)
         ApplyQuasiMatrix(*, JacobiWeight(a-1,w.b) .* Jacobi(a-1,b+1), A)
     elseif w.a == a && w.b == b # L_1^t
         A = _BandedMatrix((-2*(1:∞))', ∞, 1,-1)
@@ -301,6 +301,12 @@ end
         C1 = J \ Jacobi(a+1, b-1)
         C2 = J \ Jacobi(a,b)
         ApplyQuasiMatrix(*, JacobiWeight(w.a,w.b-1) .* J, (w.b-b) * C2 + C1 * W)
+    elseif iszero(w.b)
+        W = (JacobiWeight(a-1, w.b) .* Jacobi(a-1, b+1)) \ (D * (JacobiWeight(a,w.b) .* S))
+        J = Jacobi(a,b+1) # range Jacobi
+        C1 = J \ Jacobi(a-1, b+1)
+        C2 = J \ Jacobi(a,b)
+        ApplyQuasiMatrix(*, JacobiWeight(w.a-1,w.b) .* J, -(w.a-a) * C2 + C1 * W)
     else
         error("Not implemented")
     end
