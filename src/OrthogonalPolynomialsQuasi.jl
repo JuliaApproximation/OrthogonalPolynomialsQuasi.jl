@@ -35,7 +35,7 @@ import BandedMatrices: bandwidths
 export OrthogonalPolynomial, Normalized, orthonormalpolynomial, LanczosPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
-            ∞, Derivative, .., Inclusion, chebyshevt, chebyshevu, legendre, jacobi, jacobimatrix
+            ∞, Derivative, .., Inclusion, chebyshevt, chebyshevu, legendre, jacobi, jacobimatrix, jacobiweight, legendreweight, chebyshevtweight, chebyshevuweight
 
 
 # ambiguity error

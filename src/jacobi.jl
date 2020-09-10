@@ -11,6 +11,7 @@ struct JacobiWeight{T} <: AbstractJacobiWeight{T}
 end
 
 JacobiWeight(a::V, b::T) where {T,V} = JacobiWeight{promote_type(T,V)}(a,b)
+jacobiweight(a,b, d::AbstractInterval{T}) where T = JacobiWeight(a,b)[affine(d,ChebyshevInterval{T}())]
 
 ==(A::JacobiWeight, B::JacobiWeight) = A.b == B.b && A.a == B.a
 
@@ -27,11 +28,14 @@ end
 
 struct LegendreWeight{T} <: AbstractJacobiWeight{T} end
 LegendreWeight() = LegendreWeight{Float64}()
+legendreweight(d::AbstractInterval{T}) where T = LegendreWeight{float(T)}()[affine(d,ChebyshevInterval{T}())]
 
 function getindex(w::LegendreWeight{T}, x::Number) where T
     x ∈ axes(w,1) || throw(BoundsError())
     one(T)
 end
+
+getproperty(w::LegendreWeight{T}, ::Symbol) where T = zero(T)
 
 sum(::LegendreWeight{T}) where T = 2one(T)
 
@@ -39,7 +43,7 @@ _weighted(::LegendreWeight, P) = P
 
 # support auto-basis determination
 
-singularities(::AffineQuasiVector{T,T,Inclusion{T,ChebyshevInterval{T}}}) where T = LegendreWeight{T}()
+singularities(a::AbstractAffineQuasiVector) = singularities(a.x)
 singularitiesbroadcast(_, L::LegendreWeight) = L # Assume we stay smooth
 singularitiesbroadcast(::typeof(exp), L::LegendreWeight) = L
 singularitiesbroadcast(::typeof(Base.literal_pow), ::typeof(^), L::LegendreWeight, ::Val) = L
@@ -66,7 +70,7 @@ singularitiesbroadcast(::typeof(*), a::JacobiWeight, ::LegendreWeight) = a
 abstract type AbstractJacobi{T} <: OrthogonalPolynomial{T} end
 
 singularities(::AbstractJacobi{T}) where T = LegendreWeight{T}()
-singularities(::Inclusion{T,<:ChebyshevInterval}) where T = LegendreWeight{T}()
+singularities(::Inclusion{T,<:AbstractInterval}) where T = LegendreWeight{T}()
 singularities(d::Inclusion{T,<:Interval}) where T = LegendreWeight{T}()[affine(d,ChebyshevInterval{T}())]
 
 struct Legendre{T} <: AbstractJacobi{T} end

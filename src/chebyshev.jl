@@ -44,6 +44,9 @@ chebyshevt(d::AbstractInterval{T}) where T = ChebyshevT{float(T)}()[affine(d, Ch
 chebyshevu() = ChebyshevU()
 chebyshevu(d::AbstractInterval{T}) where T = ChebyshevU{float(T)}()[affine(d, ChebyshevInterval{T}()), :]
 
+chebysevtweight(d::AbstractInterval{T}) where T = ChebyshevTWeight{float(T)}[affine(d,ChebyshevInterval{T}())]
+chebysevuweight(d::AbstractInterval{T}) where T = ChebyshevUWeight{float(T)}[affine(d,ChebyshevInterval{T}())]
+
 ==(a::Chebyshev{kind}, b::Chebyshev{kind}) where kind = true
 ==(a::Chebyshev, b::Chebyshev) = false
 ==(::Chebyshev, ::Jacobi) = false
