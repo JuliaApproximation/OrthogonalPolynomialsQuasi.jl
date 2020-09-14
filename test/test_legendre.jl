@@ -1,5 +1,5 @@
 using OrthogonalPolynomialsQuasi, LazyArrays, QuasiArrays, Test
-import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix, bands
+import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix, bands, Clenshaw
 import QuasiArrays: MulQuasiArray
 
 @testset "Legendre" begin
@@ -33,6 +33,13 @@ import QuasiArrays: MulQuasiArray
 
         D = Derivative(axes(P,1))
         @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Ones}
+
+        P = Legendre()
+        x = axes(P,1)
+        w = x .+ x.^2 .+ 1
+        W = P \ (w .* P)
+        @test W isa Clenshaw
+        @test W * [1; 2; zeros(∞)] ≈ P \ (w .* (P[:,1:2] * [1,2]))
     end
 
     @testset "test on functions" begin

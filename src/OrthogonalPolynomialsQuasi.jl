@@ -49,6 +49,8 @@ sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
     (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockRange{1,R}, Vararg{Any}}) where R =
     (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
+@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockIndex{1}, Vararg{Any}}) =
+    (inds[1][I[1]], to_indices(A, _maybetail(inds), tail(I))...)
 
 cardinality(::FullSpace{<:AbstractFloat}) = ℵ₁
 cardinality(::EuclideanDomain) = ℵ₁

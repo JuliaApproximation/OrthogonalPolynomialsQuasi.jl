@@ -58,6 +58,12 @@ import ContinuumArrays: BasisLayout
             @test bandwidths(W) == (2,2)
             W̃ = Q' * (w .* Q)
             @test W[1:10,1:10] ≈ W[1:10,1:10]' ≈ W̃[1:10,1:10]
+
+            P = Normalized(Legendre())
+            x = axes(P,1)
+            w = x .+ x.^2 .+ 1 # w[x] == exp(x)
+            W = P \ (w .* P)
+            @test W isa Clenshaw
         end
 
         @testset "show" begin

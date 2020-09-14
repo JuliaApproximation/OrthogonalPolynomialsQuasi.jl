@@ -1,7 +1,7 @@
 name = "OrthogonalPolynomialsQuasi"
 uuid = "aa41a628-2c43-45df-899b-83ab96621781"
 authors = ["Sheehan Olver <solver@mac.com>"]
-version = "0.3"
+version = "0.3.0"
 
 [deps]
 ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
@@ -25,7 +25,7 @@ ArrayLayouts = "0.4.6"
 BandedMatrices = "0.15.11"
 BlockArrays = "0.12.8"
 BlockBandedMatrices = "0.9"
-ContinuumArrays = "0.3.2"
+ContinuumArrays = "0.3.3"
 DomainSets = "0.4, 0.5"
 FastTransforms = "0.10.1"
 FillArrays = "0.9.5"

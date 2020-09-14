@@ -303,4 +303,3 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<
     w,Q = arguments(wQ)
     (w .* P) * Clenshaw(Q * c, P)
 end
-
