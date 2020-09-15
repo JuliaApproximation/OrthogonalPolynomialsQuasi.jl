@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, Test
+using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, FastGaussQuadrature, Test
 import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
 
 @testset "Jacobi" begin
@@ -8,6 +8,18 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         @test P[0.1,2] ≈ 0.16499999999999998
         P = Jacobi(b,a)
         @test P[-0.1,2] ≈ -0.16499999999999998
+    end
+
+    @testset "orthogonality" begin
+        a,b = 0.1,0.2
+        x,w = gaussjacobi(3,a,b)
+        P = Jacobi(a,b)
+
+        M = P[x,1:3]'Diagonal(w)*P[x,1:3]
+        @test M ≈ Diagonal(M)
+        x,w = gaussradau(3,a,b)
+        M = P[x,1:3]'Diagonal(w)*P[x,1:3]
+        @test M ≈ Diagonal(M)
     end
 
     @testset "operators" begin

@@ -20,12 +20,7 @@ function getindex(w::JacobiWeight, x::Number)
     (1-x)^w.a * (1+x)^w.b
 end
 
-function sum(P::JacobiWeight)
-    b,a = P.b,P.a
-    ab = a + b
-    exp((ab+1)*log(convert(typeof(ab),2)) + loggamma(a+1)+loggamma(b+1)-loggamma(2+ab) )
-end
-
+sum(P::JacobiWeight) = jacobimoment(P.a, P.b)
 
 struct LegendreWeight{T} <: AbstractJacobiWeight{T} end
 LegendreWeight() = LegendreWeight{Float64}()
