@@ -22,7 +22,8 @@ end
 
 function sum(P::JacobiWeight)
     b,a = P.b,P.a
-    _₂F₁(1, -a, 2+b, -1)/(1+b) + _₂F₁(1, -b, 2+a, -1)/(1+a)
+    ab = a + b
+    exp((ab+1)*log(convert(typeof(ab),2)) + loggamma(a+1)+loggamma(b+1)-loggamma(2+ab) )
 end
 
 
