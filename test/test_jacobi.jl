@@ -20,6 +20,11 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         x,w = gaussradau(3,a,b)
         M = P[x,1:3]'Diagonal(w)*P[x,1:3]
         @test M ≈ Diagonal(M)
+
+        w = JacobiWeight(a,b)
+        w_2 = sqrt.(w)
+        @test w_2 .^ 2 == w
+        @test (P' * (w .* P))[1:3,1:3] ≈ (P' * (w .* P))[1:3,1:3] ≈ ((w_2 .* P)'*(w_2 .* P))[1:3,1:3] ≈ M
     end
 
     @testset "operators" begin

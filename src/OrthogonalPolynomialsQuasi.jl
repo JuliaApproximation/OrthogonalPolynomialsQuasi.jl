@@ -1,6 +1,6 @@
 module OrthogonalPolynomialsQuasi
 using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, BlockArrays,
-    IntervalSets, DomainSets, ArrayLayouts,
+    IntervalSets, DomainSets, ArrayLayouts, SpecialFunctions,
     InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra, FastGaussQuadrature, FastTransforms
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
