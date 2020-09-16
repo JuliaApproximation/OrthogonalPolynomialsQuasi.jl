@@ -233,6 +233,8 @@ end
 Clenshaw(c::AbstractVector{T}, A::AbstractVector, B::AbstractVector, C::AbstractVector, X::AbstractMatrix{T}, p0::T) where T = 
     Clenshaw{T,typeof(c),typeof(A),typeof(B),typeof(C),typeof(X)}(c, A, B, C, X, p0)
 
+Clenshaw(c::Number, A, B, C, X, p) = Clenshaw([c], A, B, C, X, p)
+
 function Clenshaw(a::AbstractQuasiVector, X::AbstractQuasiMatrix)
     P,c = arguments(a)
     Clenshaw(paddeddata(c), recurrencecoefficients(P)..., jacobimatrix(X), _p0(P))
@@ -302,4 +304,11 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), a::Expansion{<:Any,<
     wQ,c = arguments(a)
     w,Q = arguments(wQ)
     (w .* P) * Clenshaw(Q * c, P)
+end
+
+function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), wv::BroadcastQuasiVector{<:Any,typeof(*),<:Tuple{Weight,AffineQuasiVector}}, P::OrthogonalPolynomial)
+    w,v = arguments(wv)
+    Q = OrthogonalPolynomial(w)
+    a = (w .* Q) * (Q \ v)
+    a .* P
 end
