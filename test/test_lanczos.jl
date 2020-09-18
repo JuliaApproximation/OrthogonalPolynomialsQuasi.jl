@@ -101,9 +101,12 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
         T = Chebyshev(); wT = WeightedChebyshev()
         x = axes(T,1)
         
-        w = wT * [1; zeros(∞)]
+        w = wT * [1; zeros(∞)];
         Q = LanczosPolynomial(w)
         @test Q[0.1,1:10] ≈ Normalized(T)[0.1,1:10]
+
+        @test (Q'*(ChebyshevTWeight() .* Q))[1:10,1:10] ≈ I
+        @test (Q'*(w .* Q))[1:10,1:10] ≈ I
     end
 
     @testset "BigFloat" begin
@@ -147,5 +150,24 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
         Q = LanczosPolynomial(w, jacobi(1/2,0,0..1))
         # emperical from Julia
         @test Q[0.1,10] ≈ -0.936819626414421
+    end
+
+    @testset "orthogonality (#68)" begin
+        α = -0.5
+        β = -0.5
+        w = JacobiWeight(α,β)
+        p = LanczosPolynomial(w)
+        x = axes(w,1)
+        b = 2
+        wP = WeightedJacobi(α+1,β+1)
+        ϕw = wP * (Jacobi(α+1,β+1) \ (b .- x))
+        pϕ = LanczosPolynomial(ϕw)
+        @test (pϕ.P' * (ϕw .* pϕ.P))[1:3,1:3] ≈ [2 -0.5 0; -0.5 2 -0.5; 0 -0.5 2]
+        @test (pϕ' * (ϕw .* pϕ))[1:5,1:5] ≈ I
+
+        ϕw = JacobiWeight(α+1,β+1) .* (b .- x)
+        pϕ = LanczosPolynomial(ϕw)
+        @test (pϕ.P' * (ϕw .* pϕ.P))[1:3,1:3] ≈ [2 -0.5 0; -0.5 2 -0.5; 0 -0.5 2]
+        @test (pϕ' * (ϕw .* pϕ))[1:5,1:5] ≈ I
     end
 end

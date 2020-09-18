@@ -134,9 +134,11 @@ import ContinuumArrays: BasisLayout
     end
 
     @testset "Jacobi" begin
-        P = Normalized(Jacobi(1/2,0))
+        Q = Normalized(Jacobi(1/2,0))
         # Emperical from Mathematica
-        @test P[0.1,1:4] ≈ [0.728237657560985,0.41715052371131806,-0.6523500049588019,-0.5607891513201705]
+        @test Q[0.1,1:4] ≈ [0.728237657560985,0.41715052371131806,-0.6523500049588019,-0.5607891513201705]
+        w = JacobiWeight(1/2,0)
+        @test (Q'*(w .* Q))[1:10,1:10] ≈ I
     end
 
     @testset "Mapped" begin
