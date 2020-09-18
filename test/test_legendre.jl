@@ -3,6 +3,13 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix, bands, 
 import QuasiArrays: MulQuasiArray
 
 @testset "Legendre" begin
+    @testset "LegendreWeight" begin
+        w = LegendreWeight()
+        @test w.^2 isa LegendreWeight
+        @test sqrt.(w) isa LegendreWeight
+        @test w .* w isa LegendreWeight
+    end
+
     @testset "basics" begin
         P = Legendre()
         @test axes(P) == (Inclusion(ChebyshevInterval()),Base.OneTo(∞))

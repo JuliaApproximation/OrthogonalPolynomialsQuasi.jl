@@ -2,6 +2,16 @@ using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, Q
 import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
 
 @testset "Jacobi" begin
+    @testset "JacobiWeight" begin
+        a,b = 0.1,0.2
+        w = JacobiWeight(a,b)
+        @test w.^2 == JacobiWeight(2a,2b)
+        @test sqrt.(w) == JacobiWeight(a/2,b/2)
+        @test JacobiWeight(0.2,0.3) .* w == JacobiWeight(a+0.2,b+0.3)
+        @test LegendreWeight() .* w == w .* LegendreWeight() == w
+        @test ChebyshevWeight() .* w == w .* ChebyshevWeight() == JacobiWeight(a-1/2,b-1/2)
+    end
+
     @testset "basis" begin
         b,a = 0.1,0.2
         P = Jacobi(a,b)
@@ -25,6 +35,8 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         w_2 = sqrt.(w)
         @test w_2 .^ 2 == w
         @test (P' * (w .* P))[1:3,1:3] ≈ (P' * (w .* P))[1:3,1:3] ≈ ((w_2 .* P)'*(w_2 .* P))[1:3,1:3] ≈ M
+
+        @test (Jacobi(0,0)'Jacobi(0,0))[1:10,1:10] ≈ (Legendre()'Legendre())[1:10,1:10]
     end
 
     @testset "operators" begin
@@ -62,6 +74,9 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
             a = S * (S \ exp.(x))
             A = S \ (a .* S)
             @test (S * (A * (S \ a)))[0.1] ≈ exp(0.2)
+            a = S * [1; Zeros(∞)]
+            A = S \ (a .* S)
+            @test A[1:10,1:10] == I
         end
 
         @testset "Derivative" begin

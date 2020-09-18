@@ -51,7 +51,7 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(*), ::LegendreWeight{T}, ::Legend
 
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(sqrt), w::LegendreWeight{T}) where T = w
 
-broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(Base.literal_pow), ::typeof(^), w::LegendreWeight, v::Val) = w
+broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(Base.literal_pow), ::Base.RefValue{typeof(^)}, w::LegendreWeight, ::Base.RefValue{Val{k}}) where k = w
 
 # support auto-basis determination
 

@@ -35,7 +35,7 @@ import BlockArrays: blockedrange, _BlockedUnitRange, unblock, _BlockArray
 import BandedMatrices: bandwidths
 
 export OrthogonalPolynomial, Normalized, orthonormalpolynomial, LanczosPolynomial, Hermite, Jacobi, Legendre, Chebyshev, ChebyshevT, ChebyshevU, ChebyshevInterval, Ultraspherical, Fourier,
-            HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight,
+            HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight, LegendreWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
             ∞, Derivative, .., Inclusion, chebyshevt, chebyshevu, legendre, jacobi, jacobimatrix, jacobiweight, legendreweight, chebyshevtweight, chebyshevuweight
 
