@@ -25,7 +25,7 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 ArrayLayouts = "0.4.6"
 BandedMatrices = "0.15.11"
 BlockArrays = "0.12.8"
-BlockBandedMatrices = "0.9"
+BlockBandedMatrices = "0.9.3"
 ContinuumArrays = "0.3.3"
 DomainSets = "0.4, 0.5"
 FastGaussQuadrature = "0.4.3"
@@ -48,4 +48,4 @@ SemiseparableMatrices = "f8ebbe35-cbfb-4060-bf7f-b10e4670cf57"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Base64", "Test", "ForwardDiff", "SemiseparableMatrices", "SpecialFunctions", "LazyBandedMatrices", "ArrayLayouts"]
+test = ["Base64", "Test", "ForwardDiff", "SemiseparableMatrices", "LazyBandedMatrices", "ArrayLayouts"]

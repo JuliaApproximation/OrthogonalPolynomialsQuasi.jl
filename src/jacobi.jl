@@ -159,7 +159,7 @@ function legendre_massmatrix(Ac, B)
     (P\A)'*legendre_massmatrix(eltype(P))*(P\B)
 end
 
-@simplify *(A::QuasiAdjoint{<:Any,<:Legendre}, B::Legendre) = legendre_massmatrix(A, Ac)
+@simplify *(Ac::QuasiAdjoint{<:Any,<:Legendre}, B::Legendre) = legendre_massmatrix(Ac, B)
 @simplify *(Ac::QuasiAdjoint{<:Any,<:AbstractJacobi}, B::AbstractJacobi) = legendre_massmatrix(Ac,B)
 
 # 2^{a + b + 1} {\Gamma(n+a+1) \Gamma(n+b+1) \over (2n+a+b+1) \Gamma(n+a+b+1) n!}.
