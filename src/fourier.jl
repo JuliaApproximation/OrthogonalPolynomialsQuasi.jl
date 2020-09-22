@@ -11,6 +11,38 @@ function getindex(F::Fourier{T}, x::Real, j::Int)::T where T
     sin((j÷2)*x)
 end
 
+### transform
+checkpoints(::Fourier{T}) where T = T[1.223972,3.14,5.83273484]
+
+fouriergrid(T, n) = convert(T,π)*collect(0:2:2n-2)/n
+
+function grid(Pn::SubQuasiArray{T,2,<:Fourier,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T
+    kr,jr = parentindices(Pn)
+    n = maximum(jr)
+    fouriergrid(T, n)
+end
+
+struct FourierTransformFactorization{T,Plan} <: Factorization{T}
+    plan::Plan
+end
+
+size(F::FourierTransformFactorization, _) = size(F.plan,1)
+size(F::FourierTransformFactorization) = (size(F.plan,1),size(F.plan,1))
+grid(F::FourierTransformFactorization{T}) where T = fouriergrid(T, size(F,1))
+
+FourierTransformFactorization{T}(p::Plan) where {T,Plan} = FourierTransformFactorization{T,Plan}(p)
+FourierTransformFactorization{T}(n::Int) where T = FourierTransformFactorization{T}(FFTW.plan_r2r!(Array{T}(undef, n), FFTW.R2HC))
+factorize(L::SubQuasiArray{T,2,<:Fourier,<:Tuple{<:Inclusion,<:OneTo}}) where T =
+    FourierTransformFactorization{T}(size(L,2))
+
+function \(F::FourierTransformFactorization{T}, b::AbstractQuasiVector) where T
+    n = size(F,1)
+    c = lmul!(convert(T,2)/n, F.plan * convert(Array, b[grid(F)]))
+    c[1] /= 2
+    iseven(n) && (c[n÷2+1] /= 2)
+    negateeven!(reverseeven!(interlace!(c,1)))
+end
+
 import BlockBandedMatrices: _BlockSkylineMatrix
 
 @simplify function *(A::QuasiAdjoint{<:Any,<:Fourier}, B::Fourier)

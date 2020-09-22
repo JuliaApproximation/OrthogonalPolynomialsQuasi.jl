@@ -23,6 +23,14 @@ import QuasiArrays: MulQuasiArray
         @test u[0.1] == 1 + 2sin(0.1) + 3cos(0.1)
     end
 
+    @testset "Transform" begin
+        F = Fourier()
+        θ = axes(F,1)
+        F[:,Base.OneTo(5)] \ cos.(θ)
+
+        # F \ cos.(θ)
+    end
+
     @testset "Derivative" begin
         F = Fourier()
         @test F\F === Eye((axes(F,2),))
