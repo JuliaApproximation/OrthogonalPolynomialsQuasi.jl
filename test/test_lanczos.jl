@@ -150,6 +150,8 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
         Q = LanczosPolynomial(w, jacobi(1/2,0,0..1))
         # emperical from Julia
         @test Q[0.1,10] ≈ -0.936819626414421
+
+        Q \ x
     end
 
     @testset "orthogonality (#68)" begin
