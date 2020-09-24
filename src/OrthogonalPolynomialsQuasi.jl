@@ -80,8 +80,10 @@ function chop!(c::AbstractVector, tol::Real)
     c
 end
 
+setaxis(c, ::OneToInf) = c
+setaxis(c, ax::BlockedUnitRange) = PseudoBlockVector(c, (ax,))
 
-function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
+function adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
     T = promote_type(U,V)
 
     r = checkpoints(A)
@@ -103,7 +105,7 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
         ##TODO: how to do scaling for unnormalized bases like Jacobi?
         if maximum(abs,@views(cfs[n-2:end])) < 10tol*maxabsc &&
                 all(norm.(un[r] - fr, 1) .< tol * n * maxabsfr*1000)
-            return [chop!(cfs, tol); zeros(T,∞)]
+            return setaxis([chop!(cfs, tol); zeros(T,∞)], axes(A,2))
         end
     end
     error("Have not converged")

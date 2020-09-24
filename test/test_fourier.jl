@@ -26,9 +26,10 @@ import QuasiArrays: MulQuasiArray
     @testset "Transform" begin
         F = Fourier()
         θ = axes(F,1)
-        F[:,Base.OneTo(5)] \ cos.(θ)
-
-        # F \ cos.(θ)
+        @test F[:,Base.OneTo(5)] \ cos.(θ) ≈ [0,0,1,0,0]
+        @test (F \ cos.(θ))[Block(2)] ≈ [0,1]
+        u = F * (F \ exp.(cos.(θ)))
+        @test u[0.1] ≈ exp(cos(0.1))
     end
 
     @testset "Derivative" begin
