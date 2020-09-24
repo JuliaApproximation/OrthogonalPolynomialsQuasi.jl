@@ -22,26 +22,31 @@ function grid(Pn::SubQuasiArray{T,2,<:Fourier,<:Tuple{<:Inclusion,<:AbstractUnit
     fouriergrid(T, n)
 end
 
-struct FourierTransformFactorization{T,Plan} <: Factorization{T}
+"""
+Gives a shuffled version of the real FFT, with order
+1,sin(θ),cos(θ),sin(2θ)…
+"""
+struct ShuffledRFFT{T,Plan} <: Factorization{T}
     plan::Plan
 end
 
-size(F::FourierTransformFactorization, _) = size(F.plan,1)
-size(F::FourierTransformFactorization) = (size(F.plan,1),size(F.plan,1))
-grid(F::FourierTransformFactorization{T}) where T = fouriergrid(T, size(F,1))
+size(F::ShuffledRFFT, _) = size(F.plan,1)
+size(F::ShuffledRFFT) = (size(F.plan,1),size(F.plan,1))
 
-FourierTransformFactorization{T}(p::Plan) where {T,Plan} = FourierTransformFactorization{T,Plan}(p)
-FourierTransformFactorization{T}(n::Int) where T = FourierTransformFactorization{T}(FFTW.plan_r2r!(Array{T}(undef, n), FFTW.R2HC))
-factorize(L::SubQuasiArray{T,2,<:Fourier,<:Tuple{<:Inclusion,<:OneTo}}) where T =
-    FourierTransformFactorization{T}(size(L,2))
+ShuffledRFFT{T}(p::Plan) where {T,Plan} = ShuffledRFFT{T,Plan}(p)
+ShuffledRFFT{T}(n::Int) where T = ShuffledRFFT{T}(FFTW.plan_r2r!(Array{T}(undef, n), FFTW.R2HC))
 
-function \(F::FourierTransformFactorization{T}, b::AbstractQuasiVector) where T
+
+function *(F::ShuffledRFFT{T}, b::AbstractVector) where T
     n = size(F,1)
-    c = lmul!(convert(T,2)/n, F.plan * convert(Array, b[grid(F)]))
+    c = lmul!(convert(T,2)/n, F.plan * convert(Array, b))
     c[1] /= 2
     iseven(n) && (c[n÷2+1] /= 2)
     negateeven!(reverseeven!(interlace!(c,1)))
 end
+
+factorize(L::SubQuasiArray{T,2,<:Fourier,<:Tuple{<:Inclusion,<:OneTo}}) where T =
+    TransformFactorization(grid(L), ShuffledRFFT{T}(size(L,2)))
 
 import BlockBandedMatrices: _BlockSkylineMatrix
 
