@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, FastTransforms, ArrayLayouts, Test
+using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, FastTransforms, ArrayLayouts, Test, FillArrays
 import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, paddeddata, jacobimatrix
 import LazyArrays: ApplyStyle
 import QuasiArrays: MulQuasiMatrix
@@ -235,5 +235,10 @@ import Base: OneTo
             a = wT * [1; 2; 3; zeros(∞)];
             @test (a .* T)[0.1,1:10] ≈ a[0.1] * T[0.1,1:10]
         end
+    end
+
+    @testset "show" begin
+        T = Chebyshev()
+        T * [1; 2; Zeros(∞)]
     end
 end

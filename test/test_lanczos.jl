@@ -151,7 +151,8 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
         # emperical from Julia
         @test Q[0.1,10] ≈ -0.936819626414421
 
-        Q \ x
+        @test (Q * (Q \ exp.(x)))[0.1] ≈ exp(0.1)
+        @test (Q[:,1:20] \ exp.(x)) ≈ (Q \ exp.(x))[1:20]
     end
 
     @testset "orthogonality (#68)" begin

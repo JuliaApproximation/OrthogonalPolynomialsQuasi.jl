@@ -238,7 +238,12 @@ end
 
 
 ArrayLayouts.mul(Q::LanczosPolynomial, C::AbstractArray) = ApplyQuasiArray(*, Q, C)
-transform_ldiv(Q::LanczosPolynomial, C::AbstractQuasiArray) = LanczosConversion(Q.data) \ (Q.P \ C)
+ldiv(Q::LanczosPolynomial, C::AbstractQuasiArray) = LanczosConversion(Q.data) \ (Q.P \ C)
+function ldiv(Qn::SubQuasiArray{<:Any,2,<:LanczosPolynomial,<:Tuple{<:Inclusion,<:Any}}, C::AbstractQuasiArray)
+    _,jr = parentindices(Qn)
+    Q = parent(Qn)
+    LanczosConversion(Q.data)[jr,jr] \ (Q.P[:,jr] \ C)
+end
 arguments(::ApplyLayout{typeof(*)}, Q::LanczosPolynomial) = Q.P, LanczosConversion(Q.data)
 LazyArrays._mul_arguments(Q::LanczosPolynomial) = arguments(ApplyLayout{typeof(*)}(), Q)
 LazyArrays._mul_arguments(Q::QuasiAdjoint{<:Any,<:LanczosPolynomial}) = arguments(ApplyLayout{typeof(*)}(), Q)
