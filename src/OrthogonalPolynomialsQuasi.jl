@@ -25,7 +25,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf, InfAxes, InfUnitRange, Infinity
 import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion,
-    AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts
+    AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts, demap
 import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!,
                         _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
@@ -115,6 +115,7 @@ abstract type OrthogonalPolynomial{T} <: Basis{T} end
 
 # OPs are immutable
 copy(a::OrthogonalPolynomial) = a
+copy(a::SubQuasiArray{<:Any,N,<:OrthogonalPolynomial}) where N = a
 
 """
     jacobimatrix(S)
@@ -237,10 +238,8 @@ end
 include("clenshaw.jl")
 
 
-function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T
-    p = grid(L)
-    TransformFactorization(p, nothing, qr(L[p,:])) # Use QR so type-stable
-end
+factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T =
+    TransformFactorization(nothing, qr(L[grid(L),:])) # Use QR so type-stable
 
 function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T
     _,jr = parentindices(L)

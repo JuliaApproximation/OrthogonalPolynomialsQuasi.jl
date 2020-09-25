@@ -41,6 +41,8 @@ normalizationconstant(P) = NormalizationConstant(P)
 Normalized(P::AbstractQuasiMatrix{T}) where T = Normalized(P, normalizationconstant(P))
 Normalized(Q::Normalized) = Q
 
+MemoryLayout(::Type{<:Normalized{<:Any, OPs}}) where OPs = MemoryLayout(OPs)
+
 struct QuasiQR{T, QQ, RR} <: Factorization{T}
     Q::QQ
     R::RR
@@ -56,6 +58,12 @@ Base.iterate(S::QuasiQR, ::Val{:done}) = nothing
 
 axes(Q::Normalized) = axes(Q.P)
 ==(A::Normalized, B::Normalized) = A.P == B.P
+
+# There is no point in a Normalized OP thats ==, so just return false
+==(A::Normalized, B::OrthogonalPolynomial) = false
+==(A::OrthogonalPolynomial, B::Normalized) = false
+==(A::Normalized, B::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}) = false
+==(A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, B::Normalized) = false
 
 _p0(Q::Normalized) = Q.scaling[1]
 
@@ -83,6 +91,11 @@ end
 
 orthogonalityweight(Q::Normalized) = orthogonalityweight(Q.P)
 singularities(Q::Normalized) = singularities(Q.P)
+
+function demap(Q::Normalized)
+    P,D =  arguments(ApplyLayout{typeof(*)}(), Q)
+    demap(P) * D
+end
 
 # Sometimes we want to expand out, sometimes we don't
 

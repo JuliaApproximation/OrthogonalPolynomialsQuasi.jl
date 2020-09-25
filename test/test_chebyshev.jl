@@ -60,7 +60,7 @@ import Base: OneTo
             Tn = @inferred(T[:,OneTo(100)])
             @test grid(Tn) == chebyshevpoints(100, Val(1))
             P = factorize(Tn)
-            u = T*[P.plan * exp.(P.grid); zeros(∞)]
+            u = T*[P.plan * exp.(grid(Tn)); zeros(∞)]
             @test u[0.1] ≈ exp(0.1)
 
             # auto-transform
@@ -114,7 +114,17 @@ import Base: OneTo
         x = axes(wT,1)
         @test (x .* wT).args[2] isa BandedMatrix
 
-        a = wT * [1; 2; 3; zeros(∞)];
+        c = [1; 2; 3; zeros(∞)]
+        a = wT * c;
+        @test a[0.1] ≈ (T * c)[0.1]/sqrt(1-0.1^2)
+        u = wT * (wT \ @.(exp(x)/sqrt(1-x^2)))
+        @test u[0.1] ≈ exp(0.1)/sqrt(1-0.1^2)
+
+        @testset "mapped" begin
+            x = Inclusion(0..1)
+            wT̃ = wT[2x .- 1, :]
+            wT̃ \ @.(exp(x)/(sqrt(x)*sqrt(1-x)))
+        end
     end
 
     @testset "operators" begin

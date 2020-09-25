@@ -142,12 +142,12 @@ function grid(Pn::SubQuasiArray{T,2,<:AbstractJacobi,<:Tuple{<:Inclusion,<:Abstr
     ChebyshevGrid{1,T}(maximum(jr))
 end
 
-function ldiv(::Legendre{V}, f) where V
+function ldiv(::Legendre{V}, f::AbstractQuasiVector) where V
     T = ChebyshevT{V}()
     [cheb2leg(paddeddata(T \ f)); zeros(V,∞)]
 end
 
-function ldiv(P::Jacobi{V}, f) where V
+function ldiv(P::Jacobi{V}, f::AbstractQuasiVector) where V
     T = ChebyshevT{V}()
     [cheb2jac(paddeddata(T \ f), P.a, P.b); zeros(V,∞)]
 end
