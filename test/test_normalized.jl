@@ -67,7 +67,7 @@ import ContinuumArrays: BasisLayout
         end
 
         @testset "show" begin
-            @test stringmime("text/plain", Normalized(Legendre())) == "Normalized(Legendre{Float64}())"
+            @test stringmime("text/plain", Normalized(Legendre())) == "Normalized(Legendre{Float64})"
             @test summary(Normalized(Legendre()).scaling) == "NormalizationConstant{Float64}"
         end
     end
@@ -158,6 +158,9 @@ import ContinuumArrays: BasisLayout
         wQ = weighted(Q)
         x = axes(Q,1)
         @test wQ[0.1,1:10] ≈ Q[0.1,1:10] * sqrt(1-(2*0.1-1))
+
+        @test MemoryLayout(wQ) isa MappedWeightedBasisLayout
+        @test MemoryLayout(wQ[:,1:20]) isa MappedWeightedBasisLayout
         u = wQ[:,1:20] * (wQ[:,1:20] \  @.(sqrt(1-x^2)))
         @test u[0.1] ≈ sqrt(1-0.1^2)
         u = wQ * (wQ \ @.(sqrt(1-x^2)))

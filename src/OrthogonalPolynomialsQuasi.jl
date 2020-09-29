@@ -239,7 +239,7 @@ include("clenshaw.jl")
 
 
 factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T =
-    TransformFactorization(nothing, qr(L[grid(L),:])) # Use QR so type-stable
+    TransformFactorization(grid(L), nothing, qr(L[grid(L),:])) # Use QR so type-stable
 
 function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T
     _,jr = parentindices(L)

@@ -1,8 +1,9 @@
-using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, FastTransforms, ArrayLayouts, Test, FillArrays
+using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, FastTransforms, ArrayLayouts, Test, FillArrays, Base64
 import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, paddeddata, jacobimatrix
 import LazyArrays: ApplyStyle
 import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
+import ContinuumArrays: MappedWeightedBasisLayout
 
 @testset "Chebyshev" begin
     @testset "ChebyshevGrid" begin
@@ -110,6 +111,7 @@ import Base: OneTo
 
     @testset "weighted" begin
         T = ChebyshevT()
+        w = ChebyshevTWeight()
         wT = WeightedChebyshevT()
         x = axes(wT,1)
         @test (x .* wT).args[2] isa BandedMatrix
@@ -123,7 +125,14 @@ import Base: OneTo
         @testset "mapped" begin
             x = Inclusion(0..1)
             wT̃ = wT[2x .- 1, :]
-            wT̃ \ @.(exp(x)/(sqrt(x)*sqrt(1-x)))
+            @test MemoryLayout(wT̃) isa MappedWeightedBasisLayout
+            v = wT̃ * (wT̃ \ @.(exp(x)/(sqrt(x)*sqrt(1-x))))
+            @test v[0.1] ≈ let x = 0.1; exp(x)/(sqrt(x)*sqrt(1-x)) end
+
+            WT̃ = w[2x .- 1] .* T[2x .- 1, :]
+            @test MemoryLayout(wT̃) isa MappedWeightedBasisLayout
+            v = wT̃ * (wT̃ \ @.(exp(x)/(sqrt(x)*sqrt(1-x))))
+            @test v[0.1] ≈ let x = 0.1; exp(x)/(sqrt(x)*sqrt(1-x)) end
         end
     end
 
@@ -249,6 +258,6 @@ import Base: OneTo
 
     @testset "show" begin
         T = Chebyshev()
-        T * [1; 2; Zeros(∞)]
+        @test stringmime("text/plain", T * [1; 2; Zeros(∞)]) == "Chebyshev{1,Float64} * [1.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, …]"
     end
 end

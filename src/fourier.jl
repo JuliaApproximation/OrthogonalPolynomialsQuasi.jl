@@ -46,7 +46,7 @@ function *(F::ShuffledRFFT{T}, b::AbstractVector) where T
 end
 
 factorize(L::SubQuasiArray{T,2,<:Fourier,<:Tuple{<:Inclusion,<:OneTo}}) where T =
-    TransformFactorization(ShuffledRFFT{T}(size(L,2)))
+    TransformFactorization(grid(L), ShuffledRFFT{T}(size(L,2)))
 
 import BlockBandedMatrices: _BlockSkylineMatrix
 
