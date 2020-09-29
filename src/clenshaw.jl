@@ -21,11 +21,15 @@ function initiateforwardrecurrence(N, A, B, C, x, μ)
     p0,p1
 end
 
-getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T =
-    copyto!(Vector{T}(undef,length(n)), view(P, x, n))
+for (get, vie) in ((:getindex, :view), (:(Base.unsafe_getindex), :(Base.unsafe_view)))
+    @eval begin
+        Base.@propagate_inbounds @inline $get(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T =
+            copyto!(Vector{T}(undef,length(n)), $vie(P, x, n))
 
-getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::AbstractUnitRange{Int}) where T =
-    copyto!(Matrix{T}(undef,length(x),length(n)), view(P, x, n))
+        $get(P::OrthogonalPolynomial{T}, x::AbstractVector, n::AbstractUnitRange{Int}) where T =
+            copyto!(Matrix{T}(undef,length(x),length(n)), $vie(P, x, n))
+    end
+end
 
 function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial,<:Tuple{<:Number,<:OneTo}})
     P = parent(V)
@@ -63,14 +67,18 @@ end
 getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = layout_getindex(P, x, n)
 getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = layout_getindex(P, x, n)
 
-getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) =
-    P[x,OneTo(maximum(n))][n]
+unsafe_layout_getindex(A...) = sub_materialize(Base.unsafe_view(A...))
 
-getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer}) =
-    P[x,OneTo(maximum(n))][:,n]
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = unsafe_layout_getindex(P, x, n)
 
-getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
-
+for get in (:getindex, :(Base.unsafe_getindex))
+    @eval begin
+        $get(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) = $get(P,x,OneTo(maximum(n)))[n]
+        $get(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer}) =  $get(P,x,OneTo(maximum(n)))[:,n]
+        $get(P::OrthogonalPolynomial, x::Number, n::Number) = $get(P,x,OneTo(n))[end]
+    end
+end
 
 
 ###
