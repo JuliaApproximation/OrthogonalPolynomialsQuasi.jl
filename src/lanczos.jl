@@ -184,6 +184,8 @@ end
 ==(A::LanczosPolynomial, B::LanczosPolynomial) = A.w == B.w
 ==(::LanczosPolynomial, ::OrthogonalPolynomial) = false # TODO: fix
 ==(::OrthogonalPolynomial, ::LanczosPolynomial) = false # TODO: fix
+==(::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, ::LanczosPolynomial) = false # TODO: fix
+==(::LanczosPolynomial, ::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}) = false # TODO: fix
 
 
 normalize(Q::LanczosPolynomial) = Q
@@ -235,7 +237,8 @@ end
 \(A::Normalized, Q::LanczosPolynomial) = (A \ Q.P) * LanczosConversion(Q.data)
 \(Q::LanczosPolynomial, A::OrthogonalPolynomial) = inv(LanczosConversion(Q.data)) * (Q.P \ A)
 \(Q::LanczosPolynomial, A::Normalized) = inv(LanczosConversion(Q.data)) * (Q.P \ A)
-
+\(Q::LanczosPolynomial, A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}) = inv(LanczosConversion(Q.data)) * (Q.P \ A)
+\(A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, Q::LanczosPolynomial) = (A \ Q.P) * LanczosConversion(Q.data)
 
 ArrayLayouts.mul(Q::LanczosPolynomial, C::AbstractArray) = ApplyQuasiArray(*, Q, C)
 function ldiv(Qn::SubQuasiArray{<:Any,2,<:LanczosPolynomial,<:Tuple{<:Inclusion,<:Any}}, C::AbstractQuasiArray)

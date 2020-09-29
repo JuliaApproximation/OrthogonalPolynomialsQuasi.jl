@@ -153,6 +153,16 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
 
         @test (Q * (Q \ exp.(x)))[0.1] ≈ exp(0.1)
         @test (Q[:,1:20] \ exp.(x)) ≈ (Q \ exp.(x))[1:20]
+
+        @testset "Mapped Conversion" begin
+            P₋ = jacobi(0,-1/2,0..1)
+            x = axes(P₋,1)
+            y = @.(sqrt(x)*sqrt(2-x))
+            U = LanczosPolynomial(y, P₊)
+            @test P₊ ≠ U
+            R = P₊ \ U
+            @test U[0.1,5] ≈ (P₊ * R * [zeros(4); 1; zeros(∞)])[0.1]
+        end
     end
 
     @testset "orthogonality (#68)" begin
