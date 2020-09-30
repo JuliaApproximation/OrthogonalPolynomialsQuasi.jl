@@ -155,8 +155,8 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, PaddedLayout
         @test (Q[:,1:20] \ exp.(x)) ≈ (Q \ exp.(x))[1:20]
 
         @testset "Mapped Conversion" begin
-            P₋ = jacobi(0,-1/2,0..1)
-            x = axes(P₋,1)
+            P₊ = jacobi(0,1/2,0..1)
+            x = axes(P₊,1)
             y = @.(sqrt(x)*sqrt(2-x))
             U = LanczosPolynomial(y, P₊)
             @test P₊ ≠ U
