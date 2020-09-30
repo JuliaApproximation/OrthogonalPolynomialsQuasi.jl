@@ -166,4 +166,18 @@ import ContinuumArrays: BasisLayout
         u = wQ * (wQ \ @.(sqrt(1-x^2)))
         @test u[0.1] ≈ sqrt(1-0.1^2)
     end
+
+    @testset "Christoffel–Darboux" begin
+        Q = Normalized(Legendre())
+        X = Q\ (axes(Q,1) .* Q)
+        x,y = 0.1,0.2
+        n = 10
+        Pn = Diagonal([Ones(n); Zeros(∞)])
+        @test (X*Pn - Pn*X)[1:n,1:n] ≈ zeros(n,n)
+        @test Pn * Q[y,:] isa CachedVector
+
+        # @test (x-y) * Q[x,1:n]'*Q[y,1:n] ≈ (x-y) * Q[x,:]'*Pn*Q[y,:] ≈ (x-y) * Q[x,:]'*Pn*Q[y,:]
+        # Q[x,:]' * ((X*Pn - Pn*X)* Q[y,:])
+        @test (x-y) * Q[x,1:n]'*Q[y,1:n] ≈ Q[x,n:n+1]' * (X*Pn - Pn*X)[n:n+1,n:n+1] * Q[y,n:n+1]
+    end
 end
