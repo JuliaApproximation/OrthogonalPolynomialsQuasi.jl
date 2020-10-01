@@ -272,4 +272,21 @@ import ContinuumArrays: MappedWeightedBasisLayout
         @test Base.unsafe_getindex(Chebyshev(), 5.0, 5)  ≈ cos(4*acos(5+0im))
         @test Base.unsafe_getindex(ChebyshevT{ComplexF64}(), 5.0+im, 5)  ≈ cos(4*acos(5+im))
     end
+
+    @testset "Christoffel–Darboux" begin
+        T = Chebyshev()
+        X = T\ (axes(T,1) .* T)
+        Mi = inv(T'*(ChebyshevWeight() .* T))
+        x,y = 0.1,0.2
+        n = 10
+        Pn = Diagonal([Ones(n); Zeros(∞)])
+        Min = Pn * Mi
+        @test (X*Min - Min*X')[1:n,1:n] ≈ zeros(n,n)
+        @test (x-y) * T[x,1:n]'Mi[1:n,1:n]*T[y,1:n] ≈ T[x,n:n+1]' * (X*Min - Min*X')[n:n+1,n:n+1] * T[y,n:n+1]
+
+        @testset "extrapolation" begin
+            x,y = 0.1,3.4
+            @test (x-y) * T[x,1:n]'Mi[1:n,1:n]*Base.unsafe_getindex(T,y,1:n) ≈ T[x,n:n+1]' * (X*Min - Min*X')[n:n+1,n:n+1] * Base.unsafe_getindex(T,y,n:n+1)
+        end
+    end
 end

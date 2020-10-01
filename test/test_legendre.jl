@@ -97,4 +97,16 @@ import QuasiArrays: MulQuasiArray
         @test P[0.1,3] ≈ (A[2]*0.1 + B[2])*P[0.1,2] - C[2]
         @test P[0.1,4] ≈ (A[3]*0.1 + B[3])*P[0.1,3] - C[3]*P[0.1,2]
     end
+
+    @testset "Christoffel–Darboux" begin
+        P = Legendre()
+        X = P\ (axes(P,1) .* P)
+        Mi = inv(P'P)
+        x,y = 0.1,0.2
+        n = 10
+        Pn = Diagonal([Ones(n); Zeros(∞)])
+        Min = Pn * Mi
+        @test (X*Min - Min*X')[1:n,1:n] ≈ zeros(n,n)
+        @test (x-y) * P[x,1:n]'Mi[1:n,1:n]*P[y,1:n] ≈ P[x,n:n+1]' * (X*Min - Min*X')[n:n+1,n:n+1] * P[y,n:n+1]
+    end
 end

@@ -135,8 +135,8 @@ end
 
 getindex(A::LanczosJacobiBand, I::Integer) = _lanczos_getindex(A, I)
 getindex(A::LanczosJacobiBand, I::AbstractVector) = _lanczos_getindex(A, I)
-getindex(K::LanczosJacobiBand, k::InfUnitRange) = view(K, k)
-getindex(K::SubArray{<:Any,1,<:LanczosJacobiBand}, k::InfUnitRange) = view(K, k)
+getindex(K::LanczosJacobiBand, k::AbstractInfUnitRange) = view(K, k)
+getindex(K::SubArray{<:Any,1,<:LanczosJacobiBand}, k::AbstractInfUnitRange) = view(K, k)
 
 
 struct LanczosRecurrence{ABC,T,XX,WW} <: LazyVector{T}
@@ -171,8 +171,8 @@ end
 
 getindex(A::LanczosRecurrence, I::Integer) = _lanczos_getindex(A, I)
 getindex(A::LanczosRecurrence, I::AbstractVector) = _lanczos_getindex(A, I)
-getindex(K::LanczosRecurrence, k::InfUnitRange) = view(K, k)
-getindex(K::SubArray{<:Any,1,<:LanczosRecurrence}, k::InfUnitRange) = view(K, k)
+getindex(K::LanczosRecurrence, k::AbstractInfUnitRange) = view(K, k)
+getindex(K::SubArray{<:Any,1,<:LanczosRecurrence}, k::AbstractInfUnitRange) = view(K, k)
 
 
 struct LanczosPolynomial{T,XX,WW,Weight,Basis} <: OrthogonalPolynomial{T}
@@ -222,6 +222,9 @@ Base.array_summary(io::IO, C::SymTridiagonal{T,<:LanczosJacobiBand}, inds::Tuple
 
 Base.array_summary(io::IO, C::LanczosConversion{T}, inds::Tuple{Vararg{OneToInf{Int}}}) where T =
     print(io, Base.dims2string(length.(inds)), " LanczosConversion{$T}")
+
+Base.array_summary(io::IO, C::LanczosJacobiBand{T}, inds::Tuple{Vararg{OneToInf{Int}}}) where T =
+    print(io, Base.dims2string(length.(inds)), " LanczosJacobiBand{$T}")
 
 
 # Sometimes we want to expand out, sometimes we don't

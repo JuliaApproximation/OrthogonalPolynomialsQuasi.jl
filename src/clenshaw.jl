@@ -80,6 +80,8 @@ for get in (:getindex, :(Base.unsafe_getindex))
     end
 end
 
+getindex(P::OrthogonalPolynomial, x::Number, jr::AbstractInfUnitRange{Int}) = view(P, x, jr)
+
 
 ###
 # Clenshaw

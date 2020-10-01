@@ -22,7 +22,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle,
                     _getindex, layout_getindex, _factorize
 
-import InfiniteArrays: OneToInf, InfAxes, InfUnitRange, Infinity
+import InfiniteArrays: OneToInf, InfAxes, Infinity, AbstractInfUnitRange
 import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion,
     AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts, demap
@@ -41,6 +41,8 @@ export OrthogonalPolynomial, Normalized, orthonormalpolynomial, LanczosPolynomia
 
 
 include("interlace.jl")
+
+
 
 # ambiguity error
 sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V

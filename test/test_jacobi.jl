@@ -293,4 +293,23 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         R̃ = Jacobi(0,1/2) \ Jacobi(0,-1/2)
         @test R[1:10,1:10] == R̃[1:10,1:10]
     end
+
+    @testset "Christoffel–Darboux" begin
+        a,b = 0.1,0.2
+        P = Jacobi(a,b)
+        X = P\ (axes(P,1) .* P)
+        Mi = inv(P'*(JacobiWeight(a,b) .* P))
+        x,y = 0.1,0.2
+        n = 10
+        Pn = Diagonal([Ones(n); Zeros(∞)])
+        Min = Pn * Mi
+        @test norm((X*Min - Min*X')[1:n,1:n]) ≤ 1E-13
+        β = X[n,n+1]*Mi[n+1,n+1]
+        @test (x-y) * P[x,1:n]'Mi[1:n,1:n]*P[y,1:n] ≈ P[x,n:n+1]' * (X*Min - Min*X')[n:n+1,n:n+1] * P[y,n:n+1] ≈ P[x,n:n+1]' * [0 -β; β 0] * P[y,n:n+1]
+        
+        @testset "extrapolation" begin
+            x,y = 0.1,3.4
+            @test (x-y) * P[x,1:n]'Mi[1:n,1:n]*Base.unsafe_getindex(P,y,1:n) ≈ P[x,n:n+1]' * [0 -β; β 0] * Base.unsafe_getindex(P,y,n:n+1)
+        end
+    end
 end

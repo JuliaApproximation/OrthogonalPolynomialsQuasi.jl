@@ -20,8 +20,8 @@ size(K::NormalizationConstant) = (∞,)
 # Behaves like a CachedVector
 getindex(K::NormalizationConstant, k) = LazyArrays.cache_getindex(K, k)
 getindex(K::NormalizationConstant, k::AbstractVector) = LazyArrays.cache_getindex(K, k)
-getindex(K::NormalizationConstant, k::InfUnitRange) = layout_getindex(K, k)
-getindex(K::SubArray{<:Any,1,<:NormalizationConstant}, k::InfUnitRange) = layout_getindex(K, k)
+getindex(K::NormalizationConstant, k::AbstractInfUnitRange) = layout_getindex(K, k)
+getindex(K::SubArray{<:Any,1,<:NormalizationConstant}, k::AbstractInfUnitRange) = layout_getindex(K, k)
 
 paddeddata(A::NormalizationConstant) = view(A.data,OneTo(A.datasize[1]))
 resizedata!(B::NormalizationConstant, mn...) = resizedata!(MemoryLayout(typeof(B.data)), UnknownLayout(), B, mn...)
