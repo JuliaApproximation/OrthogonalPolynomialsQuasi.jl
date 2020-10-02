@@ -1,5 +1,5 @@
 
-mutable struct NormalizationConstant{T, DL, DU} <: LazyVector{T}
+mutable struct NormalizationConstant{T, DL, DU} <: AbstractCachedVector{T}
     dl::DL # subdiagonal of Jacobi
     du::DU # superdiagonal
     data::Vector{T}
@@ -17,14 +17,7 @@ end
 
 size(K::NormalizationConstant) = (∞,)
 
-# Behaves like a CachedVector
-getindex(K::NormalizationConstant, k) = LazyArrays.cache_getindex(K, k)
-getindex(K::NormalizationConstant, k::AbstractVector) = LazyArrays.cache_getindex(K, k)
-getindex(K::NormalizationConstant, k::AbstractInfUnitRange) = layout_getindex(K, k)
-getindex(K::SubArray{<:Any,1,<:NormalizationConstant}, k::AbstractInfUnitRange) = layout_getindex(K, k)
-
-paddeddata(A::NormalizationConstant) = view(A.data,OneTo(A.datasize[1]))
-resizedata!(B::NormalizationConstant, mn...) = resizedata!(MemoryLayout(typeof(B.data)), UnknownLayout(), B, mn...)
+# How we populate the data
 function LazyArrays.cache_filldata!(K::NormalizationConstant, inds)
     @inbounds for k in inds
         K.data[k] = sqrt(K.du[k-1]/K.dl[k]) * K.data[k-1]
@@ -62,6 +55,8 @@ axes(Q::Normalized) = axes(Q.P)
 # There is no point in a Normalized OP thats ==, so just return false
 ==(A::Normalized, B::OrthogonalPolynomial) = false
 ==(A::OrthogonalPolynomial, B::Normalized) = false
+==(A::Normalized, B::AbstractQuasiMatrix) = false
+==(A::AbstractQuasiMatrix, B::Normalized) = false
 ==(A::Normalized, B::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}) = false
 ==(A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, B::Normalized) = false
 
@@ -129,6 +124,8 @@ _mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{type
 \(A::Normalized, B::Normalized) = _normalized_ldiv(Diagonal(A.scaling), A.P \ B.P, Diagonal(B.scaling))
 \(P::OrthogonalPolynomial, Q::Normalized) = copy(Ldiv{typeof(MemoryLayout(P)),ApplyLayout{typeof(*)}}(P,Q))
 \(Q::Normalized, P::OrthogonalPolynomial) = copy(Ldiv{ApplyLayout{typeof(*)},typeof(MemoryLayout(P))}(Q,P))
+\(P::AbstractQuasiMatrix, Q::Normalized) = copy(Ldiv{typeof(MemoryLayout(P)),ApplyLayout{typeof(*)}}(P,Q))
+\(Q::Normalized, P::AbstractQuasiMatrix) = copy(Ldiv{ApplyLayout{typeof(*)},typeof(MemoryLayout(P))}(Q,P))
 
 
 

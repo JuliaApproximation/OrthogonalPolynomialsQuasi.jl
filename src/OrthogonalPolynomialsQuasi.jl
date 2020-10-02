@@ -10,7 +10,7 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout,
                 sub_materialize, arguments, sub_paddeddata, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout, call,
-                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!, AbstractLazyLayout, BroadcastLayout
+                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!, AbstractLazyLayout, BroadcastLayout, AbstractCachedVector
 import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, ldiv, transposelayout, triangulardata
 import LinearAlgebra: pinv, factorize, qr, adjoint, transpose
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
@@ -227,6 +227,10 @@ _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
 bands(J::AbstractBandedMatrix) = _vec.(bandeddata(J).args)
 bands(J::Tridiagonal) = J.du, J.d, J.dl
 bands(D::Diagonal{T}) where T = Zeros{T}(∞), D.diag, Zeros{T}(∞)
+function bands(S::Symmetric{<:Any,<:AbstractBandedMatrix})
+    d,u = _vec.(bandeddata(parent(S)).args)
+    u, d, u
+end
 function bands(B::BroadcastArray{<:Any,2,<:Any,<:NTuple{2,AbstractMatrix}})
     ((au,ad,al),(bu,bd,bl)) = map(bands, B.args)
     (B.f(au,bu), B.f(ad,bd), B.f(al,bl))
