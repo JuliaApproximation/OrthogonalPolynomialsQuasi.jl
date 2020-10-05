@@ -34,7 +34,10 @@ normalizationconstant(P) = NormalizationConstant(P)
 Normalized(P::AbstractQuasiMatrix{T}) where T = Normalized(P, normalizationconstant(P))
 Normalized(Q::Normalized) = Q
 
-MemoryLayout(::Type{<:Normalized{<:Any, OPs}}) where OPs = MemoryLayout(OPs)
+
+struct NormalizedBasisLayout{LAY<:AbstractBasisLayout} <: AbstractBasisLayout end
+
+MemoryLayout(::Type{<:Normalized{<:Any, OPs}}) where OPs = NormalizedBasisLayout{typeof(MemoryLayout(OPs))}()
 
 struct QuasiQR{T, QQ, RR} <: Factorization{T}
     Q::QQ
@@ -121,33 +124,9 @@ _mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{type
 # table stable identity if A.P == B.P
 @inline _normalized_ldiv(An, C, Bn) = An \ (C * Bn)
 @inline _normalized_ldiv(An, C::Eye{T}, Bn) where T = FillArrays.SquareEye{promote_type(eltype(An),T,eltype(Bn))}(∞)
-\(A::Normalized, B::Normalized) = _normalized_ldiv(Diagonal(A.scaling), A.P \ B.P, Diagonal(B.scaling))
-\(P::OrthogonalPolynomial, Q::Normalized) = copy(Ldiv{typeof(MemoryLayout(P)),ApplyLayout{typeof(*)}}(P,Q))
-\(Q::Normalized, P::OrthogonalPolynomial) = copy(Ldiv{ApplyLayout{typeof(*)},typeof(MemoryLayout(P))}(Q,P))
-\(P::AbstractQuasiMatrix, Q::Normalized) = copy(Ldiv{typeof(MemoryLayout(P)),ApplyLayout{typeof(*)}}(P,Q))
-\(Q::Normalized, P::AbstractQuasiMatrix) = copy(Ldiv{ApplyLayout{typeof(*)},typeof(MemoryLayout(P))}(Q,P))
-
-
-
-
-
-
-
-
-
-
-# function symmetrize_jacobi(J)
-#     d=Array{T}(undef, n)
-#     d[1]=1
-#     for k=2:n
-#         d[k]=sqrt(J[k,k-1]/J[k-1,k])*d[k-1]
-#     end
-
-#    SymTridiagonal(
-#     T[J[k,k] for k=1:n],
-#     T[J[k,k+1]*d[k+1]/d[k] for k=1:n-1])
-# end
-
+copy(L::Ldiv{<:NormalizedBasisLayout,<:NormalizedBasisLayout}) = _normalized_ldiv(Diagonal(L.A.scaling), L.A.P \ L.B.P, Diagonal(L.B.scaling))
+copy(L::Ldiv{Lay,<:NormalizedBasisLayout}) where Lay = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
+copy(L::Ldiv{<:NormalizedBasisLayout,Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
 
 ###
 # show

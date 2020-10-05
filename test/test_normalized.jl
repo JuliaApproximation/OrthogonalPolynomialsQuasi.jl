@@ -55,14 +55,12 @@ import ContinuumArrays: BasisLayout
             w = P * (P \ (1 .- x.^2));
             W = Q \ (w .* Q)
             @test W isa Clenshaw
-            @test bandwidths(W) == (2,2)
             W̃ = Q' * (w .* Q)
+            @test bandwidths(W) == bandwidths(W̃) == (2,2)
             @test W[1:10,1:10] ≈ W[1:10,1:10]' ≈ W̃[1:10,1:10]
 
-            P = Normalized(Legendre())
-            x = axes(P,1)
-            w = x .+ x.^2 .+ 1 # w[x] == exp(x)
-            W = P \ (w .* P)
+            w = @. x + x^2 + 1 # w[x] == x + x^2 + 1
+            W = Q \ (w .* Q)
             @test W isa Clenshaw
         end
 
