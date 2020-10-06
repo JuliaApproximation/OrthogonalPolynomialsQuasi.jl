@@ -25,7 +25,7 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf, InfAxes, Infinity, AbstractInfUnitRange
 import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion,
-    AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts, demap, AbstractBasisLayout
+    AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts, demap, AbstractBasisLayout, BasisLayout
 import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!,
                         _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
@@ -233,12 +233,20 @@ function bands(S::Symmetric{<:Any,<:AbstractBandedMatrix})
 end
 function bands(B::BroadcastArray{<:Any,2,<:Any,<:NTuple{2,AbstractMatrix}})
     ((au,ad,al),(bu,bd,bl)) = map(bands, B.args)
-    (B.f(au,bu), B.f(ad,bd), B.f(al,bl))
+    (B.f.(au,bu), B.f.(ad,bd), B.f.(al,bl))
+end
+function bands(B::BroadcastArray{<:Any,2,<:Any,<:Tuple{<:AbstractMatrix,<:Diagonal{T}}}) where T
+    (au,ad,al) = bands(B.args[1])
+    (B.f.(au,zero(T)), B.f.(ad,B.args[2].diag), B.f.(al,zero(T)))
+end
+function bands(B::BroadcastArray{<:Any,2,<:Any,<:Tuple{<:Diagonal{T},<:AbstractMatrix}}) where T
+    (bu,bd,bl) = bands(B.args[2])
+    (B.f.(zero(T),bu), B.f.(B.args[1].diag,bd), B.f.(zero(T),bl))
 end
 function bands(B::BroadcastArray{<:Any,2,<:Any,<:Tuple{Number,AbstractMatrix}})
     a = B.args[1]
     (bu,bd,bl) = bands(B.args[2])
-    (B.f(a,bu), B.f(a,bd), B.f(a,bl))
+    (B.f.(a,bu), B.f.(a,bd), B.f.(a,bl))
 end
 
 include("clenshaw.jl")

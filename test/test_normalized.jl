@@ -1,7 +1,7 @@
-using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, ArrayLayouts, Base64, Test
-import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients, Normalized, Clenshaw, PaddedLayout, weighted
-import ContinuumArrays: BasisLayout
-
+using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, ArrayLayouts, LazyArrays, Base64, Test
+import OrthogonalPolynomialsQuasi: NormalizationConstant, NormalizedBasisLayout, recurrencecoefficients, Normalized, Clenshaw, weighted
+import LazyArrays: CachedVector, PaddedLayout
+import ContinuumArrays: MappedWeightedBasisLayout
 
 @testset "Normalized" begin
     @testset "Legendre" begin
@@ -9,7 +9,7 @@ import ContinuumArrays: BasisLayout
         Q = Normalized(P)
 
         @testset "Basic" begin
-            @test MemoryLayout(Q) isa BasisLayout
+            @test MemoryLayout(Q) isa NormalizedBasisLayout
             @test @inferred(Q\Q) ≡ Eye(∞)
         end
 
@@ -77,7 +77,7 @@ import ContinuumArrays: BasisLayout
         Q = Normalized(T)
 
         @testset "Basic" begin
-            @test MemoryLayout(Q) isa BasisLayout
+            @test MemoryLayout(Q) isa NormalizedBasisLayout
             @test @inferred(Q\Q) ≡ Eye(∞)
         end
 
@@ -153,12 +153,17 @@ import ContinuumArrays: BasisLayout
         @test u[0.1] ≈ exp(0.1)
 
         Q = Normalized(jacobi(1/2,0,0..1))
+        @testset "Recurrences" begin
+            A,B,C = recurrencecoefficients(Q)
+            Ã,B̃,C̃ = recurrencecoefficients(Normalized(Jacobi(1/2,0)))
+            @test A[1:10] ≈ 2Ã[1:10]
+            @test B[1:10] ≈ B̃[1:10] .- Ã[1:10]
+            @test C[1:10] ≈ C̃[1:10]
+        end
         wQ = weighted(Q)
         x = axes(Q,1)
         @test wQ[0.1,1:10] ≈ Q[0.1,1:10] * sqrt(1-(2*0.1-1))
 
-        @test MemoryLayout(wQ) isa MappedWeightedBasisLayout
-        @test MemoryLayout(wQ[:,1:20]) isa MappedWeightedBasisLayout
         u = wQ[:,1:20] * (wQ[:,1:20] \  @.(sqrt(1-x^2)))
         @test u[0.1] ≈ sqrt(1-0.1^2)
         u = wQ * (wQ \ @.(sqrt(1-x^2)))
