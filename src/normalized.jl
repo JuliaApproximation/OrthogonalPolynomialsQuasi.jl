@@ -1,26 +1,24 @@
 
-mutable struct NormalizationConstant{T, DL, DU} <: AbstractCachedVector{T}
-    dl::DL # subdiagonal of Jacobi
-    du::DU # superdiagonal
+mutable struct NormalizationConstant{T, PP<:AbstractQuasiMatrix{T}} <: AbstractCachedVector{T}
+    P::PP # OPs
     data::Vector{T}
     datasize::Tuple{Int}
 
-    NormalizationConstant{T, DL, DU}(μ::T, dl::DL, du::DU) where {T,DL,DU} = new{T, DL, DU}(dl, du, [μ], (1,))
+    function NormalizationConstant{T, PP}(P::PP) where {T,PP<:AbstractQuasiMatrix{T}}
+        μ = inv(sqrt(sum(orthogonalityweight(P))))
+        new{T, PP}(P, [μ], (1,))
+    end
 end
 
-NormalizationConstant(μ::T, dl::AbstractVector{T}, du::AbstractVector{T}) where T = NormalizationConstant{T,typeof(dl),typeof(du)}(μ, dl, du)
-
-function NormalizationConstant(P::AbstractQuasiMatrix)
-    dl, _, du = bands(jacobimatrix(P))
-    NormalizationConstant(inv(sqrt(sum(orthogonalityweight(P)))), dl, du)
-end
+NormalizationConstant(P::AbstractQuasiMatrix{T}) where T = NormalizationConstant{T,typeof(P)}(P)
 
 size(K::NormalizationConstant) = (∞,)
 
 # How we populate the data
 function LazyArrays.cache_filldata!(K::NormalizationConstant, inds)
+    dl, _, du = bands(jacobimatrix(K.P))
     @inbounds for k in inds
-        K.data[k] = sqrt(K.du[k-1]/K.dl[k]) * K.data[k-1]
+        K.data[k] = sqrt(du[k-1]/dl[k]) * K.data[k-1]
     end
 end
 
