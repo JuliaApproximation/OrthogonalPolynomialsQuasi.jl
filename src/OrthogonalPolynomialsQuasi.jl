@@ -120,17 +120,38 @@ copy(a::OrthogonalPolynomial) = a
 copy(a::SubQuasiArray{<:Any,N,<:OrthogonalPolynomial}) where N = a
 
 """
-    jacobimatrix(S)
+    jacobimatrix(P)
 
 returns the Jacobi matrix `X` associated to a quasi-matrix of orthogonal polynomials
 satisfying
 ```julia
-x = axes(S,1)
-x*S == S*X
+x = axes(P,1)
+x*P == P*X
 ```
 Note that `X` is the transpose of the usual definition of the Jacobi matrix.
 """
-jacobimatrix(S) = error("Override for $(typeof(S))")
+jacobimatrix(P) = error("Override for $(typeof(P))")
+
+"""
+    recurrencecoefficients(P)
+
+returns a `(A,B,C)` associated with the Orthogonal Polynomials P,
+satisfying for `x in axes(P,1)`
+```julia
+P[x,2] == (A[1]*x + B[1])*P[x,1]
+P[x,n+1] == (A[n]*x + B[n])*P[x,n] - C[n]*P[x,n-1]
+```
+Note that `C[1]`` is unused. 
+
+The relationship with the Jacobi matrix is: 
+```julia
+1/A[n] == X[n+1,n]
+-B[n]/A[n] == X[n,n]
+C[n+1]/A[n+1] == X[n,n+1]
+```
+"""
+recurrencecoefficients(P) = error("Override for $(typeof(P))")
+
 
 const WeightedOrthogonalPolynomial{T, A<:AbstractQuasiVector, B<:OrthogonalPolynomial} = WeightedBasis{T, A, B}
 
@@ -224,8 +245,10 @@ end
 _vec(a) = vec(a)
 _vec(a::InfiniteArrays.ReshapedArray) = _vec(parent(a))
 _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
+# TODO: Aren't the bands inconsisten here??
 bands(J::AbstractBandedMatrix) = _vec.(bandeddata(J).args)
 bands(J::Tridiagonal) = J.du, J.d, J.dl
+bands(J::SymTridiagonal) = J.ev, J.dv, J.ev
 bands(D::Diagonal{T}) where T = Zeros{T}(∞), D.diag, Zeros{T}(∞)
 function bands(S::Symmetric{<:Any,<:AbstractBandedMatrix})
     d,u = _vec.(bandeddata(parent(S)).args)

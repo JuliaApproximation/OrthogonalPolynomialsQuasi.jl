@@ -18,6 +18,24 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         @test P[0.1,2] ≈ 0.16499999999999998
         P = Jacobi(b,a)
         @test P[-0.1,2] ≈ -0.16499999999999998
+
+        A,B,C = recurrencecoefficients(P)
+        X = jacobimatrix(P)
+        @testset "recurrence coefficient and jacobimatrix" begin
+            @test 1/A[1] ≈ X[2,1]
+            @test -B[1]/A[1] ≈ X[1,1]
+            @test C[2]/A[2] ≈ X[1,2]
+            @test 1/A[2] ≈ X[3,2]
+            @test -B[2]/A[2] ≈ X[2,2]
+            @test C[3]/A[3] ≈ X[2,3]
+
+            @test A[1] ≈ 1/X[2,1]
+            @test B[1] ≈ -X[1,1]/X[2,1]
+            @test C[2] ≈ X[1,2]/X[3,2]
+            @test A[2] ≈ 1/X[3,2]
+            @test B[2] ≈ -X[2,2]/X[3,2]
+            @test C[3] ≈ X[2,3]/X[4,3]
+        end
     end
 
     @testset "orthogonality" begin
