@@ -1,5 +1,5 @@
 using OrthogonalPolynomialsQuasi, LazyArrays, QuasiArrays, Test
-import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix, bands, Clenshaw
+import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix, Clenshaw
 import QuasiArrays: MulQuasiArray
 
 @testset "Legendre" begin
