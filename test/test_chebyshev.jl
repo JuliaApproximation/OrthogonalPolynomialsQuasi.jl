@@ -271,6 +271,10 @@ import ContinuumArrays: MappedWeightedBasisLayout
         @test Base.unsafe_getindex(Chebyshev(), 5.0, Base.OneTo(5)) ≈ [cos(k*acos(5+0im)) for k=0:4]
         @test Base.unsafe_getindex(Chebyshev(), 5.0, 5)  ≈ cos(4*acos(5+0im))
         @test Base.unsafe_getindex(ChebyshevT{ComplexF64}(), 5.0+im, 5)  ≈ cos(4*acos(5+im))
+
+        v = Base.unsafe_getindex(Chebyshev(), 2, 2:∞)
+        @test eltype(v) == Float64
+        @test v[5] == Base.unsafe_getindex(Chebyshev(), 2, 6)
     end
 
     @testset "Christoffel–Darboux" begin

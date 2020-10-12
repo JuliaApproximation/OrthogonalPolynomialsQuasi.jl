@@ -81,6 +81,8 @@ for get in (:getindex, :(Base.unsafe_getindex))
 end
 
 getindex(P::OrthogonalPolynomial, x::Number, jr::AbstractInfUnitRange{Int}) = view(P, x, jr)
+Base.unsafe_getindex(P::OrthogonalPolynomial{T}, x::Number, jr::AbstractInfUnitRange{Int}) where T = 
+    BroadcastVector{T}(Base.unsafe_getindex, Ref(P), x, jr)
 
 
 ###

@@ -15,12 +15,21 @@ NormalizationConstant(P::AbstractQuasiMatrix{T}) where T = NormalizationConstant
 size(K::NormalizationConstant) = (∞,)
 
 # How we populate the data
-function LazyArrays.cache_filldata!(K::NormalizationConstant, inds)
-    dl, _, du = bands(jacobimatrix(K.P))
+# function _normalizationconstant_fill_data!(K::NormalizationConstant, J::Union{BandedMatrix,Symmetric{<:Any,BandedMatrix},Tridiagonal,SymTridiagonal}, inds)
+#     dl, _, du = bands(J)
+#     @inbounds for k in inds
+#         K.data[k] = sqrt(du[k-1]/dl[k]) * K.data[k-1]
+#     end
+# end
+
+function _normalizationconstant_fill_data!(K::NormalizationConstant, J, inds)
     @inbounds for k in inds
-        K.data[k] = sqrt(du[k-1]/dl[k]) * K.data[k-1]
+        K.data[k] = sqrt(J[k,k-1]/J[k-1,k]) * K.data[k-1]
     end
 end
+
+
+LazyArrays.cache_filldata!(K::NormalizationConstant, inds) = _normalizationconstant_fill_data!(K, jacobimatrix(K.P), inds)
 
 
 struct Normalized{T, OPs<:AbstractQuasiMatrix{T}, NL} <: OrthogonalPolynomial{T}
@@ -80,7 +89,8 @@ end
 # q_{n+1}/h[n+1] = (A_n * x + B_n) * q_n/h[n] - C_n * p_{n-1}/h[n-1]
 # q_{n+1} = (h[n+1]/h[n] * A_n * x + h[n+1]/h[n] * B_n) * q_n - h[n+1]/h[n-1] * C_n * p_{n-1}
 function jacobimatrix(Q::Normalized)
-    _,a,b = bands(jacobimatrix(Q.P))
+    X = jacobimatrix(Q.P)
+    a,b = X[band(0)], X[band(1)]
     h = Q.scaling
     Symmetric(_BandedMatrix(Vcat(a', (b .* h ./ h[2:end])'), ∞, 1, 0), :L)
 end

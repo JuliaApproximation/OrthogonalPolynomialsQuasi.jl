@@ -4,7 +4,7 @@ using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, QuasiArrays, FillArrays
 using ForwardDiff, SemiseparableMatrices, SpecialFunctions, LazyBandedMatrices
 import ContinuumArrays: BasisLayout, MappedBasisLayout
 import OrthogonalPolynomialsQuasi: jacobimatrix, ∞, ChebyshevInterval, LegendreWeight,
-            Clenshaw, bands, forwardrecurrence!, singularities
+            Clenshaw, forwardrecurrence!, singularities
 import LazyArrays: ApplyStyle, colsupport, MemoryLayout, arguments
 import SemiseparableMatrices: VcatAlmostBandedLayout
 import QuasiArrays: MulQuasiMatrix

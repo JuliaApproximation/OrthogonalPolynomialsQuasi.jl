@@ -105,9 +105,9 @@ import QuasiArrays: MulQuasiArray
         x = axes(P,1)
         X = jacobimatrix(P)
         @test X[1:10,1:10] ≈ (P \ (x .* P))[1:10,1:10]
-        @test bands(X)[1][2:10] ≈ [X[k,k+1] for k=1:9]
-        @test bands(X)[2][1:10] ≈ [X[k,k] for k=1:10]
-        @test bands(X)[3][1:10] ≈ [X[k+1,k] for k=1:10]
+        @test X[band(1)][2:10] ≈ [X[k,k+1] for k=1:9]
+        @test X[band(0)][1:10] ≈ [X[k,k] for k=1:10]
+        @test X[band(-1)][1:10] ≈ [X[k+1,k] for k=1:10]
         A,B,C = recurrencecoefficients(P)
         @test P[0.1,1] == 1
         @test P[0.1,2] ≈ A[1]*0.1 + B[1]

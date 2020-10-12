@@ -245,32 +245,6 @@ end
 _vec(a) = vec(a)
 _vec(a::InfiniteArrays.ReshapedArray) = _vec(parent(a))
 _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
-# TODO: Aren't the bands inconsisten here??
-bands(J::AbstractBandedMatrix) = _vec.(bandeddata(J).args)
-bands(J::Tridiagonal) = J.du, J.d, J.dl
-bands(J::SymTridiagonal) = J.ev, J.dv, J.ev
-bands(D::Diagonal{T}) where T = Zeros{T}(∞), D.diag, Zeros{T}(∞)
-function bands(S::Symmetric{<:Any,<:AbstractBandedMatrix})
-    d,u = _vec.(bandeddata(parent(S)).args)
-    u, d, u
-end
-function bands(B::BroadcastArray{<:Any,2,<:Any,<:NTuple{2,AbstractMatrix}})
-    ((au,ad,al),(bu,bd,bl)) = map(bands, B.args)
-    (B.f.(au,bu), B.f.(ad,bd), B.f.(al,bl))
-end
-function bands(B::BroadcastArray{<:Any,2,<:Any,<:Tuple{<:AbstractMatrix,<:Diagonal{T}}}) where T
-    (au,ad,al) = bands(B.args[1])
-    (B.f.(au,zero(T)), B.f.(ad,B.args[2].diag), B.f.(al,zero(T)))
-end
-function bands(B::BroadcastArray{<:Any,2,<:Any,<:Tuple{<:Diagonal{T},<:AbstractMatrix}}) where T
-    (bu,bd,bl) = bands(B.args[2])
-    (B.f.(zero(T),bu), B.f.(B.args[1].diag,bd), B.f.(zero(T),bl))
-end
-function bands(B::BroadcastArray{<:Any,2,<:Any,<:Tuple{Number,AbstractMatrix}})
-    a = B.args[1]
-    (bu,bd,bl) = bands(B.args[2])
-    (B.f.(a,bu), B.f.(a,bd), B.f.(a,bl))
-end
 
 include("clenshaw.jl")
 
