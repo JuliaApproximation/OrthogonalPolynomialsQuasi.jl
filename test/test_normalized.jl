@@ -48,6 +48,13 @@ import ContinuumArrays: MappedWeightedBasisLayout
             @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=1E-4
         end
 
+        @testset "Jacobi" begin
+            X = jacobimatrix(Q)
+            M = P'P
+            @test X[1:10,1:10] ≈ sqrt(M)[1:10,1:10] * jacobimatrix(P)[1:10,1:10] * inv(sqrt(M))[1:10,1:10]
+            @test 0.1*Q[0.1,1:10] ≈ (Q*X)[0.1,1:10]
+        end
+
         @testset "Multiplication" begin
             x = axes(Q,1)
             @test Q \ (x .* Q) isa Symmetric

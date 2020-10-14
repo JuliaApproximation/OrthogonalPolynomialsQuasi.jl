@@ -90,7 +90,7 @@ end
 # q_{n+1} = (h[n+1]/h[n] * A_n * x + h[n+1]/h[n] * B_n) * q_n - h[n+1]/h[n-1] * C_n * p_{n-1}
 function jacobimatrix(Q::Normalized)
     X = jacobimatrix(Q.P)
-    a,b = X[band(0)], X[band(1)]
+    a,b = X[band(0)], X[band(-1)]
     h = Q.scaling
     Symmetric(_BandedMatrix(Vcat(a', (b .* h ./ h[2:end])'), ∞, 1, 0), :L)
 end

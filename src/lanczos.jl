@@ -138,6 +138,7 @@ getindex(A::LanczosJacobiBand, I::AbstractVector) = _lanczos_getindex(A, I)
 getindex(K::LanczosJacobiBand, k::AbstractInfUnitRange) = view(K, k)
 getindex(K::SubArray{<:Any,1,<:LanczosJacobiBand}, k::AbstractInfUnitRange) = view(K, k)
 
+copy(A::LanczosJacobiBand) = A # immutable
 
 struct LanczosRecurrence{ABC,T,XX,WW} <: LazyVector{T}
     data::LanczosData{T,XX,WW}

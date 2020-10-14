@@ -324,3 +324,10 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), wv::BroadcastQuasiVe
     a = (w .* Q) * (Q \ v)
     a .* P
 end
+
+
+##
+# Banded dot is slow
+###
+
+LinearAlgebra.dot(x::AbstractVector, A::Clenshaw, y::AbstractVector) = dot(x, mul(A, y))
