@@ -66,11 +66,13 @@ end
 
 getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = layout_getindex(P, x, n)
 getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = layout_getindex(P, x, n)
+getindex(P::SubArray{<:Any,1,<:OrthogonalPolynomial}, x::AbstractVector) = layout_getindex(P, x)
 
 unsafe_layout_getindex(A...) = sub_materialize(Base.unsafe_view(A...))
 
 Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = unsafe_layout_getindex(P, x, n)
 Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, ::Colon) = Base.unsafe_getindex(P, x, axes(P,2))
 
 for get in (:getindex, :(Base.unsafe_getindex))
     @eval begin
@@ -84,6 +86,10 @@ getindex(P::OrthogonalPolynomial, x::Number, jr::AbstractInfUnitRange{Int}) = vi
 Base.unsafe_getindex(P::OrthogonalPolynomial{T}, x::Number, jr::AbstractInfUnitRange{Int}) where T = 
     BroadcastVector{T}(Base.unsafe_getindex, Ref(P), x, jr)
 
+function getindex(P::BroadcastVector{<:Any,typeof(Base.unsafe_getindex), <:Tuple{Ref{<:OrthogonalPolynomial},Number,AbstractVector{Int}}}, kr::AbstractVector)
+    Pr, x, jr = P.args
+    Base.unsafe_getindex(Pr[], x, jr[kr])
+end
 
 ###
 # Clenshaw

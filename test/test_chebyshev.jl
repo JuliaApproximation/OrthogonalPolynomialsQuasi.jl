@@ -293,4 +293,14 @@ import ContinuumArrays: MappedWeightedBasisLayout
             @test (x-y) * T[x,1:n]'Mi[1:n,1:n]*Base.unsafe_getindex(T,y,1:n) ≈ T[x,n:n+1]' * (X*Min - Min*X')[n:n+1,n:n+1] * Base.unsafe_getindex(T,y,n:n+1)
         end
     end
+
+    @testset "pointwise evaluation" begin
+        T = Chebyshev()
+        v = T[0.1,:]
+        @test v[1:100_000] == T[0.1,1:100_000]
+        v = T[0.1,2:∞]
+        @test v[1:100_000] == T[0.1,2:100_001]
+        v = Base.unsafe_getindex(T, 2.0, :)
+        @test isequal(v[1:10_000], Base.unsafe_getindex(T, 2.0, 1:10_000))
+    end
 end

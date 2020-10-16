@@ -125,5 +125,7 @@ import QuasiArrays: MulQuasiArray
         Min = Pn * Mi
         @test (X*Min - Min*X')[1:n,1:n] ≈ zeros(n,n)
         @test (x-y) * P[x,1:n]'Mi[1:n,1:n]*P[y,1:n] ≈ P[x,n:n+1]' * (X*Min - Min*X')[n:n+1,n:n+1] * P[y,n:n+1]
+        β = X[n,n+1]*Mi[n+1,n+1]
+        @test (x-y) * P[x,1:n]'Mi[1:n,1:n]*P[y,1:n] ≈ P[x,n:n+1]' * [0 -β; β 0] * P[y,n:n+1]
     end
 end
