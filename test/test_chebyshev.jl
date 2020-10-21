@@ -298,9 +298,15 @@ import ContinuumArrays: MappedWeightedBasisLayout
         T = Chebyshev()
         v = T[0.1,:]
         @test v[1:100_000] == T[0.1,1:100_000]
+        @test Base.BroadcastStyle(typeof(v)) isa LazyArrays.LazyArrayStyle{1}
+        @test (v./v)[1:10] == ones(10)
         v = T[0.1,2:∞]
         @test v[1:100_000] == T[0.1,2:100_001]
+        @test Base.BroadcastStyle(typeof(v)) isa LazyArrays.LazyArrayStyle{1}
+        @test (v./v)[1:10] == ones(10)
         v = Base.unsafe_getindex(T, 2.0, :)
         @test isequal(v[1:10_000], Base.unsafe_getindex(T, 2.0, 1:10_000))
+        @test Base.BroadcastStyle(typeof(v)) isa LazyArrays.LazyArrayStyle{1}
+        @test (v./v)[1:10] == ones(10)
     end
 end
