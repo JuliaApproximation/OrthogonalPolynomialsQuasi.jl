@@ -15,9 +15,9 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(Base.literal_pow), ::Base.RefValu
 
 """
     JacobiWeight(a,b)
-returns the quasiarray associated to the Jacobi weight function (1-x)^a * (1+x)^b.
+
+Return the quasiarray associated to the Jacobi weight function (1-x)^a * (1+x)^b.
 The default interval is [-1,1].
-Use jacobiweight(a,b,I) to modify the interval.
 
 # Examples
 ```julia-repl
@@ -49,6 +49,27 @@ end
 
 sum(P::JacobiWeight) = jacobimoment(P.a, P.b)
 
+"""
+    LegendreWeight(a,b)
+
+Return the quasiarray associated to the Legendre weight function 1.
+The default interval is [-1,1].
+
+# Examples
+```julia-repl
+julia> L=LegendreWeight()
+LegendreWeight{Float64}()
+
+julia> L[0.5]
+1.0
+
+julia> axes(L)
+(Inclusion(-1.0..1.0 (Chebyshev)),)
+
+julia> LegendreWeight{Int32}()[-0.1]
+1
+```
+"""
 struct LegendreWeight{T} <: AbstractJacobiWeight{T} end
 LegendreWeight() = LegendreWeight{Float64}()
 legendreweight(d::AbstractInterval{T}) where T = LegendreWeight{float(T)}()[affine(d,ChebyshevInterval{T}())]
