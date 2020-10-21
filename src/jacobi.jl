@@ -13,6 +13,23 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(sqrt), w::AbstractJacobiWeight) =
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(Base.literal_pow), ::Base.RefValue{typeof(^)}, w::AbstractJacobiWeight, ::Base.RefValue{Val{k}}) where k = 
     JacobiWeight(k * w.a, k * w.b)
 
+"""
+JacobiWeight(a,b) returns the quasiarray associated to the Jacobi weight function (1-x)^a * (1+x)^b.
+The default interval is [-1,1]. Use jacobiweight(a,b,I) to modify the interval.
+
+```julia
+julia> J=JacobiWeight(1.0,1.0)
+JacobiWeight{Float64}(1.0, 1.0)
+
+julia> J[0.5]
+0.75
+
+julia> axes(J)
+(Inclusion(-1.0..1.0 (Chebyshev)),)
+```
+
+"""
+
 struct JacobiWeight{T} <: AbstractJacobiWeight{T}
     a::T
     b::T
