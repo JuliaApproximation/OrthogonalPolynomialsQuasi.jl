@@ -151,6 +151,32 @@ function qr(P::Legendre)
     QuasiQR(Q, Diagonal(Q.scaling))
 end
 
+"""
+    Jacobi{T}(a,b)
+    Jacobi(a,b)
+
+Return the quasimatrix associated to orthogonal polynomials w.r.t JacobiWeight(a,b) where the first axes represents the interval and the second axes represents the polynomial index (starting from 1).
+The default interval is [-1,1]. The type, when not specified, will be converted to a floating point data type.
+
+# Examples
+```julia-repo
+julia> J=Jacobi(0,0) # The type will be converted to float
+Jacobi{Float64}(0.0, 0.0)
+
+julia> J[0,:] # An array of the value of every polynomial at 0
+∞-element view(::Jacobi{Float64}, 0.0, :) with eltype Float64 with indices OneToInf():
+  1.0
+  0.0
+ -0.5
+ -0.0
+  0.375
+  ⋮
+
+julia> J0=J[:,1]; # J0 is the polynomial of degree 0. The index of J0 within J is 1.
+
+julia> J0[0],J0[0.5]
+(1.0, 1.0)
+"""
 struct Jacobi{T} <: AbstractJacobi{T}
     a::T
     b::T
