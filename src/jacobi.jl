@@ -14,6 +14,7 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(Base.literal_pow), ::Base.RefValu
     JacobiWeight(k * w.a, k * w.b)
 
 """
+    JacobiWeight{T}(a,b)
     JacobiWeight(a,b)
 
 Return the quasiarray associated to the Jacobi weight function (1-x)^a * (1+x)^b.
@@ -38,6 +39,10 @@ struct JacobiWeight{T} <: AbstractJacobiWeight{T}
 end
 
 JacobiWeight(a::V, b::T) where {T,V} = JacobiWeight{promote_type(T,V)}(a,b)
+
+"""
+    jacobiweight(a,b, d::AbstractInterval{T})
+"""
 jacobiweight(a,b, d::AbstractInterval{T}) where T = JacobiWeight(a,b)[affine(d,ChebyshevInterval{T}())]
 
 ==(A::JacobiWeight, B::JacobiWeight) = A.b == B.b && A.a == B.a
@@ -50,10 +55,12 @@ end
 sum(P::JacobiWeight) = jacobimoment(P.a, P.b)
 
 """
-    LegendreWeight(a,b)
+    LegendreWeight{T}()
+    LegendreWeight()
 
 Return the quasiarray associated to the Legendre weight function 1.
-The default interval is [-1,1].
+The default interval is [-1,1]. The default type is Float64.
+Any property of a LegendreWeight is zero(T).
 
 # Examples
 ```julia-repl
@@ -66,12 +73,16 @@ julia> L[0.5]
 julia> axes(L)
 (Inclusion(-1.0..1.0 (Chebyshev)),)
 
-julia> LegendreWeight{Int32}()[-0.1]
-1
+julia> L.abc
+0.0
 ```
 """
 struct LegendreWeight{T} <: AbstractJacobiWeight{T} end
 LegendreWeight() = LegendreWeight{Float64}()
+
+"""
+    legendreweight(d::AbstractInterval{T})
+"""
 legendreweight(d::AbstractInterval{T}) where T = LegendreWeight{float(T)}()[affine(d,ChebyshevInterval{T}())]
 
 function getindex(w::LegendreWeight{T}, x::Number) where T
