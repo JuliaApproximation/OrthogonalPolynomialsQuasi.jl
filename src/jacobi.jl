@@ -227,8 +227,8 @@ end
 # Conversion
 ##########
 
-\(A::Jacobi, B::Legendre) = A\Jacobi(B)
-\(A::Legendre, B::Jacobi) = Jacobi(A)\B
+\(A::AbstractJacobi, B::AbstractJacobi) = \(promote(A,B)...)
+\(A::Legendre{V}, B::Legendre{T}) where {V,T} = Eye{promote_type(V,T)}(∞)
 
 function \(A::Jacobi, B::Jacobi)
     T = promote_type(eltype(A), eltype(B))
