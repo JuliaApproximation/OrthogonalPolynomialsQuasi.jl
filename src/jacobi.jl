@@ -131,10 +131,10 @@ WeightedJacobi{T}(a,b) where T = JacobiWeight{T}(a,b) .* Jacobi{T}(a,b)
 axes(::AbstractJacobi{T}) where T = (Inclusion(ChebyshevInterval{T}()), OneTo(∞))
 
 ==(A::WeightedJacobi, B::WeightedJacobi) = A.args == B.args
-==(A::WeightedJacobi, B::Jacobi{T}) where T = A == JacobiWeight(zero(T),zero(T)).*B
-==(A::WeightedJacobi, B::Legendre) = A == Jacobi(B)
-==(A::Jacobi{T}, B::WeightedJacobi) where T = JacobiWeight(zero(T),zero(T)).*A == B
-==(A::Legendre, B::WeightedJacobi) = Jacobi(A) == B
+==(A::WeightedJacobi, B::AbstractJacobi{T}) where T =
+    A.args==(JacobiWeight(zero(T),zero(T)),Legendre{T}()) && B==Legendre{T}()
+==(B::AbstractJacobi{T}, A::WeightedJacobi) where T =
+    A.args==(JacobiWeight(zero(T),zero(T)),Legendre{T}()) && B==Legendre{T}()
 
 ###
 # transforms
