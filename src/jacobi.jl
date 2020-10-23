@@ -112,7 +112,13 @@ Jacobi(a::V, b::T) where {T,V} = Jacobi{float(promote_type(T,V))}(a, b)
 jacobi(a,b) = Jacobi(a,b)
 jacobi(a,b, d::AbstractInterval{T}) where T = Jacobi(a,b)[affine(d,ChebyshevInterval{T}()), :]
 
+==(P::Jacobi, Q::Jacobi) = P.a == Q.a && P.b == Q.b
+
+Base.promote_rule(::Type{Legendre{V}},::Type{Jacobi{T}}) where {V,T} = Jacobi{promote_type(V,T)}
+Base.convert(::Type{Jacobi{V}},P::Legendre{T}) where {V,T} = Jacobi{promote_type(V,T)}(zero(T), zero(T))
+Base.convert(::Type{Jacobi{V}},P::Jacobi{T}) where {V,T} = Jacobi{V}(P.b,P.a)
 Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
+==(P::AbstractJacobi,Q::AbstractJacobi) = ==(promote(P,Q)...)
 
 OrthogonalPolynomial(w::JacobiWeight) = Jacobi(w.a, w.b)
 orthogonalityweight(P::Jacobi) = JacobiWeight(P.a, P.b)
@@ -122,16 +128,13 @@ const WeightedJacobi{T} = WeightedBasis{T,<:JacobiWeight,<:Jacobi}
 WeightedJacobi(a,b) = JacobiWeight(a,b) .* Jacobi(a,b)
 WeightedJacobi{T}(a,b) where T = JacobiWeight{T}(a,b) .* Jacobi{T}(a,b)
 
-
 axes(::AbstractJacobi{T}) where T = (Inclusion(ChebyshevInterval{T}()), OneTo(∞))
-==(P::Jacobi, Q::Jacobi) = P.a == Q.a && P.b == Q.b
-==(P::Legendre, Q::Jacobi) = Jacobi(P) == Q
-==(P::Jacobi, Q::Legendre) = P == Jacobi(Q)
+
 ==(A::WeightedJacobi, B::WeightedJacobi) = A.args == B.args
-==(A::WeightedJacobi, B::Jacobi{T}) where T = A == JacobiWeight(zero(T),zero(T)).*B
-==(A::WeightedJacobi, B::Legendre) = A == Jacobi(B)
-==(A::Jacobi{T}, B::WeightedJacobi) where T = JacobiWeight(zero(T),zero(T)).*A == B
-==(A::Legendre, B::WeightedJacobi) = Jacobi(A) == B
+==(A::WeightedJacobi, B::AbstractJacobi{T}) where T =
+    A.args==(JacobiWeight(zero(T),zero(T)),Legendre{T}()) && B==Legendre{T}()
+==(B::AbstractJacobi{T}, A::WeightedJacobi) where T =
+    A.args==(JacobiWeight(zero(T),zero(T)),Legendre{T}()) && B==Legendre{T}()
 
 ###
 # transforms
@@ -224,8 +227,8 @@ end
 # Conversion
 ##########
 
-\(A::Jacobi, B::Legendre) = A\Jacobi(B)
-\(A::Legendre, B::Jacobi) = Jacobi(A)\B
+\(A::AbstractJacobi, B::AbstractJacobi) = \(promote(A,B)...)
+\(A::Legendre{V}, B::Legendre{T}) where {V,T} = Eye{promote_type(V,T)}(∞)
 
 function \(A::Jacobi, B::Jacobi)
     T = promote_type(eltype(A), eltype(B))
