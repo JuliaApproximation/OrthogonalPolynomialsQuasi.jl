@@ -3,7 +3,7 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
 
 @testset "Jacobi" begin
     @testset "promotion and conversion" begin
-        A,B=promote(Jacobi(1,1),Legendre())
+        A,B=promote(Jacobi{Int64}(1,1),Legendre{Float64}())
         @test eltype(A) == Float64
     end
     @testset "JacobiWeight" begin
