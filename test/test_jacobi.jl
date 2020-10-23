@@ -1,6 +1,13 @@
 using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, QuasiArrays, LazyArrays, FastGaussQuadrature, Test
 import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
 
+@testset "Promotion and Conversion" begin
+    @testset "AbstractJacobi" begin
+        A,B=promote(Jacobi(1,1),Legendre())
+        @test eltype(A) == Float64
+    end
+end
+
 @testset "Jacobi" begin
     @testset "JacobiWeight" begin
         a,b = 0.1,0.2
