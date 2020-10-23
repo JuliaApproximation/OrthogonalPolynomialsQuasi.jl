@@ -5,6 +5,8 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
     @testset "promotion and conversion" begin
         A,B=promote(Jacobi{Int64}(1,1),Legendre{Float64}())
         @test eltype(A) == Float64
+        @test Jacobi{Int64}(0,0) == Legendre{Float64}()
+        @test Jacobi{Int64}(0,0)\Jacobi{Int64}(0,0) == Jacobi{Int64}(0,0)\Legendre{Float64}() == Legendre{Float64}()\Legendre{Float64}()
     end
     @testset "JacobiWeight" begin
         a,b = 0.1,0.2
