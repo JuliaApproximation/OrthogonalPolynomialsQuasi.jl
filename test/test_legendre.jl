@@ -1,4 +1,4 @@
-using OrthogonalPolynomialsQuasi, LazyArrays, QuasiArrays, BandedMatrices, Test
+using OrthogonalPolynomialsQuasi, LazyArrays, QuasiArrays, BandedMatrices, ForwardDiff, Test
 import OrthogonalPolynomialsQuasi: recurrencecoefficients, jacobimatrix, Clenshaw
 import QuasiArrays: MulQuasiArray
 
