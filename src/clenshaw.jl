@@ -21,11 +21,15 @@ function initiateforwardrecurrence(N, A, B, C, x, μ)
     p0,p1
 end
 
-getindex(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T =
-    copyto!(Vector{T}(undef,length(n)), view(P, x, n))
+for (get, vie) in ((:getindex, :view), (:(Base.unsafe_getindex), :(Base.unsafe_view)))
+    @eval begin
+        Base.@propagate_inbounds @inline $get(P::OrthogonalPolynomial{T}, x::Number, n::OneTo) where T =
+            copyto!(Vector{T}(undef,length(n)), $vie(P, x, n))
 
-getindex(P::OrthogonalPolynomial{T}, x::AbstractVector, n::AbstractUnitRange{Int}) where T =
-    copyto!(Matrix{T}(undef,length(x),length(n)), view(P, x, n))
+        $get(P::OrthogonalPolynomial{T}, x::AbstractVector, n::AbstractUnitRange{Int}) where T =
+            copyto!(Matrix{T}(undef,length(x),length(n)), $vie(P, x, n))
+    end
+end
 
 function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial,<:Tuple{<:Number,<:OneTo}})
     P = parent(V)
@@ -34,7 +38,7 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial
     forwardrecurrence!(dest, A, B, C, x, _p0(P))
 end
 
-function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial,<:Tuple{<:AbstractVector,<:UnitRange}})
+function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial,<:Tuple{<:AbstractVector,<:AbstractUnitRange}})
     checkbounds(dest, axes(V)...)
     P = parent(V)
     xr,jr = parentindices(V)
@@ -60,18 +64,29 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial
     dest
 end
 
-getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = layout_getindex(P, x, n)
-getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = layout_getindex(P, x, n)
-
-getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) =
-    P[x,OneTo(maximum(n))][n]
-
-getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer}) =
-    P[x,OneTo(maximum(n))][:,n]
-
+getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector) = layout_getindex(P, x, n)
+getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector) = layout_getindex(P, x, n)
+getindex(P::SubArray{<:Any,1,<:OrthogonalPolynomial}, x::AbstractVector) = layout_getindex(P, x)
 getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
+unsafe_layout_getindex(A...) = sub_materialize(Base.unsafe_view(A...))
 
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::AbstractUnitRange) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractUnitRange) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector) = Base.unsafe_getindex(P,x,OneTo(maximum(n)))[n]
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector) = Base.unsafe_getindex(P,x,OneTo(maximum(n)))[:,n]
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::Number) = Base.unsafe_getindex(P, x, 1:n)[:,end]
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, ::Colon) = Base.unsafe_getindex(P, x, axes(P,2))
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::Number) = Base.unsafe_getindex(P,x,OneTo(n))[end]
+
+getindex(P::OrthogonalPolynomial, x::Number, jr::AbstractInfUnitRange{Int}) = view(P, x, jr)
+Base.unsafe_getindex(P::OrthogonalPolynomial{T}, x::Number, jr::AbstractInfUnitRange{Int}) where T = 
+    BroadcastVector{T}(Base.unsafe_getindex, Ref(P), x, jr)
+
+function getindex(P::BroadcastVector{<:Any,typeof(Base.unsafe_getindex), <:Tuple{Ref{<:OrthogonalPolynomial},Number,AbstractVector{Int}}}, kr::AbstractVector)
+    Pr, x, jr = P.args
+    Base.unsafe_getindex(Pr[], x, jr[kr])
+end
 
 ###
 # Clenshaw
@@ -312,3 +327,10 @@ function broadcasted(::LazyQuasiArrayStyle{2}, ::typeof(*), wv::BroadcastQuasiVe
     a = (w .* Q) * (Q \ v)
     a .* P
 end
+
+
+##
+# Banded dot is slow
+###
+
+LinearAlgebra.dot(x::AbstractVector, A::Clenshaw, y::AbstractVector) = dot(x, mul(A, y))

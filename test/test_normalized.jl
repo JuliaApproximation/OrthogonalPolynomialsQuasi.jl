@@ -1,7 +1,7 @@
-using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, ArrayLayouts, Base64, Test
-import OrthogonalPolynomialsQuasi: NormalizationConstant, recurrencecoefficients, Normalized, Clenshaw, PaddedLayout, weighted
-import ContinuumArrays: BasisLayout
-
+using OrthogonalPolynomialsQuasi, FillArrays, BandedMatrices, ContinuumArrays, ArrayLayouts, LazyArrays, Base64, Test
+import OrthogonalPolynomialsQuasi: NormalizationConstant, NormalizedBasisLayout, recurrencecoefficients, Normalized, Clenshaw, weighted
+import LazyArrays: CachedVector, PaddedLayout
+import ContinuumArrays: MappedWeightedBasisLayout
 
 @testset "Normalized" begin
     @testset "Legendre" begin
@@ -9,8 +9,13 @@ import ContinuumArrays: BasisLayout
         Q = Normalized(P)
 
         @testset "Basic" begin
-            @test MemoryLayout(Q) isa BasisLayout
+            @test MemoryLayout(Q) isa NormalizedBasisLayout
             @test @inferred(Q\Q) ≡ Eye(∞)
+            @test Q == Q
+            @test P ≠ Q
+            @test Q ≠ P
+            @test Q ≠ P[:,1:end]
+            @test P[:,1:end] ≠ Q
         end
 
         @testset "recurrencecoefficients" begin
@@ -48,6 +53,13 @@ import ContinuumArrays: BasisLayout
             @test (D*f)[0.1] ≈ (f[0.1+h]-f[0.1])/h atol=1E-4
         end
 
+        @testset "Jacobi" begin
+            X = jacobimatrix(Q)
+            M = P'P
+            @test X[1:10,1:10] ≈ sqrt(M)[1:10,1:10] * jacobimatrix(P)[1:10,1:10] * inv(sqrt(M))[1:10,1:10]
+            @test 0.1*Q[0.1,1:10] ≈ (Q*X)[0.1,1:10]
+        end
+
         @testset "Multiplication" begin
             x = axes(Q,1)
             @test Q \ (x .* Q) isa Symmetric
@@ -55,19 +67,17 @@ import ContinuumArrays: BasisLayout
             w = P * (P \ (1 .- x.^2));
             W = Q \ (w .* Q)
             @test W isa Clenshaw
-            @test bandwidths(W) == (2,2)
             W̃ = Q' * (w .* Q)
+            @test bandwidths(W) == bandwidths(W̃) == (2,2)
             @test W[1:10,1:10] ≈ W[1:10,1:10]' ≈ W̃[1:10,1:10]
 
-            P = Normalized(Legendre())
-            x = axes(P,1)
-            w = x .+ x.^2 .+ 1 # w[x] == exp(x)
-            W = P \ (w .* P)
+            w = @. x + x^2 + 1 # w[x] == x + x^2 + 1
+            W = Q \ (w .* Q)
             @test W isa Clenshaw
         end
 
         @testset "show" begin
-            @test stringmime("text/plain", Normalized(Legendre())) == "Normalized(Legendre{Float64}())"
+            @test stringmime("text/plain", Normalized(Legendre())) == "Normalized(Legendre{Float64})"
             @test summary(Normalized(Legendre()).scaling) == "NormalizationConstant{Float64}"
         end
     end
@@ -79,7 +89,7 @@ import ContinuumArrays: BasisLayout
         Q = Normalized(T)
 
         @testset "Basic" begin
-            @test MemoryLayout(Q) isa BasisLayout
+            @test MemoryLayout(Q) isa NormalizedBasisLayout
             @test @inferred(Q\Q) ≡ Eye(∞)
         end
 
@@ -155,12 +165,34 @@ import ContinuumArrays: BasisLayout
         @test u[0.1] ≈ exp(0.1)
 
         Q = Normalized(jacobi(1/2,0,0..1))
+        @testset "Recurrences" begin
+            A,B,C = recurrencecoefficients(Q)
+            Ã,B̃,C̃ = recurrencecoefficients(Normalized(Jacobi(1/2,0)))
+            @test A[1:10] ≈ 2Ã[1:10]
+            @test B[1:10] ≈ B̃[1:10] .- Ã[1:10]
+            @test C[1:10] ≈ C̃[1:10]
+        end
         wQ = weighted(Q)
         x = axes(Q,1)
         @test wQ[0.1,1:10] ≈ Q[0.1,1:10] * sqrt(1-(2*0.1-1))
+
         u = wQ[:,1:20] * (wQ[:,1:20] \  @.(sqrt(1-x^2)))
         @test u[0.1] ≈ sqrt(1-0.1^2)
         u = wQ * (wQ \ @.(sqrt(1-x^2)))
         @test u[0.1] ≈ sqrt(1-0.1^2)
+    end
+
+    @testset "Christoffel–Darboux" begin
+        Q = Normalized(Legendre())
+        X = Q\ (axes(Q,1) .* Q)
+        x,y = 0.1,0.2
+        n = 10
+        Pn = Diagonal([Ones(n); Zeros(∞)])
+        @test (X*Pn - Pn*X)[1:n,1:n] ≈ zeros(n,n)
+        @test Pn * Q[y,:] isa CachedVector
+
+        # @test (x-y) * Q[x,1:n]'*Q[y,1:n] ≈ (x-y) * Q[x,:]'*Pn*Q[y,:] ≈ (x-y) * Q[x,:]'*Pn*Q[y,:]
+        # Q[x,:]' * ((X*Pn - Pn*X)* Q[y,:])
+        @test (x-y) * Q[x,1:n]'*Q[y,1:n] ≈ Q[x,n:n+1]' * (X*Pn - Pn*X)[n:n+1,n:n+1] * Q[y,n:n+1]
     end
 end

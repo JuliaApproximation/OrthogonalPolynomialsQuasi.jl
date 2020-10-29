@@ -123,7 +123,7 @@ WeightedJacobi(a,b) = JacobiWeight(a,b) .* Jacobi(a,b)
 WeightedJacobi{T}(a,b) where T = JacobiWeight{T}(a,b) .* Jacobi{T}(a,b)
 
 
-axes(::AbstractJacobi{T}) where T = (Inclusion(ChebyshevInterval{T}()), OneTo(∞))
+axes(::AbstractJacobi{T}) where T = (Inclusion{T}(ChebyshevInterval{real(T)}()), OneTo(∞))
 ==(P::Jacobi, Q::Jacobi) = P.a == Q.a && P.b == Q.b
 ==(P::Legendre, Q::Jacobi) = Jacobi(P) == Q
 ==(P::Jacobi, Q::Legendre) = P == Jacobi(Q)
@@ -142,10 +142,16 @@ function grid(Pn::SubQuasiArray{T,2,<:AbstractJacobi,<:Tuple{<:Inclusion,<:Abstr
     ChebyshevGrid{1,T}(maximum(jr))
 end
 
-function transform_ldiv(Pn::Legendre{V}, f) where V
+function ldiv(::Legendre{V}, f::AbstractQuasiVector) where V
     T = ChebyshevT{V}()
     [cheb2leg(paddeddata(T \ f)); zeros(V,∞)]
 end
+
+function ldiv(P::Jacobi{V}, f::AbstractQuasiVector) where V
+    T = ChebyshevT{V}()
+    [cheb2jac(paddeddata(T \ f), P.a, P.b); zeros(V,∞)]
+end
+
 
 ########
 # Mass Matrix

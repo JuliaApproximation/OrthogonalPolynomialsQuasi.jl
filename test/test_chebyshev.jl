@@ -1,8 +1,9 @@
-using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, FastTransforms, ArrayLayouts, Test
+using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, FastTransforms, ArrayLayouts, Test, FillArrays, Base64
 import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, paddeddata, jacobimatrix
 import LazyArrays: ApplyStyle
 import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
+import ContinuumArrays: MappedWeightedBasisLayout
 
 @testset "Chebyshev" begin
     @testset "ChebyshevGrid" begin
@@ -60,7 +61,7 @@ import Base: OneTo
             Tn = @inferred(T[:,OneTo(100)])
             @test grid(Tn) == chebyshevpoints(100, Val(1))
             P = factorize(Tn)
-            u = T*[P.plan * exp.(P.grid); zeros(∞)]
+            u = T*[P.plan * exp.(grid(Tn)); zeros(∞)]
             @test u[0.1] ≈ exp(0.1)
 
             # auto-transform
@@ -110,11 +111,29 @@ import Base: OneTo
 
     @testset "weighted" begin
         T = ChebyshevT()
+        w = ChebyshevTWeight()
         wT = WeightedChebyshevT()
         x = axes(wT,1)
         @test (x .* wT).args[2] isa BandedMatrix
 
-        a = wT * [1; 2; 3; zeros(∞)];
+        c = [1; 2; 3; zeros(∞)]
+        a = wT * c;
+        @test a[0.1] ≈ (T * c)[0.1]/sqrt(1-0.1^2)
+        u = wT * (wT \ @.(exp(x)/sqrt(1-x^2)))
+        @test u[0.1] ≈ exp(0.1)/sqrt(1-0.1^2)
+
+        @testset "mapped" begin
+            x = Inclusion(0..1)
+            wT̃ = wT[2x .- 1, :]
+            @test MemoryLayout(wT̃) isa MappedWeightedBasisLayout
+            v = wT̃ * (wT̃ \ @.(exp(x)/(sqrt(x)*sqrt(1-x))))
+            @test v[0.1] ≈ let x = 0.1; exp(x)/(sqrt(x)*sqrt(1-x)) end
+
+            WT̃ = w[2x .- 1] .* T[2x .- 1, :]
+            @test MemoryLayout(wT̃) isa MappedWeightedBasisLayout
+            v = wT̃ * (wT̃ \ @.(exp(x)/(sqrt(x)*sqrt(1-x))))
+            @test v[0.1] ≈ let x = 0.1; exp(x)/(sqrt(x)*sqrt(1-x)) end
+        end
     end
 
     @testset "operators" begin
@@ -162,6 +181,7 @@ import Base: OneTo
     @testset "sub-of-sub" begin
         T = Chebyshev()
         V = T[:,2:end]
+        @test copy(V) == V
         @test view(V,0.1:0.1:1,:) isa SubArray
         @test V[0.1:0.1:1,:] isa SubArray
         @test V[0.1:0.1:1,:][:,1:5] == T[0.1:0.1:1,2:6]
@@ -235,5 +255,66 @@ import Base: OneTo
             a = wT * [1; 2; 3; zeros(∞)];
             @test (a .* T)[0.1,1:10] ≈ a[0.1] * T[0.1,1:10]
         end
+    end
+
+    @testset "show" begin
+        T = Chebyshev()
+        @test stringmime("text/plain", T * [1; 2; Zeros(∞)]) == "Chebyshev{1,Float64} * [1.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, …]"
+    end
+
+    @testset "Complex eltype" begin
+        @test axes(ChebyshevT{ComplexF64}(),1) ≡ Inclusion{ComplexF64}(ChebyshevInterval())
+        @test ChebyshevT{ComplexF64}()[0.1+0im,1:5] isa Vector{ComplexF64}
+        @test ChebyshevT{ComplexF64}()[0.1+0im,1:5] ≈ ChebyshevT()[0.1,1:5]
+    end
+
+    @testset "extrapolation" begin
+        @test Base.unsafe_getindex(Chebyshev(), 5.0, Base.OneTo(5)) ≈ [cos(k*acos(5+0im)) for k=0:4]
+        @test Base.unsafe_getindex(Chebyshev(), 5.0, 5)  ≈ cos(4*acos(5+0im))
+        @test Base.unsafe_getindex(ChebyshevT{ComplexF64}(), 5.0+im, 5)  ≈ cos(4*acos(5+im))
+        @test Base.unsafe_getindex(Chebyshev(), 5.0, 1:5) ≈ [cos(n*acos(5+0im)) for n=0:4]
+        @test Base.unsafe_getindex(Chebyshev(), 5.0, Base.OneTo(5)) ≈ [cos(n*acos(5+0im)) for n=0:4]
+        @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], 5)  ≈ [cos(4*acos(x+0im)) for x in [1,5]]
+        @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], 1:5)  ≈ [cos(n*acos(x+0im)) for x in [1,5], n in 0:4]
+        @test Base.unsafe_getindex(Chebyshev(), 5.0, [1,5])  ≈ [cos(n*acos(5.0+0im)) for n in [0,4]]
+        @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], [1,5])  ≈ [cos(n*acos(x+0im)) for x in [1,5], n in [0,4]]
+        @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], Base.OneTo(5))  ≈ [cos(n*acos(x+0im)) for x in [1,5], n in 0:4]
+
+        v = Base.unsafe_getindex(Chebyshev(), 2, 2:∞)
+        @test eltype(v) == Float64
+        @test v[5] == Base.unsafe_getindex(Chebyshev(), 2, 6)
+    end
+
+    @testset "Christoffel–Darboux" begin
+        T = Chebyshev()
+        X = T\ (axes(T,1) .* T)
+        Mi = inv(T'*(ChebyshevWeight() .* T))
+        x,y = 0.1,0.2
+        n = 10
+        Pn = Diagonal([Ones(n); Zeros(∞)])
+        Min = Pn * Mi
+        @test (X*Min - Min*X')[1:n,1:n] ≈ zeros(n,n)
+        @test (x-y) * T[x,1:n]'Mi[1:n,1:n]*T[y,1:n] ≈ T[x,n:n+1]' * (X*Min - Min*X')[n:n+1,n:n+1] * T[y,n:n+1]
+
+        @testset "extrapolation" begin
+            x,y = 0.1,3.4
+            @test (x-y) * T[x,1:n]'Mi[1:n,1:n]*Base.unsafe_getindex(T,y,1:n) ≈ T[x,n:n+1]' * (X*Min - Min*X')[n:n+1,n:n+1] * Base.unsafe_getindex(T,y,n:n+1)
+        end
+    end
+
+    @testset "pointwise evaluation" begin
+        T = Chebyshev()
+        v = T[0.1,:]
+        @test v[1:100_000] == T[0.1,1:100_000]
+        @test Base.BroadcastStyle(typeof(v)) isa LazyArrays.LazyArrayStyle{1}
+        @test (v./v)[1:10] == ones(10)
+        v = T[0.1,2:∞]
+        @test v[1:100_000] == T[0.1,2:100_001]
+        @test Base.BroadcastStyle(typeof(v)) isa LazyArrays.LazyArrayStyle{1}
+        @test (v./v)[1:10] == ones(10)
+        v = Base.unsafe_getindex(T, 2.0, :)
+        @test isequal(v[1:10_000], Base.unsafe_getindex(T, 2.0, 1:10_000))
+        @test Base.BroadcastStyle(typeof(v)) isa LazyArrays.LazyArrayStyle{1}
+        @test (v./v)[1:10] == ones(10)
     end
 end

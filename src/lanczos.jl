@@ -135,9 +135,10 @@ end
 
 getindex(A::LanczosJacobiBand, I::Integer) = _lanczos_getindex(A, I)
 getindex(A::LanczosJacobiBand, I::AbstractVector) = _lanczos_getindex(A, I)
-getindex(K::LanczosJacobiBand, k::InfUnitRange) = view(K, k)
-getindex(K::SubArray{<:Any,1,<:LanczosJacobiBand}, k::InfUnitRange) = view(K, k)
+getindex(K::LanczosJacobiBand, k::AbstractInfUnitRange) = view(K, k)
+getindex(K::SubArray{<:Any,1,<:LanczosJacobiBand}, k::AbstractInfUnitRange) = view(K, k)
 
+copy(A::LanczosJacobiBand) = A # immutable
 
 struct LanczosRecurrence{ABC,T,XX,WW} <: LazyVector{T}
     data::LanczosData{T,XX,WW}
@@ -171,8 +172,8 @@ end
 
 getindex(A::LanczosRecurrence, I::Integer) = _lanczos_getindex(A, I)
 getindex(A::LanczosRecurrence, I::AbstractVector) = _lanczos_getindex(A, I)
-getindex(K::LanczosRecurrence, k::InfUnitRange) = view(K, k)
-getindex(K::SubArray{<:Any,1,<:LanczosRecurrence}, k::InfUnitRange) = view(K, k)
+getindex(K::LanczosRecurrence, k::AbstractInfUnitRange) = view(K, k)
+getindex(K::SubArray{<:Any,1,<:LanczosRecurrence}, k::AbstractInfUnitRange) = view(K, k)
 
 
 struct LanczosPolynomial{T,XX,WW,Weight,Basis} <: OrthogonalPolynomial{T}
@@ -184,6 +185,8 @@ end
 ==(A::LanczosPolynomial, B::LanczosPolynomial) = A.w == B.w
 ==(::LanczosPolynomial, ::OrthogonalPolynomial) = false # TODO: fix
 ==(::OrthogonalPolynomial, ::LanczosPolynomial) = false # TODO: fix
+==(::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, ::LanczosPolynomial) = false # TODO: fix
+==(::LanczosPolynomial, ::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}) = false # TODO: fix
 
 
 normalize(Q::LanczosPolynomial) = Q
@@ -221,6 +224,9 @@ Base.array_summary(io::IO, C::SymTridiagonal{T,<:LanczosJacobiBand}, inds::Tuple
 Base.array_summary(io::IO, C::LanczosConversion{T}, inds::Tuple{Vararg{OneToInf{Int}}}) where T =
     print(io, Base.dims2string(length.(inds)), " LanczosConversion{$T}")
 
+Base.array_summary(io::IO, C::LanczosJacobiBand{T}, inds::Tuple{Vararg{OneToInf{Int}}}) where T =
+    print(io, Base.dims2string(length.(inds)), " LanczosJacobiBand{$T}")
+
 
 # Sometimes we want to expand out, sometimes we don't
 
@@ -235,10 +241,15 @@ end
 \(A::Normalized, Q::LanczosPolynomial) = (A \ Q.P) * LanczosConversion(Q.data)
 \(Q::LanczosPolynomial, A::OrthogonalPolynomial) = inv(LanczosConversion(Q.data)) * (Q.P \ A)
 \(Q::LanczosPolynomial, A::Normalized) = inv(LanczosConversion(Q.data)) * (Q.P \ A)
-
+\(Q::LanczosPolynomial, A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}) = inv(LanczosConversion(Q.data)) * (Q.P \ A)
+\(A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, Q::LanczosPolynomial) = (A \ Q.P) * LanczosConversion(Q.data)
 
 ArrayLayouts.mul(Q::LanczosPolynomial, C::AbstractArray) = ApplyQuasiArray(*, Q, C)
-transform_ldiv(Q::LanczosPolynomial, C::AbstractQuasiArray) = LanczosConversion(Q.data) \ (Q.P \ C)
+function ldiv(Qn::SubQuasiArray{<:Any,2,<:LanczosPolynomial,<:Tuple{<:Inclusion,<:Any}}, C::AbstractQuasiArray)
+    _,jr = parentindices(Qn)
+    Q = parent(Qn)
+    LanczosConversion(Q.data)[jr,jr] \ (Q.P[:,jr] \ C)
+end
 arguments(::ApplyLayout{typeof(*)}, Q::LanczosPolynomial) = Q.P, LanczosConversion(Q.data)
 LazyArrays._mul_arguments(Q::LanczosPolynomial) = arguments(ApplyLayout{typeof(*)}(), Q)
 LazyArrays._mul_arguments(Q::QuasiAdjoint{<:Any,<:LanczosPolynomial}) = arguments(ApplyLayout{typeof(*)}(), Q)

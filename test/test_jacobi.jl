@@ -12,12 +12,35 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         @test ChebyshevWeight() .* w == w .* ChebyshevWeight() == JacobiWeight(a-1/2,b-1/2)
     end
 
+    @testset "basics" begin
+        @test Legendre() == Jacobi(0,0)
+        @test Jacobi(0,0) == Legendre()
+    end
+
     @testset "basis" begin
         b,a = 0.1,0.2
         P = Jacobi(a,b)
         @test P[0.1,2] ≈ 0.16499999999999998
         P = Jacobi(b,a)
         @test P[-0.1,2] ≈ -0.16499999999999998
+
+        A,B,C = recurrencecoefficients(P)
+        X = jacobimatrix(P)
+        @testset "recurrence coefficient and jacobimatrix" begin
+            @test 1/A[1] ≈ X[2,1]
+            @test -B[1]/A[1] ≈ X[1,1]
+            @test C[2]/A[2] ≈ X[1,2]
+            @test 1/A[2] ≈ X[3,2]
+            @test -B[2]/A[2] ≈ X[2,2]
+            @test C[3]/A[3] ≈ X[2,3]
+
+            @test A[1] ≈ 1/X[2,1]
+            @test B[1] ≈ -X[1,1]/X[2,1]
+            @test C[2] ≈ X[1,2]/X[3,2]
+            @test A[2] ≈ 1/X[3,2]
+            @test B[2] ≈ -X[2,2]/X[3,2]
+            @test C[3] ≈ X[2,3]/X[4,3]
+        end
     end
 
     @testset "orthogonality" begin
@@ -292,5 +315,24 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         R = jacobi(0,1/2,0..1) \ jacobi(0,-1/2,0..1)
         R̃ = Jacobi(0,1/2) \ Jacobi(0,-1/2)
         @test R[1:10,1:10] == R̃[1:10,1:10]
+    end
+
+    @testset "Christoffel–Darboux" begin
+        a,b = 0.1,0.2
+        P = Jacobi(a,b)
+        X = P\ (axes(P,1) .* P)
+        Mi = inv(P'*(JacobiWeight(a,b) .* P))
+        x,y = 0.1,0.2
+        n = 10
+        Pn = Diagonal([Ones(n); Zeros(∞)])
+        Min = Pn * Mi
+        @test norm((X*Min - Min*X')[1:n,1:n]) ≤ 1E-13
+        β = X[n,n+1]*Mi[n+1,n+1]
+        @test (x-y) * P[x,1:n]'Mi[1:n,1:n]*P[y,1:n] ≈ P[x,n:n+1]' * (X*Min - Min*X')[n:n+1,n:n+1] * P[y,n:n+1] ≈ P[x,n:n+1]' * [0 -β; β 0] * P[y,n:n+1]
+        
+        @testset "extrapolation" begin
+            x,y = 0.1,3.4
+            @test (x-y) * P[x,1:n]'Mi[1:n,1:n]*Base.unsafe_getindex(P,y,1:n) ≈ P[x,n:n+1]' * [0 -β; β 0] * Base.unsafe_getindex(P,y,n:n+1)
+        end
     end
 end

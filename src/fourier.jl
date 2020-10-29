@@ -11,6 +11,43 @@ function getindex(F::Fourier{T}, x::Real, j::Int)::T where T
     sin((j÷2)*x)
 end
 
+### transform
+checkpoints(::Fourier{T}) where T = T[1.223972,3.14,5.83273484]
+
+fouriergrid(T, n) = convert(T,π)*collect(0:2:2n-2)/n
+
+function grid(Pn::SubQuasiArray{T,2,<:Fourier,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T
+    kr,jr = parentindices(Pn)
+    n = maximum(jr)
+    fouriergrid(T, n)
+end
+
+"""
+Gives a shuffled version of the real FFT, with order
+1,sin(θ),cos(θ),sin(2θ)…
+"""
+struct ShuffledRFFT{T,Plan} <: Factorization{T}
+    plan::Plan
+end
+
+size(F::ShuffledRFFT, _) = size(F.plan,1)
+size(F::ShuffledRFFT) = (size(F.plan,1),size(F.plan,1))
+
+ShuffledRFFT{T}(p::Plan) where {T,Plan} = ShuffledRFFT{T,Plan}(p)
+ShuffledRFFT{T}(n::Int) where T = ShuffledRFFT{T}(FFTW.plan_r2r!(Array{T}(undef, n), FFTW.R2HC))
+
+
+function *(F::ShuffledRFFT{T}, b::AbstractVector) where T
+    n = size(F,1)
+    c = lmul!(convert(T,2)/n, F.plan * convert(Array, b))
+    c[1] /= 2
+    iseven(n) && (c[n÷2+1] /= 2)
+    negateeven!(reverseeven!(interlace!(c,1)))
+end
+
+factorize(L::SubQuasiArray{T,2,<:Fourier,<:Tuple{<:Inclusion,<:OneTo}}) where T =
+    TransformFactorization(grid(L), ShuffledRFFT{T}(size(L,2)))
+
 import BlockBandedMatrices: _BlockSkylineMatrix
 
 @simplify function *(A::QuasiAdjoint{<:Any,<:Fourier}, B::Fourier)

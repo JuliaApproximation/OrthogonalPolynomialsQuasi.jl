@@ -1,35 +1,35 @@
 
-mutable struct NormalizationConstant{T, DL, DU} <: LazyVector{T}
-    dl::DL # subdiagonal of Jacobi
-    du::DU # superdiagonal
+mutable struct NormalizationConstant{T, PP<:AbstractQuasiMatrix{T}} <: AbstractCachedVector{T}
+    P::PP # OPs
     data::Vector{T}
     datasize::Tuple{Int}
 
-    NormalizationConstant{T, DL, DU}(μ::T, dl::DL, du::DU) where {T,DL,DU} = new{T, DL, DU}(dl, du, [μ], (1,))
+    function NormalizationConstant{T, PP}(P::PP) where {T,PP<:AbstractQuasiMatrix{T}}
+        μ = inv(sqrt(sum(orthogonalityweight(P))))
+        new{T, PP}(P, [μ], (1,))
+    end
 end
 
-NormalizationConstant(μ::T, dl::AbstractVector{T}, du::AbstractVector{T}) where T = NormalizationConstant{T,typeof(dl),typeof(du)}(μ, dl, du)
-
-function NormalizationConstant(P::AbstractQuasiMatrix)
-    dl, _, du = bands(jacobimatrix(P))
-    NormalizationConstant(inv(sqrt(sum(orthogonalityweight(P)))), dl, du)
-end
+NormalizationConstant(P::AbstractQuasiMatrix{T}) where T = NormalizationConstant{T,typeof(P)}(P)
 
 size(K::NormalizationConstant) = (∞,)
 
-# Behaves like a CachedVector
-getindex(K::NormalizationConstant, k) = LazyArrays.cache_getindex(K, k)
-getindex(K::NormalizationConstant, k::AbstractVector) = LazyArrays.cache_getindex(K, k)
-getindex(K::NormalizationConstant, k::InfUnitRange) = layout_getindex(K, k)
-getindex(K::SubArray{<:Any,1,<:NormalizationConstant}, k::InfUnitRange) = layout_getindex(K, k)
+# How we populate the data
+# function _normalizationconstant_fill_data!(K::NormalizationConstant, J::Union{BandedMatrix,Symmetric{<:Any,BandedMatrix},Tridiagonal,SymTridiagonal}, inds)
+#     dl, _, du = bands(J)
+#     @inbounds for k in inds
+#         K.data[k] = sqrt(du[k-1]/dl[k]) * K.data[k-1]
+#     end
+# end
 
-paddeddata(A::NormalizationConstant) = view(A.data,OneTo(A.datasize[1]))
-resizedata!(B::NormalizationConstant, mn...) = resizedata!(MemoryLayout(typeof(B.data)), UnknownLayout(), B, mn...)
-function LazyArrays.cache_filldata!(K::NormalizationConstant, inds)
+function _normalizationconstant_fill_data!(K::NormalizationConstant, J, inds)
     @inbounds for k in inds
-        K.data[k] = sqrt(K.du[k-1]/K.dl[k]) * K.data[k-1]
+        K.data[k] = sqrt(J[k,k-1]/J[k-1,k]) * K.data[k-1]
     end
 end
+
+
+LazyArrays.cache_filldata!(K::NormalizationConstant, inds) = _normalizationconstant_fill_data!(K, jacobimatrix(K.P), inds)
 
 
 struct Normalized{T, OPs<:AbstractQuasiMatrix{T}, NL} <: OrthogonalPolynomial{T}
@@ -40,6 +40,11 @@ end
 normalizationconstant(P) = NormalizationConstant(P)
 Normalized(P::AbstractQuasiMatrix{T}) where T = Normalized(P, normalizationconstant(P))
 Normalized(Q::Normalized) = Q
+
+
+struct NormalizedBasisLayout{LAY<:AbstractBasisLayout} <: AbstractBasisLayout end
+
+MemoryLayout(::Type{<:Normalized{<:Any, OPs}}) where OPs = NormalizedBasisLayout{typeof(MemoryLayout(OPs))}()
 
 struct QuasiQR{T, QQ, RR} <: Factorization{T}
     Q::QQ
@@ -56,6 +61,14 @@ Base.iterate(S::QuasiQR, ::Val{:done}) = nothing
 
 axes(Q::Normalized) = axes(Q.P)
 ==(A::Normalized, B::Normalized) = A.P == B.P
+
+# There is no point in a Normalized OP thats ==, so just return false
+==(A::Normalized, B::OrthogonalPolynomial) = false
+==(A::OrthogonalPolynomial, B::Normalized) = false
+==(A::Normalized, B::AbstractQuasiMatrix) = false
+==(A::AbstractQuasiMatrix, B::Normalized) = false
+==(A::Normalized, B::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}) = false
+==(A::SubQuasiArray{<:Any,2,<:OrthogonalPolynomial}, B::Normalized) = false
 
 _p0(Q::Normalized) = Q.scaling[1]
 
@@ -76,13 +89,19 @@ end
 # q_{n+1}/h[n+1] = (A_n * x + B_n) * q_n/h[n] - C_n * p_{n-1}/h[n-1]
 # q_{n+1} = (h[n+1]/h[n] * A_n * x + h[n+1]/h[n] * B_n) * q_n - h[n+1]/h[n-1] * C_n * p_{n-1}
 function jacobimatrix(Q::Normalized)
-    _,a,b = bands(jacobimatrix(Q.P))
+    X = jacobimatrix(Q.P)
+    a,b = X[band(0)], X[band(-1)]
     h = Q.scaling
     Symmetric(_BandedMatrix(Vcat(a', (b .* h ./ h[2:end])'), ∞, 1, 0), :L)
 end
 
 orthogonalityweight(Q::Normalized) = orthogonalityweight(Q.P)
 singularities(Q::Normalized) = singularities(Q.P)
+
+function demap(Q::Normalized)
+    P,D =  arguments(ApplyLayout{typeof(*)}(), Q)
+    demap(P) * D
+end
 
 # Sometimes we want to expand out, sometimes we don't
 
@@ -113,31 +132,26 @@ _mul_arguments(Q::QuasiAdjoint{<:Any,<:Normalized}) = arguments(ApplyLayout{type
 # table stable identity if A.P == B.P
 @inline _normalized_ldiv(An, C, Bn) = An \ (C * Bn)
 @inline _normalized_ldiv(An, C::Eye{T}, Bn) where T = FillArrays.SquareEye{promote_type(eltype(An),T,eltype(Bn))}(∞)
-\(A::Normalized, B::Normalized) = _normalized_ldiv(Diagonal(A.scaling), A.P \ B.P, Diagonal(B.scaling))
-\(P::OrthogonalPolynomial, Q::Normalized) = copy(Ldiv{typeof(MemoryLayout(P)),ApplyLayout{typeof(*)}}(P,Q))
-\(Q::Normalized, P::OrthogonalPolynomial) = copy(Ldiv{ApplyLayout{typeof(*)},typeof(MemoryLayout(P))}(Q,P))
+@inline copy(L::Ldiv{<:NormalizedBasisLayout,<:NormalizedBasisLayout}) = _normalized_ldiv(Diagonal(L.A.scaling), L.A.P \ L.B.P, Diagonal(L.B.scaling))
+@inline copy(L::Ldiv{Lay,<:NormalizedBasisLayout}) where Lay = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
+@inline copy(L::Ldiv{<:NormalizedBasisLayout,Lay}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+@inline copy(L::Ldiv{<:NormalizedBasisLayout,Lay,<:Any,<:AbstractQuasiVector}) where Lay = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+@inline copy(L::Ldiv{Lay,<:NormalizedBasisLayout}) where Lay<:AbstractBasisLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
+@inline copy(L::Ldiv{<:NormalizedBasisLayout,Lay}) where Lay<:AbstractBasisLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+@inline copy(L::Ldiv{Lay,<:NormalizedBasisLayout}) where Lay<:AbstractLazyLayout = copy(Ldiv{Lay,ApplyLayout{typeof(*)}}(L.A, L.B))
+@inline copy(L::Ldiv{<:NormalizedBasisLayout,Lay}) where Lay<:AbstractLazyLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+@inline copy(L::Ldiv{<:NormalizedBasisLayout,Lay,<:Any,<:AbstractQuasiVector}) where Lay<:AbstractLazyLayout = copy(Ldiv{ApplyLayout{typeof(*)},Lay}(L.A, L.B))
+@inline copy(L::Ldiv{ApplyLayout{typeof(*)},<:NormalizedBasisLayout}) = copy(Ldiv{ApplyLayout{typeof(*)},ApplyLayout{typeof(*)}}(L.A, L.B))
+for Lay in (:(ApplyLayout{typeof(*)}),:(BroadcastLayout{typeof(+)}),:(BroadcastLayout{typeof(-)}))
+    @eval begin
+        @inline copy(L::Ldiv{<:NormalizedBasisLayout,$Lay}) = copy(Ldiv{ApplyLayout{typeof(*)},$Lay}(L.A, L.B))
+        @inline copy(L::Ldiv{<:NormalizedBasisLayout,$Lay,<:Any,<:AbstractQuasiVector}) = copy(Ldiv{ApplyLayout{typeof(*)},$Lay}(L.A, L.B))
+    end
+end
 
-
-
-
-
-
-
-
-
-
-# function symmetrize_jacobi(J)
-#     d=Array{T}(undef, n)
-#     d[1]=1
-#     for k=2:n
-#         d[k]=sqrt(J[k,k-1]/J[k-1,k])*d[k-1]
-#     end
-
-#    SymTridiagonal(
-#     T[J[k,k] for k=1:n],
-#     T[J[k,k+1]*d[k+1]/d[k] for k=1:n-1])
-# end
-
+# want to use special re-expansion routines without expanding Normalized basis
+@inline copy(L::Ldiv{<:NormalizedBasisLayout,BroadcastLayout{typeof(*)}}) = copy(Ldiv{BasisLayout,BroadcastLayout{typeof(*)}}(L.A, L.B))
+@inline copy(L::Ldiv{<:NormalizedBasisLayout,BroadcastLayout{typeof(*)},<:Any,<:AbstractQuasiVector}) = copy(Ldiv{BasisLayout,BroadcastLayout{typeof(*)}}(L.A, L.B))
 
 ###
 # show

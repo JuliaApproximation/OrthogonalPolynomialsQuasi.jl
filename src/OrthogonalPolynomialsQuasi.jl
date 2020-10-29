@@ -1,7 +1,7 @@
 module OrthogonalPolynomialsQuasi
 using ContinuumArrays, QuasiArrays, LazyArrays, FillArrays, BandedMatrices, BlockArrays,
     IntervalSets, DomainSets, ArrayLayouts, SpecialFunctions,
-    InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra, FastGaussQuadrature, FastTransforms
+    InfiniteLinearAlgebra, InfiniteArrays, LinearAlgebra, FastGaussQuadrature, FastTransforms, FFTW
 
 import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
                 IndexStyle, IndexLinear, ==, OneTo, tail, similar, copyto!, copy,
@@ -10,8 +10,8 @@ import Base: @_inline_meta, axes, getindex, convert, prod, *, /, \, +, -,
 import Base.Broadcast: materialize, BroadcastStyle, broadcasted
 import LazyArrays: MemoryLayout, Applied, ApplyStyle, flatten, _flatten, colsupport, adjointlayout,
                 sub_materialize, arguments, sub_paddeddata, paddeddata, PaddedLayout, resizedata!, LazyVector, ApplyLayout, call,
-                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!, AbstractLazyLayout, BroadcastLayout
-import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, transposelayout, triangulardata
+                _mul_arguments, CachedVector, CachedMatrix, LazyVector, LazyMatrix, axpy!, AbstractLazyLayout, BroadcastLayout, AbstractCachedVector
+import ArrayLayouts: MatMulVecAdd, materialize!, _fill_lmul!, sublayout, sub_materialize, lmul!, ldiv!, ldiv, transposelayout, triangulardata
 import LinearAlgebra: pinv, factorize, qr, adjoint, transpose
 import BandedMatrices: AbstractBandedLayout, AbstractBandedMatrix, _BandedMatrix, bandeddata
 import FillArrays: AbstractFill, getindex_value
@@ -22,10 +22,10 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
                     LazyQuasiArray, LazyQuasiVector, LazyQuasiMatrix, LazyLayout, LazyQuasiArrayStyle,
                     _getindex, layout_getindex, _factorize
 
-import InfiniteArrays: OneToInf, InfAxes, InfUnitRange
+import InfiniteArrays: OneToInf, InfAxes, Infinity, AbstractInfUnitRange
 import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion,
-    AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts
+    AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts, demap, AbstractBasisLayout, BasisLayout
 import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!,
                         _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
@@ -38,6 +38,10 @@ export OrthogonalPolynomial, Normalized, orthonormalpolynomial, LanczosPolynomia
             HermiteWeight, JacobiWeight, ChebyshevWeight, ChebyshevGrid, ChebyshevTWeight, ChebyshevUWeight, UltrasphericalWeight, LegendreWeight,
             WeightedUltraspherical, WeightedChebyshev, WeightedChebyshevT, WeightedChebyshevU, WeightedJacobi,
             ∞, Derivative, .., Inclusion, chebyshevt, chebyshevu, legendre, jacobi, jacobimatrix, jacobiweight, legendreweight, chebyshevtweight, chebyshevuweight
+
+
+include("interlace.jl")
+
 
 
 # ambiguity error
@@ -63,9 +67,7 @@ checkpoints(d::AbstractInterval) = width(d) .* checkpoints(UnitInterval()) .+ le
 checkpoints(x::Inclusion) = checkpoints(x.domain)
 checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
 
-transform_ldiv(A, f, ::Tuple{<:Any,OneToInf})  = adaptivetransform_ldiv(A, f)
-transform_ldiv(A, f, ::Tuple{<:Any,IdentityUnitRange{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
-transform_ldiv(A, f, ::Tuple{<:Any,Slice{<:OneToInf}})  = adaptivetransform_ldiv(A, f)
+transform_ldiv(A, f, ::Tuple{<:Any,Infinity})  = adaptivetransform_ldiv(A, f)
 
 function chop!(c::AbstractVector, tol::Real)
     @assert tol >= 0
@@ -80,8 +82,10 @@ function chop!(c::AbstractVector, tol::Real)
     c
 end
 
+setaxis(c, ::OneToInf) = c
+setaxis(c, ax::BlockedUnitRange) = PseudoBlockVector(c, (ax,))
 
-function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
+function adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{V}) where {U,V}
     T = promote_type(U,V)
 
     r = checkpoints(A)
@@ -103,7 +107,7 @@ function     adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiAr
         ##TODO: how to do scaling for unnormalized bases like Jacobi?
         if maximum(abs,@views(cfs[n-2:end])) < 10tol*maxabsc &&
                 all(norm.(un[r] - fr, 1) .< tol * n * maxabsfr*1000)
-            return [chop!(cfs, tol); zeros(T,∞)]
+            return setaxis([chop!(cfs, tol); zeros(T,∞)], axes(A,2))
         end
     end
     error("Have not converged")
@@ -113,19 +117,41 @@ abstract type OrthogonalPolynomial{T} <: Basis{T} end
 
 # OPs are immutable
 copy(a::OrthogonalPolynomial) = a
+copy(a::SubQuasiArray{<:Any,N,<:OrthogonalPolynomial}) where N = a
 
 """
-    jacobimatrix(S)
+    jacobimatrix(P)
 
 returns the Jacobi matrix `X` associated to a quasi-matrix of orthogonal polynomials
 satisfying
 ```julia
-x = axes(S,1)
-x*S == S*X
+x = axes(P,1)
+x*P == P*X
 ```
 Note that `X` is the transpose of the usual definition of the Jacobi matrix.
 """
-jacobimatrix(S) = error("Override for $(typeof(S))")
+jacobimatrix(P) = error("Override for $(typeof(P))")
+
+"""
+    recurrencecoefficients(P)
+
+returns a `(A,B,C)` associated with the Orthogonal Polynomials P,
+satisfying for `x in axes(P,1)`
+```julia
+P[x,2] == (A[1]*x + B[1])*P[x,1]
+P[x,n+1] == (A[n]*x + B[n])*P[x,n] - C[n]*P[x,n-1]
+```
+Note that `C[1]`` is unused. 
+
+The relationship with the Jacobi matrix is: 
+```julia
+1/A[n] == X[n+1,n]
+-B[n]/A[n] == X[n,n]
+C[n+1]/A[n+1] == X[n,n+1]
+```
+"""
+recurrencecoefficients(P) = error("Override for $(typeof(P))")
+
 
 const WeightedOrthogonalPolynomial{T, A<:AbstractQuasiVector, B<:OrthogonalPolynomial} = WeightedBasis{T, A, B}
 
@@ -219,26 +245,12 @@ end
 _vec(a) = vec(a)
 _vec(a::InfiniteArrays.ReshapedArray) = _vec(parent(a))
 _vec(a::Adjoint{<:Any,<:AbstractVector}) = a'
-bands(J::AbstractBandedMatrix) = _vec.(bandeddata(J).args)
-bands(J::Tridiagonal) = J.du, J.d, J.dl
-bands(D::Diagonal{T}) where T = Zeros{T}(∞), D.diag, Zeros{T}(∞)
-function bands(B::BroadcastArray{<:Any,2,<:Any,<:NTuple{2,AbstractMatrix}})
-    ((au,ad,al),(bu,bd,bl)) = map(bands, B.args)
-    (B.f(au,bu), B.f(ad,bd), B.f(al,bl))
-end
-function bands(B::BroadcastArray{<:Any,2,<:Any,<:Tuple{Number,AbstractMatrix}})
-    a = B.args[1]
-    (bu,bd,bl) = bands(B.args[2])
-    (B.f(a,bu), B.f(a,bd), B.f(a,bl))
-end
 
 include("clenshaw.jl")
 
 
-function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T
-    p = grid(L)
-    TransformFactorization(p, nothing, qr(L[p,:])) # Use QR so type-stable
-end
+factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:OneTo}}) where T =
+    TransformFactorization(grid(L), nothing, qr(L[grid(L),:])) # Use QR so type-stable
 
 function factorize(L::SubQuasiArray{T,2,<:OrthogonalPolynomial,<:Tuple{<:Inclusion,<:AbstractUnitRange}}) where T
     _,jr = parentindices(L)
