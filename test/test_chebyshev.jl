@@ -271,6 +271,11 @@ import ContinuumArrays: MappedWeightedBasisLayout
         @test Base.unsafe_getindex(Chebyshev(), 5.0, Base.OneTo(5)) ≈ [cos(k*acos(5+0im)) for k=0:4]
         @test Base.unsafe_getindex(Chebyshev(), 5.0, 5)  ≈ cos(4*acos(5+0im))
         @test Base.unsafe_getindex(ChebyshevT{ComplexF64}(), 5.0+im, 5)  ≈ cos(4*acos(5+im))
+        @test Base.unsafe_getindex(Chebyshev(), 5.0, 1:5) ≈ [cos(n*acos(5+0im)) for n=0:4]
+        @test Base.unsafe_getindex(Chebyshev(), 5.0, Base.OneTo(5)) ≈ [cos(n*acos(5+0im)) for n=0:4]
+        @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], 5)  ≈ [cos(4*acos(x+0im)) for x in [1,5]]
+        @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], 1:5)  ≈ [cos(n*acos(x+0im)) for x in [1,5], n in 0:4]
+        @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], Base.OneTo(5))  ≈ [cos(n*acos(x+0im)) for x in [1,5], n in 0:4]
 
         v = Base.unsafe_getindex(Chebyshev(), 2, 2:∞)
         @test eltype(v) == Float64

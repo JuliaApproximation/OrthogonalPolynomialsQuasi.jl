@@ -11,6 +11,11 @@ import ContinuumArrays: MappedWeightedBasisLayout
         @testset "Basic" begin
             @test MemoryLayout(Q) isa NormalizedBasisLayout
             @test @inferred(Q\Q) ≡ Eye(∞)
+            @test Q == Q
+            @test P ≠ Q
+            @test Q ≠ P
+            @test Q ≠ P[:,1:end]
+            @test P[:,1:end] ≠ Q
         end
 
         @testset "recurrencecoefficients" begin

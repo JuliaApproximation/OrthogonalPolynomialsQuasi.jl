@@ -38,7 +38,7 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial
     forwardrecurrence!(dest, A, B, C, x, _p0(P))
 end
 
-function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial,<:Tuple{<:AbstractVector,<:UnitRange}})
+function copyto!(dest::AbstractArray, V::SubArray{<:Any,2,<:OrthogonalPolynomial,<:Tuple{<:AbstractVector,<:AbstractUnitRange}})
     checkbounds(dest, axes(V)...)
     P = parent(V)
     xr,jr = parentindices(V)
@@ -64,14 +64,15 @@ function copyto!(dest::AbstractArray, V::SubArray{<:Any,1,<:OrthogonalPolynomial
     dest
 end
 
-getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = layout_getindex(P, x, n)
-getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = layout_getindex(P, x, n)
+getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector) = layout_getindex(P, x, n)
+getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector) = layout_getindex(P, x, n)
 getindex(P::SubArray{<:Any,1,<:OrthogonalPolynomial}, x::AbstractVector) = layout_getindex(P, x)
 
 unsafe_layout_getindex(A...) = sub_materialize(Base.unsafe_view(A...))
 
-Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::UnitRange) = unsafe_layout_getindex(P, x, n)
-Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::UnitRange) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::Number) = Base.unsafe_getindex(P, x, 1:n)[:,end]
 Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, ::Colon) = Base.unsafe_getindex(P, x, axes(P,2))
 
 for get in (:getindex, :(Base.unsafe_getindex))
