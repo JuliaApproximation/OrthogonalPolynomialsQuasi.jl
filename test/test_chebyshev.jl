@@ -181,6 +181,7 @@ import ContinuumArrays: MappedWeightedBasisLayout
     @testset "sub-of-sub" begin
         T = Chebyshev()
         V = T[:,2:end]
+        @test copy(V) == V
         @test view(V,0.1:0.1:1,:) isa SubArray
         @test V[0.1:0.1:1,:] isa SubArray
         @test V[0.1:0.1:1,:][:,1:5] == T[0.1:0.1:1,2:6]
@@ -275,6 +276,8 @@ import ContinuumArrays: MappedWeightedBasisLayout
         @test Base.unsafe_getindex(Chebyshev(), 5.0, Base.OneTo(5)) ≈ [cos(n*acos(5+0im)) for n=0:4]
         @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], 5)  ≈ [cos(4*acos(x+0im)) for x in [1,5]]
         @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], 1:5)  ≈ [cos(n*acos(x+0im)) for x in [1,5], n in 0:4]
+        @test Base.unsafe_getindex(Chebyshev(), 5.0, [1,5])  ≈ [cos(n*acos(5.0+0im)) for n in [0,4]]
+        @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], [1,5])  ≈ [cos(n*acos(x+0im)) for x in [1,5], n in [0,4]]
         @test Base.unsafe_getindex(Chebyshev(), [1.0,5.0], Base.OneTo(5))  ≈ [cos(n*acos(x+0im)) for x in [1,5], n in 0:4]
 
         v = Base.unsafe_getindex(Chebyshev(), 2, 2:∞)

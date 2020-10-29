@@ -12,6 +12,11 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         @test ChebyshevWeight() .* w == w .* ChebyshevWeight() == JacobiWeight(a-1/2,b-1/2)
     end
 
+    @testset "basics" begin
+        @test Legendre() == Jacobi(0,0)
+        @test Jacobi(0,0) == Legendre()
+    end
+
     @testset "basis" begin
         b,a = 0.1,0.2
         P = Jacobi(a,b)

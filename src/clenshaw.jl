@@ -67,21 +67,17 @@ end
 getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector) = layout_getindex(P, x, n)
 getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector) = layout_getindex(P, x, n)
 getindex(P::SubArray{<:Any,1,<:OrthogonalPolynomial}, x::AbstractVector) = layout_getindex(P, x)
+getindex(P::OrthogonalPolynomial, x::Number, n::Number) = P[x,OneTo(n)][end]
 
 unsafe_layout_getindex(A...) = sub_materialize(Base.unsafe_view(A...))
 
-Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector) = unsafe_layout_getindex(P, x, n)
-Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::AbstractUnitRange) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractUnitRange) = unsafe_layout_getindex(P, x, n)
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::AbstractVector) = Base.unsafe_getindex(P,x,OneTo(maximum(n)))[n]
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector) = Base.unsafe_getindex(P,x,OneTo(maximum(n)))[:,n]
 Base.unsafe_getindex(P::OrthogonalPolynomial, x::AbstractVector, n::Number) = Base.unsafe_getindex(P, x, 1:n)[:,end]
 Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, ::Colon) = Base.unsafe_getindex(P, x, axes(P,2))
-
-for get in (:getindex, :(Base.unsafe_getindex))
-    @eval begin
-        $get(P::OrthogonalPolynomial, x::Number, n::AbstractVector{<:Integer}) = $get(P,x,OneTo(maximum(n)))[n]
-        $get(P::OrthogonalPolynomial, x::AbstractVector, n::AbstractVector{<:Integer}) =  $get(P,x,OneTo(maximum(n)))[:,n]
-        $get(P::OrthogonalPolynomial, x::Number, n::Number) = $get(P,x,OneTo(n))[end]
-    end
-end
+Base.unsafe_getindex(P::OrthogonalPolynomial, x::Number, n::Number) = Base.unsafe_getindex(P,x,OneTo(n))[end]
 
 getindex(P::OrthogonalPolynomial, x::Number, jr::AbstractInfUnitRange{Int}) = view(P, x, jr)
 Base.unsafe_getindex(P::OrthogonalPolynomial{T}, x::Number, jr::AbstractInfUnitRange{Int}) where T = 
