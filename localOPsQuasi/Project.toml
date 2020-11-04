@@ -1,0 +1,7 @@
+name = "localOPsQuasi"
+uuid = "9c62efe3-25d1-440a-825a-477578925382"
+authors = ["MarcoFasondini <60903315+MarcoFasondini@users.noreply.github.com>"]
+version = "0.1.0"
+
+[deps]
+OrthogonalPolynomialsQuasi = "aa41a628-2c43-45df-899b-83ab96621781"
