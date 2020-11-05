@@ -67,8 +67,8 @@ for op in (:+, :-,*)
     end
 end
 singularitiesbroadcast(::typeof(/), ::NoSingularities, L::LegendreWeight) = L # can't find roots
-singularitiesbroadcast(::typeof(*), ::NoSingularities, L::LegendreWeight) = L
-singularitiesbroadcast(::typeof(*), L::LegendreWeight, ::NoSingularities) = L
+#singularitiesbroadcast(::typeof(*), ::NoSingularities, L::LegendreWeight) = L
+#singularitiesbroadcast(::typeof(*), L::LegendreWeight, ::NoSingularities) = L
 
 _parent(::NoSingularities) = NoSingularities()
 _parent(a) = parent(a)
