@@ -14,17 +14,28 @@ import FastTransforms: clenshaw!
 
 @testset "singularities" begin
     x = Inclusion(ChebyshevInterval())
-    @test singularities(x) == singularities(exp.(x)) == singularities(x.^2) == 
-        singularities(x .+ 1) == singularities(1 .+ x) == singularities(x .+ x) == 
+    @test singularities(x) == singularities(exp.(x)) == singularities(x.^2) ==
+        singularities(x .+ 1) == singularities(1 .+ x) == singularities(x .+ x) ==
         LegendreWeight()
-    @test singularities(exp.(x) .* JacobiWeight(0.1,0.2)) == 
+    @test singularities(exp.(x) .* JacobiWeight(0.1,0.2)) ==
         singularities(JacobiWeight(0.1,0.2) .* exp.(x)) ==
         JacobiWeight(0.1,0.2)
 
     x = Inclusion(0..1)
-    @test singularities(x) == singularities(exp.(x)) == singularities(x.^2) == 
-        singularities(x .+ 1) == singularities(1 .+ x) == singularities(x .+ x) == 
+    @test singularities(x) == singularities(exp.(x)) == singularities(x.^2) ==
+        singularities(x .+ 1) == singularities(1 .+ x) == singularities(x .+ x) ==
         legendreweight(0..1)
+end
+
+@testset "weight with coeffs" begin
+    x = Inclusion(ChebyshevInterval())
+    w = π*x.^2 .+ 2
+    Pw = LanczosPolynomial(w)
+    J = Pw\(x.*Pw)
+    x = 1
+    n = 10
+    x*Pw[x,1] ≈ J[1,1]*Pw[x,1] + J[1,2]*Pw[x,2]
+    x*Pw[x,n] ≈ J[n,n-1]*Pw[x,n-1] + J[n,n]*Pw[x,n] + J[n,n+1]*Pw[x,n+1]
 end
 
 include("test_chebyshev.jl")
