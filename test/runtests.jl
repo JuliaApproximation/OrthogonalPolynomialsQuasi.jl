@@ -36,7 +36,7 @@ end
     n = 10
     x*Pw[x,1] ≈ J[1,1]*Pw[x,1] + J[1,2]*Pw[x,2]
     x*Pw[x,n] ≈ J[n,n-1]*Pw[x,n-1] + J[n,n]*Pw[x,n] + J[n,n+1]*Pw[x,n+1]
-end
+end 
 
 include("test_chebyshev.jl")
 include("test_legendre.jl")
