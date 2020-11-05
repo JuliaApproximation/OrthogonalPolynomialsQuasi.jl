@@ -59,7 +59,7 @@ singularities(a::AbstractAffineQuasiVector) = singularities(a.x)
 singularitiesbroadcast(_, L::LegendreWeight) = L # Assume we stay smooth
 singularitiesbroadcast(::typeof(exp), L::LegendreWeight) = L
 singularitiesbroadcast(::typeof(Base.literal_pow), ::typeof(^), L::LegendreWeight, ::Val) = L
-for op in (:+, :-)
+for op in (:+, :-,*)
     @eval begin
         singularitiesbroadcast(::typeof($op), ::LegendreWeight{T}, ::LegendreWeight{V}) where {T,V} = LegendreWeight{promote_type(T,V)}()
         singularitiesbroadcast(::typeof($op), L::LegendreWeight, ::NoSingularities) = L
@@ -67,8 +67,8 @@ for op in (:+, :-)
     end
 end
 singularitiesbroadcast(::typeof(/), ::NoSingularities, L::LegendreWeight) = L # can't find roots
-singularitiesbroadcast(::typeof(*), ::NoSingularities, L::LegendreWeight) = L
-singularitiesbroadcast(::typeof(*), L::LegendreWeight, ::NoSingularities) = L
+#singularitiesbroadcast(::typeof(*), ::NoSingularities, L::LegendreWeight) = L
+#singularitiesbroadcast(::typeof(*), L::LegendreWeight, ::NoSingularities) = L
 
 _parent(::NoSingularities) = NoSingularities()
 _parent(a) = parent(a)
