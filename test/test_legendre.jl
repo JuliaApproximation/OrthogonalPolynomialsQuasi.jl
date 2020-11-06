@@ -57,6 +57,7 @@ import QuasiArrays: MulQuasiArray
 
         D = Derivative(axes(P,1))
         @test Ultraspherical(3/2)\(D*P) isa BandedMatrix{Float64,<:Ones}
+        @test (Ultraspherical(5/2) \ (D^2*P))[1:10,1:10] == BandedMatrix(2 => Fill(3,8))
 
         P = Legendre()
         x = axes(P,1)

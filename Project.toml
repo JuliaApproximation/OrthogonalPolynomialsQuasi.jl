@@ -34,7 +34,7 @@ FastGaussQuadrature = "0.4.3"
 FastTransforms = "0.10.1"
 FillArrays = "0.10"
 InfiniteArrays = "0.8.2"
-InfiniteLinearAlgebra = "0.4.3"
+InfiniteLinearAlgebra = "0.4.4"
 IntervalSets = "0.3.1, 0.4, 0.5"
 LazyArrays = "0.19"
 QuasiArrays = "0.3.6"
@@ -42,7 +42,6 @@ SpecialFunctions = "0.10"
 julia = "1.5"
 
 [extras]
-ArrayLayouts = "4c555306-a7a7-4459-81d9-ec55ddd5c99a"
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LazyBandedMatrices = "d7e5e226-e90b-4449-9968-0f923699bf6f"
@@ -50,4 +49,4 @@ SemiseparableMatrices = "f8ebbe35-cbfb-4060-bf7f-b10e4670cf57"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Base64", "Test", "ForwardDiff", "SemiseparableMatrices", "LazyBandedMatrices", "ArrayLayouts"]
+test = ["Base64", "Test", "ForwardDiff", "SemiseparableMatrices", "LazyBandedMatrices"]
