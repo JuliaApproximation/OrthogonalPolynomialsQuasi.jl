@@ -67,6 +67,7 @@ for op in (:+, :-,:*)
     end
 end
 singularitiesbroadcast(::typeof(/), ::NoSingularities, L::LegendreWeight) = L # can't find roots
+singularitiesbroadcast(::typeof(*), x::AbstractJacobiWeight, y::AbstractJacobiWeight) = JacobiWeight(x.a+y.a, x.b+y.b)
 
 _parent(::NoSingularities) = NoSingularities()
 _parent(a) = parent(a)
