@@ -29,7 +29,7 @@ function getindex(w::JacobiWeight, x::Number)
     (1-x)^w.a * (1+x)^w.b
 end
 
-summary(io::IO, w::JacobiWeight) = print(io, "(1-x)^(w.a) * (1+x)^(w.b) on -1..1")
+summary(io::IO, w::JacobiWeight) = print(io, "(1-x)^$(w.a) * (1+x)^$(w.b) on -1..1")
 
 sum(P::JacobiWeight) = jacobimoment(P.a, P.b)
 
