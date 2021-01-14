@@ -10,7 +10,7 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(*), w::AbstractJacobiWeight, v::A
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(sqrt), w::AbstractJacobiWeight) =
     JacobiWeight(w.a/2, w.b/2)
 
-broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(Base.literal_pow), ::Base.RefValue{typeof(^)}, w::AbstractJacobiWeight, ::Base.RefValue{Val{k}}) where k = 
+broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(Base.literal_pow), ::Base.RefValue{typeof(^)}, w::AbstractJacobiWeight, ::Base.RefValue{Val{k}}) where k =
     JacobiWeight(k * w.a, k * w.b)
 
 struct JacobiWeight{T} <: AbstractJacobiWeight{T}
@@ -59,7 +59,7 @@ singularities(a::AbstractAffineQuasiVector) = singularities(a.x)
 singularitiesbroadcast(_, L::LegendreWeight) = L # Assume we stay smooth
 singularitiesbroadcast(::typeof(exp), L::LegendreWeight) = L
 singularitiesbroadcast(::typeof(Base.literal_pow), ::typeof(^), L::LegendreWeight, ::Val) = L
-for op in (:+, :-)
+for op in (:+, :-,:*)
     @eval begin
         singularitiesbroadcast(::typeof($op), ::LegendreWeight{T}, ::LegendreWeight{V}) where {T,V} = LegendreWeight{promote_type(T,V)}()
         singularitiesbroadcast(::typeof($op), L::LegendreWeight, ::NoSingularities) = L
@@ -67,6 +67,7 @@ for op in (:+, :-)
     end
 end
 singularitiesbroadcast(::typeof(/), ::NoSingularities, L::LegendreWeight) = L # can't find roots
+singularitiesbroadcast(::typeof(*), x::AbstractJacobiWeight, y::AbstractJacobiWeight) = JacobiWeight(x.a+y.a, x.b+y.b)
 
 _parent(::NoSingularities) = NoSingularities()
 _parent(a) = parent(a)
@@ -391,4 +392,3 @@ function _sum(P::Legendre{T}, dims) where T
 end
 
 _sum(p::SubQuasiArray{T,1,Legendre{T},<:Tuple{Inclusion,Int}}, ::Colon) where T = parentindices(p)[2] == 1 ? convert(T, 2) : zero(T)
-
