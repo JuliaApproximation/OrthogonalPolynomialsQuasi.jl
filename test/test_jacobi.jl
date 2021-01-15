@@ -10,6 +10,7 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         @test JacobiWeight(0.2,0.3) .* w == JacobiWeight(a+0.2,b+0.3)
         @test LegendreWeight() .* w == w .* LegendreWeight() == w
         @test ChebyshevWeight() .* w == w .* ChebyshevWeight() == JacobiWeight(a-1/2,b-1/2)
+        @test summary(w) == "(1-x)^0.1 * (1+x)^0.2 on -1..1"
     end
 
     @testset "basics" begin
@@ -21,6 +22,8 @@ import OrthogonalPolynomialsQuasi: recurrencecoefficients, basis
         b,a = 0.1,0.2
         P = Jacobi(a,b)
         @test P[0.1,2] ≈ 0.16499999999999998
+        @test summary(P) == "Jacobi(0.2, 0.1)"
+
         P = Jacobi(b,a)
         @test P[-0.1,2] ≈ -0.16499999999999998
 
