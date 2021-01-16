@@ -29,6 +29,8 @@ function getindex(w::JacobiWeight, x::Number)
     (1-x)^w.a * (1+x)^w.b
 end
 
+summary(io::IO, w::JacobiWeight) = print(io, "(1-x)^$(w.a) * (1+x)^$(w.b) on -1..1")
+
 sum(P::JacobiWeight) = jacobimoment(P.a, P.b)
 
 struct LegendreWeight{T} <: AbstractJacobiWeight{T} end
@@ -132,6 +134,8 @@ axes(::AbstractJacobi{T}) where T = (Inclusion{T}(ChebyshevInterval{real(T)}()),
 ==(A::WeightedJacobi, B::Legendre) = A == Jacobi(B)
 ==(A::Jacobi{T}, B::WeightedJacobi) where T = JacobiWeight(zero(T),zero(T)).*A == B
 ==(A::Legendre, B::WeightedJacobi) = Jacobi(A) == B
+
+summary(io::IO, P::Jacobi) = print(io, "Jacobi($(P.a), $(P.b))")
 
 ###
 # transforms
