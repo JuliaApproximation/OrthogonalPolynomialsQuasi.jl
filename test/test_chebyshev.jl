@@ -3,7 +3,7 @@ import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, p
 import LazyArrays: ApplyStyle
 import QuasiArrays: MulQuasiMatrix
 import Base: OneTo
-import ContinuumArrays: MappedWeightedBasisLayout
+import ContinuumArrays: MappedWeightedBasisLayout, Map
 
 @testset "Chebyshev" begin
     @testset "ChebyshevGrid" begin
@@ -317,4 +317,29 @@ import ContinuumArrays: MappedWeightedBasisLayout
         @test Base.BroadcastStyle(typeof(v)) isa LazyArrays.LazyArrayStyle{1}
         @test (v./v)[1:10] == ones(10)
     end
+end
+
+struct QuadraticMap{T} <: Map{T} end
+struct InvQuadraticMap{T} <: Map{T} end
+
+QuadraticMap() = QuadraticMap{Float64}()
+InvQuadraticMap() = InvQuadraticMap{Float64}()
+
+Base.getindex(::QuadraticMap, r::Number) = 2r^2-1
+Base.axes(::QuadraticMap{T}) where T = (Inclusion(0..1),)
+Base.axes(::InvQuadraticMap{T}) where T = (Inclusion(-1..1),)
+Base.getindex(d::InvQuadraticMap, x::Number) = sqrt((x+1)/2)
+ContinuumArrays.invmap(::QuadraticMap{T}) where T = InvQuadraticMap{T}()
+ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
+
+@testset "Quadratic map" begin
+    T = Chebyshev()[QuadraticMap(),:]
+    Tn = Chebyshev()[QuadraticMap(),1:10]
+    Tn2 = T[:,Base.OneTo(10)]
+    @test MemoryLayout(T) == MemoryLayout(Tn) == MemoryLayout(Tn2) == ContinuumArrays.MappedBasisLayout()
+    x = axes(T,1)
+    un = Tn \ (2 * x .^2 .- 1)
+    un2 = Tn2 \ (2 * x .^2 .- 1)
+    u = T \ (2 * x .^2 .- 1)
+    @test un ≈ un2 ≈ u[1:10]
 end
