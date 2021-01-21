@@ -25,7 +25,8 @@ import QuasiArrays: cardinality, checkindex, QuasiAdjoint, QuasiTranspose, Inclu
 import InfiniteArrays: OneToInf, InfAxes, Infinity, AbstractInfUnitRange
 import ContinuumArrays: Basis, Weight, basis, @simplify, Identity, AbstractAffineQuasiVector, ProjectionFactorization,
     inbounds_getindex, grid, transform, transform_ldiv, TransformFactorization, QInfAxes, broadcastbasis, Expansion,
-    AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts, demap, AbstractBasisLayout, BasisLayout
+    AffineQuasiVector, AffineMap, WeightLayout, WeightedBasisLayout, WeightedBasisLayouts, demap, AbstractBasisLayout, BasisLayout,
+    checkpoints
 import FastTransforms: Λ, forwardrecurrence, forwardrecurrence!, _forwardrecurrence!, clenshaw, clenshaw!,
                         _forwardrecurrence_next, _clenshaw_next, check_clenshaw_recurrences, ChebyshevGrid, chebyshevpoints
 
@@ -50,6 +51,15 @@ sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
 
 #
 # BlockQuasiArrays
+
+BlockArrays.blockaxes(::Inclusion) = blockaxes(Base.OneTo(1)) # just use 1 block
+function BlockArrays.blockaxes(A::AbstractQuasiArray{T,N}, d) where {T,N}
+    @_inline_meta
+    d::Integer <= N ? blockaxes(A)[d] : Base.OneTo(1)
+end
+
+
+
 
 @inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{Block{1}, Vararg{Any}}) =
     (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
@@ -92,7 +102,7 @@ function adaptivetransform_ldiv(A::AbstractQuasiArray{U}, f::AbstractQuasiArray{
     fr = f[r]
     maxabsfr = norm(fr,Inf)
 
-    tol = 20eps(T)
+    tol = 20eps(real(T))
 
     for n = 2 .^ (4:∞)
         An = A[:,OneTo(n)]
