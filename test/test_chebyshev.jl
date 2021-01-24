@@ -1,4 +1,5 @@
-using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, FastTransforms, ArrayLayouts, Test, FillArrays, Base64
+using OrthogonalPolynomialsQuasi, QuasiArrays, ContinuumArrays, BandedMatrices, LazyArrays, 
+        FastTransforms, ArrayLayouts, Test, FillArrays, Base64, BlockArrays
 import OrthogonalPolynomialsQuasi: Clenshaw, recurrencecoefficients, clenshaw, paddeddata, jacobimatrix
 import LazyArrays: ApplyStyle
 import QuasiArrays: MulQuasiMatrix
@@ -343,4 +344,10 @@ ContinuumArrays.invmap(::InvQuadraticMap{T}) where T = QuadraticMap{T}()
     un2 = Tn2 \ (2 * x .^2 .- 1)
     u = T \ (2 * x .^2 .- 1)
     @test un ≈ un2 ≈ u[1:10]
+end
+
+@testset "block structure" begin
+    T = Chebyshev()
+    @test blockaxes(T) == (blockaxes(T,1),blockaxes(T,2)) == (Block.(Base.OneTo(1)), Block.(Base.OneTo(1)))
+    @test blockaxes(T,3) == Base.OneTo(1)
 end
