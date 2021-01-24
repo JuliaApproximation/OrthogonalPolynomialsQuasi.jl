@@ -169,6 +169,7 @@ import ContinuumArrays: MappedWeightedBasisLayout, Map
         f = T*Vcat(randn(10), Zeros(∞))
         @test (U*(U\f)).args[1] isa Chebyshev{2}
         @test (U*(U\f))[0.1] ≈ f[0.1]
+        @test (D*f).args[2] isa LazyArrays.CachedVector
         @test (D*f)[0.1] ≈ ForwardDiff.derivative(x -> (ChebyshevT{eltype(x)}()*f.args[2])[x],0.1)
     end
 
