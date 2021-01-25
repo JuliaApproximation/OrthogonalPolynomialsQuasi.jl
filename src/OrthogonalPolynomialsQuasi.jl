@@ -42,40 +42,13 @@ export OrthogonalPolynomial, Normalized, orthonormalpolynomial, LanczosPolynomia
 
 
 include("interlace.jl")
-
-
-
-# ambiguity error
-sub_materialize(_, V::AbstractQuasiArray, ::Tuple{InfAxes,QInfAxes}) = V
-sub_materialize(_, V::AbstractQuasiArray, ::Tuple{QInfAxes,InfAxes}) = V
-
-#
-# BlockQuasiArrays
-
-BlockArrays.blockaxes(::Inclusion) = blockaxes(Base.OneTo(1)) # just use 1 block
-function BlockArrays.blockaxes(A::AbstractQuasiArray{T,N}, d) where {T,N}
-    @_inline_meta
-    d::Integer <= N ? blockaxes(A)[d] : Base.OneTo(1)
-end
-
-
-
-
-@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{Block{1}, Vararg{Any}}) =
-    (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
-@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockRange{1,R}, Vararg{Any}}) where R =
-    (unblock(A, inds, I), to_indices(A, _maybetail(inds), tail(I))...)
-@inline to_indices(A::AbstractQuasiArray, inds, I::Tuple{BlockIndex{1}, Vararg{Any}}) =
-    (inds[1][I[1]], to_indices(A, _maybetail(inds), tail(I))...)
+    
 
 cardinality(::FullSpace{<:AbstractFloat}) = ℵ₁
 cardinality(::EuclideanDomain) = ℵ₁
 
 checkpoints(::ChebyshevInterval) = [-0.823972,0.01,0.3273484]
 checkpoints(::UnitInterval) = [0.823972,0.01,0.3273484]
-checkpoints(d::AbstractInterval) = width(d) .* checkpoints(UnitInterval()) .+ leftendpoint(d)
-checkpoints(x::Inclusion) = checkpoints(x.domain)
-checkpoints(A::AbstractQuasiMatrix) = checkpoints(axes(A,1))
 
 transform_ldiv(A, f, ::Tuple{<:Any,Infinity})  = adaptivetransform_ldiv(A, f)
 
