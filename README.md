@@ -5,7 +5,7 @@ A package for representing orthogonal polynomials as quasi arrays
 [![codecov](https://codecov.io/gh/JuliaApproximation/OrthogonalPolynomialsQuasi.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaApproximation/OrthogonalPolynomialsQuasi.jl)
 
 
-** This package has been superseded by [ClassicalOrthogonalPolynomials.jl](https://github.com/JuliaApproximation/ClassicalOrthogonalPolynomials.jl) ** 
+**This package has been superseded by [ClassicalOrthogonalPolynomials.jl](https://github.com/JuliaApproximation/ClassicalOrthogonalPolynomials.jl)** 
 
 
 
