@@ -5,6 +5,10 @@ A package for representing orthogonal polynomials as quasi arrays
 [![codecov](https://codecov.io/gh/JuliaApproximation/OrthogonalPolynomialsQuasi.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaApproximation/OrthogonalPolynomialsQuasi.jl)
 
 
+** This package has been superseded by [ClassicalOrthogonalPolynomials.jl](https://github.com/JuliaApproximation/ClassicalOrthogonalPolynomials.jl) ** 
+
+
+
 This package implements classical orthogonal polynomials as quasi-arrays where one one axes is continuous and the other axis is discrete (countably infinite), as implemented in [QuasiArrays.jl](https://github.com/JuliaApproximation/QuasiArrays.jl) and  [ContinuumArrays.jl](https://github.com/JuliaApproximation/ContinuumArrays.jl).  
 ```julia
 julia> using OrthogonalPolynomialsQuasi, ContinuumArrays
