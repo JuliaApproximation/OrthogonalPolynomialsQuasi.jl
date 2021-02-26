@@ -284,6 +284,7 @@ end
 include("normalized.jl")
 include("lanczos.jl")
 include("hermite.jl")
+include("laguerre.jl")
 include("jacobi.jl")
 include("chebyshev.jl")
 include("ultraspherical.jl")
