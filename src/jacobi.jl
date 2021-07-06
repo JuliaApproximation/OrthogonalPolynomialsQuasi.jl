@@ -13,6 +13,25 @@ broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(sqrt), w::AbstractJacobiWeight) =
 broadcasted(::LazyQuasiArrayStyle{1}, ::typeof(Base.literal_pow), ::Base.RefValue{typeof(^)}, w::AbstractJacobiWeight, ::Base.RefValue{Val{k}}) where k = 
     JacobiWeight(k * w.a, k * w.b)
 
+"""
+    JacobiWeight{T}(a,b)
+    JacobiWeight(a,b)
+
+Return the quasiarray associated to the Jacobi weight function (1-x)^a * (1+x)^b.
+The default interval is [-1,1].
+
+# Examples
+```julia-repl
+julia> J=JacobiWeight(1.0,1.0)
+JacobiWeight{Float64}(1.0, 1.0)
+
+julia> J[0.5]==(1-0.5)^1.0*(1+0.5)^1.0
+true
+
+julia> axes(J)
+(Inclusion(-1.0..1.0 (Chebyshev)),)
+```
+"""
 struct JacobiWeight{T} <: AbstractJacobiWeight{T}
     a::T
     b::T
@@ -20,6 +39,10 @@ struct JacobiWeight{T} <: AbstractJacobiWeight{T}
 end
 
 JacobiWeight(a::V, b::T) where {T,V} = JacobiWeight{promote_type(T,V)}(a,b)
+
+"""
+    jacobiweight(a,b, d::AbstractInterval{T})
+"""
 jacobiweight(a,b, d::AbstractInterval{T}) where T = JacobiWeight(a,b)[affine(d,ChebyshevInterval{T}())]
 
 ==(A::JacobiWeight, B::JacobiWeight) = A.b == B.b && A.a == B.a
@@ -33,8 +56,35 @@ summary(io::IO, w::JacobiWeight) = print(io, "(1-x)^$(w.a) * (1+x)^$(w.b) on -1.
 
 sum(P::JacobiWeight) = jacobimoment(P.a, P.b)
 
+"""
+    LegendreWeight{T}()
+    LegendreWeight()
+
+Return the quasiarray associated to the Legendre weight function 1.
+The default interval is [-1,1]. The default type is Float64.
+Any property of a LegendreWeight is zero(T).
+
+# Examples
+```julia-repl
+julia> L=LegendreWeight()
+LegendreWeight{Float64}()
+
+julia> L[0.5]
+1.0
+
+julia> axes(L)
+(Inclusion(-1.0..1.0 (Chebyshev)),)
+
+julia> L.abc
+0.0
+```
+"""
 struct LegendreWeight{T} <: AbstractJacobiWeight{T} end
 LegendreWeight() = LegendreWeight{Float64}()
+
+"""
+    legendreweight(d::AbstractInterval{T})
+"""
 legendreweight(d::AbstractInterval{T}) where T = LegendreWeight{float(T)}()[affine(d,ChebyshevInterval{T}())]
 
 function getindex(w::LegendreWeight{T}, x::Number) where T
@@ -103,6 +153,32 @@ function qr(P::Legendre)
     QuasiQR(Q, Diagonal(Q.scaling))
 end
 
+"""
+    Jacobi{T}(a,b)
+    Jacobi(a,b)
+
+Return the quasimatrix associated to orthogonal polynomials w.r.t JacobiWeight(a,b) where the first axes represents the interval and the second axes represents the polynomial index (starting from 1).
+The default interval is [-1,1]. The type, when not specified, will be converted to a floating point data type.
+
+# Examples
+```julia-repo
+julia> J=Jacobi(0,0) # The type will be converted to float
+Jacobi{Float64}(0.0, 0.0)
+
+julia> J[0,:] # An array of the value of every polynomial at 0
+∞-element view(::Jacobi{Float64}, 0.0, :) with eltype Float64 with indices OneToInf():
+  1.0
+  0.0
+ -0.5
+ -0.0
+  0.375
+  ⋮
+
+julia> J0=J[:,1]; # J0 is the polynomial of degree 0. The index of J0 within J is 1.
+
+julia> J0[0],J0[0.5]
+(1.0, 1.0)
+"""
 struct Jacobi{T} <: AbstractJacobi{T}
     a::T
     b::T
@@ -111,9 +187,17 @@ end
 
 Jacobi(a::V, b::T) where {T,V} = Jacobi{float(promote_type(T,V))}(a, b)
 
+"""
+    jacobi(a,b, d::AbstractInterval{T})
+"""
 jacobi(a,b) = Jacobi(a,b)
 jacobi(a,b, d::AbstractInterval{T}) where T = Jacobi(a,b)[affine(d,ChebyshevInterval{T}()), :]
 
+"""
+    Jacobi(P::Legendre{T}) = Jacobi(zero(T), zero(T))
+
+Convert a Legendre space to a Jacobi space.
+"""
 Jacobi(P::Legendre{T}) where T = Jacobi(zero(T), zero(T))
 
 OrthogonalPolynomial(w::JacobiWeight) = Jacobi(w.a, w.b)
